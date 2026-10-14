@@ -90,11 +90,11 @@ Sebagai backend, saya ingin mendapat token Jubelio dan menyimpannya selama masa 
 
 | HTTP | Isi | Penanganan |
 | --- | --- | --- |
-| 500 | `{"statusCode":500,"error":"Internal Server Error","message":"…","code":"Invalid email or password"}` | Tandai `login_ok = false` (ADM-17), log error, jangan retry terus-menerus |
+| 500 | `{"statusCode":500,"error":"Internal Server Error","message":"…","code":"Invalid email or password"}` | Log error dengan level `critical`, jangan retry terus-menerus (indikator `login_ok` di ADM-17 menyusul di v1.1) |
 
 ### Acceptance Criteria
 
-- [ ] Token disimpan di Redis dengan TTL 11 jam 30 menit (token berlaku 12 jam) oleh `JubelioTokenManager`.
+- [ ] Token disimpan di cache Laravel (driver `database`) dengan TTL 11 jam 30 menit (token berlaku 12 jam) oleh `JubelioTokenManager`.
 - [ ] Token dikirim di header `authorization: <token>` pada semua panggilan Jubelio lain.
 - [ ] Hanya satu proses yang login bersamaan (lock), proses lain menunggu token baru.
 
@@ -713,7 +713,7 @@ Sebagai backend, saya ingin menandai sales order lunas segera setelah Xendit men
 
 ### Response Failed
 
-Lihat INT-HDL. Setelah 5 kali gagal → `jubelio_sync_status = failed`, muncul di ADM-01/ADM-09, bisa dikirim ulang lewat ADM-11.
+Lihat INT-HDL. Setelah 5 kali gagal → `jubelio_sync_status = failed`, muncul di ADM-09 (filter `jubelio_sync_status=failed`), bisa dikirim ulang lewat ADM-11.
 
 ### Acceptance Criteria
 
@@ -878,7 +878,7 @@ Lihat INT-HDL.
 ### Acceptance Criteria
 
 - [ ] Disediakan sebagai perintah `php artisan jubelio:setup` yang menampilkan ID toko/gudang/pajak untuk disalin ke `.env` dan (opsional) mendaftarkan webhook.
-- [ ] ADM-17 memakai daftar toko dan gudang untuk menampilkan nama dari ID yang terpasang.
+- [ ] Perintah ini juga menampilkan nama toko dan gudang dari ID yang sedang terpasang di `.env`, untuk memastikan ID benar (tampilan di ADM-17 menyusul di v1.1).
 
 ---
 

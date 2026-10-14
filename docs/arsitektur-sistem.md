@@ -1,8 +1,8 @@
 # Arsitektur Sistem — E-Commerce Saeful Askar
 
-Laravel monolit: Blade + Alpine.js + Tailwind (FE) memanggil REST API `/api/v1` (BE). Auth session cookie (Sanctum stateful). MySQL, Redis (cache token Jubelio + queue), storage untuk gambar artikel. Integrasi keluar hanya lewat `app/Services/*/...Client` (JubelioClient, JubelioShipmentClient, XenditClient). Webhook Xendit & Jubelio → verifikasi → `webhook_events` → job di queue (idempotent). Scheduler: sinkron katalog (malam penuh, 30 menit inkremental), rekonsiliasi stok 15 menit, batalkan order kedaluwarsa 5 menit, retry push order.
+Laravel monolit: Blade + Alpine.js + Tailwind (FE) memanggil REST API `/api/v1` (BE). Auth session cookie (Sanctum stateful). MySQL sekaligus menjadi cache (token Jubelio, ongkir, region), antrean job, dan atomic lock lewat driver `database` Laravel — tanpa Redis. Storage lokal untuk gambar artikel. Integrasi keluar hanya lewat `app/Services/*/...Client` (JubelioClient, JubelioShipmentClient, XenditClient). Webhook Xendit & Jubelio → verifikasi → `webhook_events` → job di queue (idempotent). Scheduler: sinkron katalog (malam penuh, 30 menit inkremental), rekonsiliasi stok 15 menit, batalkan order kedaluwarsa 5 menit, retry push order.
 
-Kerja paralel: semua endpoint disiapkan sejak awal di `docs/api/*.md` (satu file Markdown per modul); FE memakai mock JSON di `resources/js/api/mocks/` (`VITE_API_MOCK=true`); BE feature test sesuai struktur JSON di kontrak dengan fixture Jubelio/Xendit.
+Kerja paralel: semua endpoint disiapkan sejak awal di `docs/api/*.md` (satu file Markdown per modul); FE memakai mock JSON di `resources/js/api/mocks/` (`VITE_API_MOCK=true`); BE feature test sesuai struktur JSON di kontrak dengan fixture Jubelio/Xendit. Branch Git: `backend` dan `frontend` di-merge ke `development`, lalu `development` ke `main` (rincian di PRD §8).
 
 ## Diagram arsitektur (Mermaid)
 ```mermaid
@@ -25,8 +25,7 @@ flowchart TB
 
   subgraph DATA["Penyimpanan"]
     direction LR
-    DB[("MySQL")]
-    RD[("Redis<br/>cache token · antrean")]
+    DB[("MySQL<br/>data · cache · antrean · lock")]
     ST[("Storage<br/>gambar artikel")]
   end
 
@@ -112,8 +111,9 @@ saeful-askar/
 │   │   ├── admin.md                        panel admin: artikel, pesanan, sinkron
 │   │   ├── webhooks.md                     webhook masuk Xendit & Jubelio
 │   │   └── integrations.md                 panggilan keluar ke Jubelio, Jubelio Shipment, Xendit
-│   ├── architecture.md
-│   └── jubelio-mapping.md                  pemetaan field Jubelio → tabel
+│   ├── PRD-Website-ECommerce-Saeful-Askar.md   kebutuhan produk (acuan utama)
+│   ├── arsitektur-sistem.md                diagram arsitektur, alur checkout, struktur folder
+│   └── erd.md                              ERD v2: kolom, relasi, index 14 tabel (pemetaan field Jubelio ada di api/integrations.md)
 │
 ├── app/                                    BE
 │   ├── Console/Commands/
@@ -180,7 +180,7 @@ saeful-askar/
 │   ├── Services/
 │   │   ├── Jubelio/
 │   │   │   ├── JubelioClient.php           satu-satunya pemanggil api2.jubelio.com
-│   │   │   ├── JubelioTokenManager.php     token 12 jam di Redis
+│   │   │   ├── JubelioTokenManager.php     token 12 jam di cache database
 │   │   │   ├── ProductSyncService.php
 │   │   │   ├── StockSyncService.php
 │   │   │   ├── ContactService.php
@@ -208,7 +208,7 @@ saeful-askar/
 │   └── xendit.php                          secret_key, callback_token, invoice_duration
 │
 ├── database/                               BE
-│   ├── migrations/                         14 tabel sesuai ERD
+│   ├── migrations/                         14 tabel sesuai docs/erd.md
 │   ├── factories/
 │   └── seeders/
 │       ├── DatabaseSeeder.php
@@ -216,7 +216,7 @@ saeful-askar/
 │       └── DemoCatalogSeeder.php           data contoh untuk FE saat Jubelio belum terhubung
 │
 ├── resources/                              FE
-│   ├── css/app.css                         Tailwind (@tailwind base/components/utilities)
+│   ├── css/app.css                         Tailwind 4 (@import 'tailwindcss')
 │   ├── js/
 │   │   ├── app.js                          inisialisasi Alpine, registrasi komponen
 │   │   ├── api/
@@ -276,7 +276,7 @@ saeful-askar/
 │
 ├── public/  storage/  vendor/
 ├── .env.example
-├── CLAUDE.md                               aturan proyek untuk AI coding agent
+├── README.md                               cara setup lokal & alur branch
 ├── composer.json
 ├── package.json                            alpinejs, tailwindcss, vite
 └── vite.config.js

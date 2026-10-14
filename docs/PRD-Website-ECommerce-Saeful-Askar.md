@@ -1,6 +1,6 @@
 # PRD Website E-Commerce Saeful Askar
 
-14 Oktober 2026 · Penyusun: Ataka
+14 Oktober 2026 · Penyusun: Ataka · Revisi 15 Oktober 2026
 
 ## 1. Ringkasan produk
 
@@ -21,7 +21,7 @@ Website e-commerce Toko Sepeda Listrik Saeful Askar adalah channel penjualan bar
 - Katalog produk (cari, filter kategori, detail varian) yang disinkron dari Jubelio.
 - Registrasi, login, dan buku alamat customer.
 - Keranjang, cek ongkir lewat Jubelio Shipment, checkout, dan pembayaran Xendit.
-- Riwayat dan pelacakan pesanan (status dan nomor resi dari Jubelio).
+- Riwayat dan pelacakan pesanan (status dan nomor resi dari Jubelio), serta pembatalan pesanan yang belum dibayar.
 - Artikel blog yang dikelola admin.
 - Panel admin sederhana: artikel, daftar order, dan sinkron manual.
 
@@ -46,8 +46,9 @@ Ada dua peran di website: customer yang membeli dan admin toko yang mengelola ko
 6. Sebagai customer, saya diarahkan ke halaman bayar Xendit dan tahu batas waktu pembayaran.
 7. Sebagai customer, saya melihat status pesanan dan nomor resi setelah barang dikirim.
 8. Sebagai customer, saya diberi tahu bila pesanan dibatalkan karena batas bayar habis.
-9. Sebagai admin, saya bisa membuat, menyunting, menjadwalkan, dan menerbitkan artikel.
-10. Sebagai admin, saya bisa melihat order website beserta status sinkron ke Jubelio dan menjalankan sinkron katalog manual.
+9. Sebagai customer, saya bisa membatalkan pesanan yang belum saya bayar, agar tagihan ditutup dan stok kembali untuk pembeli lain.
+10. Sebagai admin, saya bisa membuat, menyunting, menjadwalkan, dan menerbitkan artikel.
+11. Sebagai admin, saya bisa melihat order website beserta status sinkron ke Jubelio dan menjalankan sinkron katalog manual.
 
 ## 3. Kebutuhan fungsional
 
@@ -73,6 +74,7 @@ Kebutuhan dibagi per modul; kode di kolom pertama dipakai sebagai acuan di API C
 | F-16 | Admin | Daftar order website dengan status pembayaran dan status sinkron Jubelio; kirim ulang order gagal | Wajib |
 | F-17 | Admin | Tombol sinkron katalog manual dan log sinkron | Sebaiknya |
 | F-18 | Notifikasi | Email konfirmasi order, pembayaran diterima, dan pembatalan | Sebaiknya |
+| F-19 | Pesanan | Customer membatalkan pesanan yang belum dibayar: invoice Xendit ditutup, sales order Jubelio dibatalkan, stok kembali (ORD-05) | Wajib |
 
 **Aturan bisnis.**
 
@@ -112,7 +114,7 @@ Website memakai tiga layanan luar; Jubelio adalah sumber kebenaran untuk katalog
 7. Kedaluwarsa: webhook EXPIRED (atau job cadangan tiap 5 menit) → `cancel` sales order Jubelio → stok kembali → order website `expired`.
 8. Webhook `update-salesorder` (hanya `store_id` website) memperbarui status dan nomor resi.
 
-**Status order website.** `pending_payment` → `paid` → `processing` → `shipped` → `completed`; cabang `expired` (batas bayar habis) dan `cancelled` (dibatalkan di Jubelio).
+**Status order website.** `pending_payment` → `paid` → `processing` → `shipped` → `completed`; cabang `expired` (batas bayar habis) dan `cancelled` (dibatalkan customer sebelum bayar, atau dibatalkan di Jubelio).
 
 ## 5. Kebutuhan non-fungsional
 
@@ -134,22 +136,22 @@ Yang paling penting adalah keandalan integrasi: tidak ada order hilang, ganda, a
 
 Satu aplikasi Laravel monolit: halaman Blade memanggil REST API `/api/v1`, dan semua panggilan ke layanan luar melewati satu lapisan client.
 
-![Diagram arsitektur sistem](diagram-arsitektur-saeful-askar.png)
+Diagram arsitektur dan alur checkout (Mermaid) ada di [`arsitektur-sistem.md`](arsitektur-sistem.md).
 
 Webhook dari Xendit dan Jubelio dicatat dulu lalu diproses di antrean, sehingga event yang dikirim ulang tidak diproses dua kali.
 
 | Lapisan | Teknologi |
 | --- | --- |
-| Backend + halaman | Laravel 11/12, PHP 8.3, Blade |
+| Backend + halaman | Laravel 12, PHP 8.3, Blade |
 | Interaksi frontend | Alpine.js, Tailwind CSS (tanpa Bootstrap), Vite |
 | Autentikasi | Session cookie Laravel (Sanctum stateful) + CSRF |
-| Database | MySQL 8 |
-| Cache dan antrean | Redis (token Jubelio 12 jam, queue job) |
+| Database | MySQL 8 (lokal: MariaDB 10.4 bawaan XAMPP) |
+| Cache dan antrean | Tanpa Redis: driver `database` Laravel untuk cache (token Jubelio 12 jam, tarif ongkir, region), queue job, dan lock sinkron |
 | Integrasi | Jubelio API, Jubelio Shipment API, Xendit Invoice API |
 | Kontrak dan mock | Markdown per modul (`docs/api/*.md`) + mock JSON di frontend |
 | Pengujian | PHPUnit/Pest feature + unit test dengan fixture |
 
-**Model data (ERD v2, 14 tabel).**
+**Model data (ERD v2, 14 tabel).** Rincian kolom, relasi, dan index ada di [`erd.md`](erd.md).
 
 | Kelompok | Tabel | Catatan |
 | --- | --- | --- |
@@ -163,7 +165,7 @@ Konfigurasi integrasi (`store_id` toko website, `location_id` gudang, tax No Tax
 
 ## 7. Struktur folder
 
-Struktur Laravel 11/12 yang sama dengan dokumen arsitektur. Pemilik folder: BE (backend), FE (frontend), BERSAMA (diubah lewat kesepakatan). Titik temu kedua tim adalah folder `docs/api/`, berisi API Contract dalam satu file Markdown per modul.
+Struktur Laravel 12 yang sama dengan dokumen arsitektur. Pemilik folder: BE (backend), FE (frontend), BERSAMA (diubah lewat kesepakatan). Titik temu kedua tim adalah folder `docs/api/`, berisi API Contract dalam satu file Markdown per modul.
 
 ```
 saeful-askar/
@@ -180,8 +182,9 @@ saeful-askar/
 │   │   ├── admin.md                        panel admin: artikel, pesanan, sinkron
 │   │   ├── webhooks.md                     webhook masuk Xendit & Jubelio
 │   │   └── integrations.md                 panggilan keluar ke Jubelio, Jubelio Shipment, Xendit
-│   ├── architecture.md
-│   └── jubelio-mapping.md                  pemetaan field Jubelio → tabel
+│   ├── PRD-Website-ECommerce-Saeful-Askar.md   kebutuhan produk (acuan utama)
+│   ├── arsitektur-sistem.md                diagram arsitektur, alur checkout, struktur folder
+│   └── erd.md                              ERD v2: kolom, relasi, index 14 tabel (pemetaan field Jubelio ada di api/integrations.md)
 │
 ├── app/                                    BE
 │   ├── Console/Commands/
@@ -248,7 +251,7 @@ saeful-askar/
 │   ├── Services/
 │   │   ├── Jubelio/
 │   │   │   ├── JubelioClient.php           satu-satunya pemanggil api2.jubelio.com
-│   │   │   ├── JubelioTokenManager.php     token 12 jam di Redis
+│   │   │   ├── JubelioTokenManager.php     token 12 jam di cache database
 │   │   │   ├── ProductSyncService.php
 │   │   │   ├── StockSyncService.php
 │   │   │   ├── ContactService.php
@@ -276,7 +279,7 @@ saeful-askar/
 │   └── xendit.php                          secret_key, callback_token, invoice_duration
 │
 ├── database/                               BE
-│   ├── migrations/                         14 tabel sesuai ERD
+│   ├── migrations/                         14 tabel sesuai docs/erd.md
 │   ├── factories/
 │   └── seeders/
 │       ├── DatabaseSeeder.php
@@ -284,7 +287,7 @@ saeful-askar/
 │       └── DemoCatalogSeeder.php           data contoh untuk FE saat Jubelio belum terhubung
 │
 ├── resources/                              FE
-│   ├── css/app.css                         Tailwind (@tailwind base/components/utilities)
+│   ├── css/app.css                         Tailwind 4 (@import 'tailwindcss')
 │   ├── js/
 │   │   ├── app.js                          inisialisasi Alpine, registrasi komponen
 │   │   ├── api/
@@ -344,7 +347,7 @@ saeful-askar/
 │
 ├── public/  storage/  vendor/
 ├── .env.example
-├── CLAUDE.md                               aturan proyek untuk AI coding agent
+├── README.md                               cara setup lokal & alur branch
 ├── composer.json
 ├── package.json                            alpinejs, tailwindcss, vite
 └── vite.config.js
@@ -360,6 +363,18 @@ Backend dan frontend mulai bersamaan setelah API Contract disepakati; frontend m
 - Setiap endpoint di file modul memuat Endpoint, User Story, Request Body, Response Success, Response Failed, dan Acceptance Criteria. Frontend menyalin contoh response ke `resources/js/api/mocks/` dan menyalakannya dengan `VITE_API_MOCK=true`; setelah backend siap cukup mematikan mock.
 - Backend menulis feature test yang memastikan response sesuai struktur JSON di dokumen kontrak, dengan fixture Jubelio dan Xendit agar tes tidak memanggil API asli.
 - `DemoCatalogSeeder` mengisi katalog contoh agar halaman bisa diuji sebelum Jubelio tersambung.
+
+**Alur branch Git.**
+
+| Branch | Isi | Aturan |
+| --- | --- | --- |
+| `main` | Versi stabil yang siap rilis | Hanya menerima merge dari `development` setelah uji terpadu |
+| `development` | Integrasi backend + frontend | Menerima merge dari `backend` dan `frontend`; perubahan BERSAMA (kontrak `docs/api/`, `routes/web.php`, fondasi) di-commit di sini |
+| `backend` | Pekerjaan tim backend | Hanya mengubah folder milik BE (lihat §7) |
+| `frontend` | Pekerjaan tim frontend | Hanya mengubah folder milik FE (lihat §7) |
+
+- Perubahan BERSAMA dibuat di `development`, lalu `development` di-merge ke `backend` dan `frontend` agar kedua tim memakai kontrak yang sama.
+- Setelah sebuah modul selesai di kedua sisi, `backend` dan `frontend` di-merge ke `development`; feature test wajib lulus sebelum merge.
 
 **Tahapan.** Tanggal belum ditetapkan; urutannya:
 
@@ -402,4 +417,4 @@ Risiko terbesar adalah dokumentasi API rates Jubelio Shipment yang belum tersedi
 - [ ] Toko internal "Website Saeful Askar" dibuat di Jubelio dan `store_id`-nya dicatat.
 - [ ] Metode pembayaran Xendit yang diaktifkan (VA, e-wallet, QRIS, kartu).
 
-**Di luar lingkup versi 1.** Checkout tanpa login, voucher dan promo website, COD, multi-gudang, ulasan produk, wishlist, aplikasi mobile, chat penjual, dan pengelolaan produk atau stok dari website.
+**Di luar lingkup versi 1.** Checkout tanpa login, voucher dan promo website, COD, multi-gudang, ulasan produk, wishlist, aplikasi mobile, chat penjual, dan pengelolaan produk atau stok dari website. Endpoint admin berikut juga ditunda ke versi 1.1: ADM-01 (dashboard ringkasan), ADM-15 (daftar webhook masuk), ADM-16 (proses ulang webhook), dan ADM-17 (status konfigurasi integrasi); pemeriksaan order dan pemulihan tetap memakai ADM-09 – ADM-12, rekonsiliasi stok terjadwal, dan perintah `php artisan jubelio:setup`.

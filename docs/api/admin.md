@@ -2,6 +2,8 @@
 
 Semua endpoint di file ini wajib login dengan `role = admin` (middleware `EnsureUserIsAdmin`). Customer yang memanggilnya mendapat `403 FORBIDDEN`. Produk, harga, dan stok **tidak** dikelola di sini karena sumbernya Jubelio. Konvensi umum ada di `README.md`.
 
+Versi 1 memuat ADM-02 – ADM-14. ADM-01, ADM-15, ADM-16, dan ADM-17 ditunda ke v1.1 (PRD §9); di v1, order bermasalah ditangani lewat ADM-09 – ADM-12, dan webhook gagal diperiksa langsung di tabel `webhook_events` / log server.
+
 Objek **AdminArticle**:
 
 ```json
@@ -37,7 +39,9 @@ Error yang berlaku untuk semua endpoint admin:
 
 ---
 
-## ADM-01 · Ringkasan dashboard
+## ADM-01 · Ringkasan dashboard (v1.1)
+
+> **Ditunda ke v1.1** (PRD §9). Kontrak disimpan sebagai acuan; endpoint ini tidak dibuat di versi 1.
 
 ### Endpoint
 
@@ -863,7 +867,7 @@ Sebagai admin yang baru mengubah produk di Jubelio, saya ingin menjalankan sinkr
 
 ### Acceptance Criteria
 
-- [ ] Hanya satu sinkron per jenis berjalan bersamaan (lock di Redis).
+- [ ] Hanya satu sinkron per jenis berjalan bersamaan (atomic lock Laravel di cache `database`).
 - [ ] `full` = kategori → produk → stok berurutan, masing-masing dengan baris `sync_logs` sendiri.
 - [ ] Sinkron mematuhi batas 600 request/menit Jubelio.
 
@@ -938,7 +942,9 @@ Tidak ada.
 
 ---
 
-## ADM-15 · Daftar webhook masuk
+## ADM-15 · Daftar webhook masuk (v1.1)
+
+> **Ditunda ke v1.1** (PRD §9). Kontrak disimpan sebagai acuan; endpoint ini tidak dibuat di versi 1.
 
 ### Endpoint
 
@@ -997,7 +1003,9 @@ Tidak ada.
 
 ---
 
-## ADM-16 · Proses ulang webhook
+## ADM-16 · Proses ulang webhook (v1.1)
+
+> **Ditunda ke v1.1** (PRD §9). Kontrak disimpan sebagai acuan; endpoint ini tidak dibuat di versi 1.
 
 ### Endpoint
 
@@ -1048,7 +1056,9 @@ Tidak ada.
 
 ---
 
-## ADM-17 · Status konfigurasi integrasi
+## ADM-17 · Status konfigurasi integrasi (v1.1)
+
+> **Ditunda ke v1.1** (PRD §9). Kontrak disimpan sebagai acuan; endpoint ini tidak dibuat di versi 1.
 
 ### Endpoint
 

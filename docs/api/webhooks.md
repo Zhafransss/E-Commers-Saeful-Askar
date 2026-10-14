@@ -107,7 +107,7 @@ Dikirim Xendit. Field yang dipakai:
     - [ ] `payments.status = EXPIRED`, order → `expired`, `cancel_reason = "Batas waktu pembayaran habis"`.
     - [ ] Job `CancelSalesOrderJob` memanggil INT-JB-12 agar stok kembali.
     - [ ] Email "Pesanan dibatalkan" dikirim ke customer.
-- [ ] `paid_amount` ≠ `amount` → order tidak diubah, event `failed`, muncul di ADM-15 untuk dicek admin.
+- [ ] `paid_amount` ≠ `amount` → order tidak diubah, event `failed` dan dicatat di log dengan level `warning` untuk dicek admin (daftar di ADM-15 menyusul di v1.1).
 - [ ] `PAID` untuk order yang sudah `expired`/`cancelled` → order tidak diubah, event `failed` dengan pesan "Dibayar setelah dibatalkan — perlu refund/proses manual".
 - [ ] `external_id` tidak dikenal → event `ignored`, balas 200.
 - [ ] Job cadangan `ExpireUnpaidOrders` (tiap 5 menit) menjalankan alur `EXPIRED` untuk order yang lewat `payment_expires_at` setelah memastikan status invoice di Xendit (INT-XD-02).
@@ -370,7 +370,7 @@ Payload sales order lengkap dari Jubelio. Field yang dipakai:
 ### Acceptance Criteria
 
 - [ ] Order dari toko lain (Shopee, dll.) → event `ignored`.
-- [ ] Order dicari lewat `salesorder_id`, cadangan `ref_no`; tidak ketemu → event `failed` (terlihat di ADM-15).
+- [ ] Order dicari lewat `salesorder_id`, cadangan `ref_no`; tidak ketemu → event `failed` dan dicatat di log (daftar di ADM-15 menyusul di v1.1).
 - [ ] Event dengan `last_modified` lebih lama dari yang terakhir diproses untuk order itu → `ignored`.
 - [ ] Pemetaan status (urutan pengecekan dari atas; nilai pasti dikonfirmasi dengan contoh webhook asli saat uji coba):
 

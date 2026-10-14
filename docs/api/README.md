@@ -4,7 +4,7 @@ Dokumen ini adalah kontrak antara frontend (Blade + Alpine.js) dan backend (Lara
 
 - Versi: 1.0
 - Tanggal: 14 Oktober 2026
-- Acuan: PRD Website E-Commerce Saeful Askar, ERD v2, dokumen riset API Jubelio
+- Acuan: PRD Website E-Commerce Saeful Askar (`../PRD-Website-ECommerce-Saeful-Askar.md`), ERD v2 (`../erd.md`), dokumen riset API Jubelio
 
 ## Isi folder
 
@@ -449,7 +449,7 @@ ID wilayah mengikuti endpoint Region Jubelio (string). Response REG-04 (keluraha
 
 ## Indeks endpoint
 
-Total **58 endpoint** milik website: 53 dipanggil frontend dan 5 webhook masuk. Ditambah 18 kelompok panggilan keluar (INT-JB-01 – INT-JB-14, INT-JS-01, INT-XD-01 – INT-XD-03) dan aturan umumnya (INT-HDL) di `integrations.md`.
+Total **58 endpoint** milik website: 53 dipanggil frontend dan 5 webhook masuk. Empat endpoint admin bertanda **(v1.1)** — ADM-01, ADM-15, ADM-16, ADM-17 — ditunda sesuai PRD §9, sehingga versi 1 berisi **54 endpoint** (49 frontend + 5 webhook). Kontraknya tetap disimpan di `admin.md` sebagai acuan v1.1. Ditambah 18 kelompok panggilan keluar (INT-JB-01 – INT-JB-14, INT-JS-01, INT-XD-01 – INT-XD-03) dan aturan umumnya (INT-HDL) di `integrations.md`.
 
 ### Untuk frontend (`/api/v1`, kecuali CSRF)
 
@@ -488,10 +488,10 @@ Total **58 endpoint** milik website: 53 dipanggil frontend dan 5 webhook masuk. 
 | ORD-02 | GET | `/orders` | Customer | checkout-orders.md | F-12 |
 | ORD-03 | GET | `/orders/{order_number}` | Customer | checkout-orders.md | F-12 |
 | ORD-04 | GET | `/orders/{order_number}/payment` | Customer | checkout-orders.md | F-09, F-10 |
-| ORD-05 | POST | `/orders/{order_number}/cancel` | Customer | checkout-orders.md | F-11 |
+| ORD-05 | POST | `/orders/{order_number}/cancel` | Customer | checkout-orders.md | F-19 |
 | ART-01 | GET | `/articles` | Publik | articles.md | F-14 |
 | ART-02 | GET | `/articles/{slug}` | Publik | articles.md | F-14 |
-| ADM-01 | GET | `/admin/dashboard` | Admin | admin.md | F-16, F-17 |
+| ADM-01 (v1.1) | GET | `/admin/dashboard` | Admin | admin.md | F-16, F-17 |
 | ADM-02 | GET | `/admin/articles` | Admin | admin.md | F-15 |
 | ADM-03 | POST | `/admin/articles` | Admin | admin.md | F-15 |
 | ADM-04 | GET | `/admin/articles/{id}` | Admin | admin.md | F-15 |
@@ -505,9 +505,9 @@ Total **58 endpoint** milik website: 53 dipanggil frontend dan 5 webhook masuk. 
 | ADM-12 | POST | `/admin/orders/{order_number}/refresh-payment` | Admin | admin.md | F-16 |
 | ADM-13 | POST | `/admin/sync` | Admin | admin.md | F-17 |
 | ADM-14 | GET | `/admin/sync-logs` | Admin | admin.md | F-17 |
-| ADM-15 | GET | `/admin/webhook-events` | Admin | admin.md | F-16 |
-| ADM-16 | POST | `/admin/webhook-events/{id}/retry` | Admin | admin.md | F-16 |
-| ADM-17 | GET | `/admin/settings/integrations` | Admin | admin.md | F-16 |
+| ADM-15 (v1.1) | GET | `/admin/webhook-events` | Admin | admin.md | F-16 |
+| ADM-16 (v1.1) | POST | `/admin/webhook-events/{id}/retry` | Admin | admin.md | F-16 |
+| ADM-17 (v1.1) | GET | `/admin/settings/integrations` | Admin | admin.md | F-16 |
 
 ### Webhook masuk (`/webhooks`)
 
@@ -558,6 +558,6 @@ Total **58 endpoint** milik website: 53 dipanggil frontend dan 5 webhook masuk. 
 | `SLUG_TAKEN` | 422 | ADM-03, ADM-05 |
 | `ALREADY_SYNCED` | 409 | ADM-11 |
 | `SYNC_ALREADY_RUNNING` | 409 | ADM-13 |
-| `WEBHOOK_EVENT_NOT_FOUND` | 404 | ADM-16 |
+| `WEBHOOK_EVENT_NOT_FOUND` | 404 | ADM-16 (v1.1) |
 | `INVALID_CALLBACK_TOKEN` | 401 | WH-01 |
 | `INVALID_SIGNATURE` | 401 | WH-02 – WH-05 |
