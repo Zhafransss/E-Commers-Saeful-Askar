@@ -13,9 +13,12 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table): void {
             $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->string('no_hp')->unique();
+            $table->string('name', 100);
+            $table->string('email', 191)->unique();
+            // Nullable only for seeded admins; checkout rejects PROFILE_INCOMPLETE without it.
+            $table->string('phone', 15)->nullable();
+            $table->string('role', 20)->default('customer');
+            $table->unsignedBigInteger('jubelio_contact_id')->nullable()->index();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();

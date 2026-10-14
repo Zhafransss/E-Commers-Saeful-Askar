@@ -1,0 +1,1446 @@
+{
+  "GET /sanctum/csrf-cookie": {
+    "code": "AUTH-01",
+    "status": 204,
+    "body": null
+  },
+  "POST /api/v1/auth/register": {
+    "code": "AUTH-02",
+    "status": 201,
+    "body": {
+      "data": {
+        "id": 21,
+        "name": "Budi Santoso",
+        "email": "budi@example.com",
+        "phone": "081234567890",
+        "role": "customer",
+        "email_verified_at": null,
+        "has_default_address": false,
+        "created_at": "2026-10-14T21:00:00+07:00"
+      }
+    }
+  },
+  "POST /api/v1/auth/login": {
+    "code": "AUTH-03",
+    "status": 200,
+    "body": {
+      "data": {
+        "id": 21,
+        "name": "Budi Santoso",
+        "email": "budi@example.com",
+        "phone": "081234567890",
+        "role": "customer",
+        "email_verified_at": null,
+        "has_default_address": true,
+        "created_at": "2026-10-14T21:00:00+07:00"
+      }
+    }
+  },
+  "POST /api/v1/auth/logout": {
+    "code": "AUTH-04",
+    "status": 200,
+    "body": {
+      "message": "Berhasil keluar."
+    }
+  },
+  "GET /api/v1/auth/me": {
+    "code": "AUTH-05",
+    "status": 200,
+    "body": {
+      "data": {
+        "id": 21,
+        "name": "Budi Santoso",
+        "email": "budi@example.com",
+        "phone": "081234567890",
+        "role": "customer",
+        "email_verified_at": null,
+        "has_default_address": true,
+        "created_at": "2026-10-14T21:00:00+07:00"
+      }
+    }
+  },
+  "PUT /api/v1/auth/profile": {
+    "code": "AUTH-06",
+    "status": 200,
+    "body": {
+      "data": {
+        "id": 21,
+        "name": "Budi Santoso",
+        "email": "budi@example.com",
+        "phone": "081298765432",
+        "role": "customer",
+        "email_verified_at": null,
+        "has_default_address": true,
+        "created_at": "2026-10-14T21:00:00+07:00"
+      }
+    }
+  },
+  "PUT /api/v1/auth/password": {
+    "code": "AUTH-07",
+    "status": 200,
+    "body": {
+      "message": "Password berhasil diubah."
+    }
+  },
+  "POST /api/v1/auth/forgot-password": {
+    "code": "AUTH-08",
+    "status": 200,
+    "body": {
+      "message": "Jika email terdaftar, tautan reset password sudah dikirim."
+    }
+  },
+  "POST /api/v1/auth/reset-password": {
+    "code": "AUTH-09",
+    "status": 200,
+    "body": {
+      "message": "Password berhasil diatur ulang. Silakan masuk."
+    }
+  },
+  "GET /api/v1/categories": {
+    "code": "CAT-01",
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": 4,
+          "name": "Baterai",
+          "slug": "baterai",
+          "parent_id": null,
+          "product_count": 7
+        },
+        {
+          "id": 3,
+          "name": "Sepeda Listrik",
+          "slug": "sepeda-listrik",
+          "parent_id": null,
+          "product_count": 18
+        },
+        {
+          "id": 9,
+          "name": "Sepeda Listrik Lipat",
+          "slug": "sepeda-listrik-lipat",
+          "parent_id": 3,
+          "product_count": 5
+        }
+      ]
+    }
+  },
+  "GET /api/v1/products": {
+    "code": "CAT-02",
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": 12,
+          "slug": "sepeda-listrik-uwinfly-c1-pro",
+          "name": "Sepeda Listrik Uwinfly C1 Pro",
+          "category": {
+            "id": 3,
+            "name": "Sepeda Listrik",
+            "slug": "sepeda-listrik"
+          },
+          "thumbnail_url": "https://jubelio.blob.core.windows.net/images/abc/thumb.jpg",
+          "price_min": 6750000,
+          "price_max": 7250000,
+          "total_available_qty": 9,
+          "in_stock": true,
+          "variant_count": 3
+        },
+        {
+          "id": 15,
+          "slug": "baterai-lithium-48v",
+          "name": "Baterai Lithium 48V",
+          "category": {
+            "id": 4,
+            "name": "Baterai",
+            "slug": "baterai"
+          },
+          "thumbnail_url": "https://jubelio.blob.core.windows.net/images/def/thumb.jpg",
+          "price_min": 2100000,
+          "price_max": 3400000,
+          "total_available_qty": 0,
+          "in_stock": false,
+          "variant_count": 2
+        }
+      ],
+      "meta": {
+        "current_page": 1,
+        "per_page": 12,
+        "total": 25,
+        "last_page": 3
+      }
+    }
+  },
+  "GET /api/v1/products/{slug}": {
+    "code": "CAT-03",
+    "status": 200,
+    "body": {
+      "data": {
+        "id": 12,
+        "slug": "sepeda-listrik-uwinfly-c1-pro",
+        "name": "Sepeda Listrik Uwinfly C1 Pro",
+        "category": {
+          "id": 3,
+          "name": "Sepeda Listrik",
+          "slug": "sepeda-listrik"
+        },
+        "brand_name": "Uwinfly",
+        "description_html": "<p>Motor 500W, baterai 48V 12Ah, jarak tempuh hingga 45 km.</p>",
+        "sell_unit": "Unit",
+        "min_qty": 1,
+        "max_qty": 2,
+        "package_dimensions": {
+          "length": 150,
+          "width": 30,
+          "height": 80
+        },
+        "images": [
+          {
+            "id": 101,
+            "url": "https://jubelio.blob.core.windows.net/images/abc/1.jpg",
+            "thumbnail_url": "https://jubelio.blob.core.windows.net/images/abc/1-thumb.jpg",
+            "variant_id": null,
+            "sort_order": 0
+          },
+          {
+            "id": 102,
+            "url": "https://jubelio.blob.core.windows.net/images/abc/hitam.jpg",
+            "thumbnail_url": "https://jubelio.blob.core.windows.net/images/abc/hitam-thumb.jpg",
+            "variant_id": 31,
+            "sort_order": 1
+          }
+        ],
+        "variations": [
+          {
+            "label": "Warna",
+            "values": [
+              "Hitam",
+              "Putih"
+            ]
+          }
+        ],
+        "variants": [
+          {
+            "id": 31,
+            "sku": "UWF-C1PRO-HTM",
+            "name": "Sepeda Listrik Uwinfly C1 Pro - Hitam",
+            "variation_values": [
+              {
+                "label": "Warna",
+                "value": "Hitam"
+              }
+            ],
+            "price": 6750000,
+            "available_qty": 4,
+            "in_stock": true,
+            "package_weight": 32000,
+            "image_url": "https://jubelio.blob.core.windows.net/images/abc/hitam.jpg"
+          },
+          {
+            "id": 32,
+            "sku": "UWF-C1PRO-PTH",
+            "name": "Sepeda Listrik Uwinfly C1 Pro - Putih",
+            "variation_values": [
+              {
+                "label": "Warna",
+                "value": "Putih"
+              }
+            ],
+            "price": 7250000,
+            "available_qty": 0,
+            "in_stock": false,
+            "package_weight": 32000,
+            "image_url": null
+          }
+        ],
+        "price_min": 6750000,
+        "price_max": 7250000,
+        "in_stock": true,
+        "updated_at": "2026-10-14T20:15:00+07:00"
+      }
+    }
+  },
+  "GET /api/v1/cart": {
+    "code": "CART-01",
+    "status": 200,
+    "body": {
+      "data": {
+        "items": [
+          {
+            "id": 5,
+            "variant": {
+              "id": 31,
+              "sku": "UWF-C1PRO-HTM",
+              "name": "Sepeda Listrik Uwinfly C1 Pro - Hitam",
+              "variation_values": [
+                {
+                  "label": "Warna",
+                  "value": "Hitam"
+                }
+              ],
+              "price": 6750000,
+              "available_qty": 4,
+              "in_stock": true,
+              "package_weight": 32000,
+              "image_url": "https://jubelio.blob.core.windows.net/images/abc/hitam.jpg"
+            },
+            "product": {
+              "id": 12,
+              "slug": "sepeda-listrik-uwinfly-c1-pro",
+              "name": "Sepeda Listrik Uwinfly C1 Pro",
+              "min_qty": 1,
+              "max_qty": 2
+            },
+            "qty": 1,
+            "subtotal": 6750000,
+            "weight_total": 32000,
+            "issue": null
+          },
+          {
+            "id": 6,
+            "variant": {
+              "id": 41,
+              "sku": "BAT-48V-20AH",
+              "name": "Baterai Lithium 48V - 20Ah",
+              "variation_values": [
+                {
+                  "label": "Kapasitas",
+                  "value": "20Ah"
+                }
+              ],
+              "price": 3400000,
+              "available_qty": 1,
+              "in_stock": true,
+              "package_weight": 9500,
+              "image_url": null
+            },
+            "product": {
+              "id": 15,
+              "slug": "baterai-lithium-48v",
+              "name": "Baterai Lithium 48V",
+              "min_qty": null,
+              "max_qty": null
+            },
+            "qty": 2,
+            "subtotal": 6800000,
+            "weight_total": 19000,
+            "issue": "QTY_EXCEEDS_STOCK"
+          }
+        ],
+        "summary": {
+          "item_count": 2,
+          "total_qty": 3,
+          "subtotal": 13550000,
+          "total_weight": 51000,
+          "has_issue": true
+        }
+      }
+    }
+  },
+  "POST /api/v1/cart/items": {
+    "code": "CART-02",
+    "status": 201,
+    "body": {
+      "data": {
+        "items": [
+          {
+            "id": 5,
+            "variant": {
+              "id": 31,
+              "sku": "UWF-C1PRO-HTM",
+              "name": "Sepeda Listrik Uwinfly C1 Pro - Hitam",
+              "variation_values": [
+                {
+                  "label": "Warna",
+                  "value": "Hitam"
+                }
+              ],
+              "price": 6750000,
+              "available_qty": 4,
+              "in_stock": true,
+              "package_weight": 32000,
+              "image_url": "https://jubelio.blob.core.windows.net/images/abc/hitam.jpg"
+            },
+            "product": {
+              "id": 12,
+              "slug": "sepeda-listrik-uwinfly-c1-pro",
+              "name": "Sepeda Listrik Uwinfly C1 Pro",
+              "min_qty": 1,
+              "max_qty": 2
+            },
+            "qty": 1,
+            "subtotal": 6750000,
+            "weight_total": 32000,
+            "issue": null
+          }
+        ],
+        "summary": {
+          "item_count": 1,
+          "total_qty": 1,
+          "subtotal": 6750000,
+          "total_weight": 32000,
+          "has_issue": false
+        }
+      },
+      "message": "Produk ditambahkan ke keranjang."
+    }
+  },
+  "PATCH /api/v1/cart/items/{id}": {
+    "code": "CART-03",
+    "status": 200,
+    "body": {
+      "data": {
+        "items": [
+          {
+            "id": 5,
+            "variant": {
+              "id": 31,
+              "sku": "UWF-C1PRO-HTM",
+              "name": "Sepeda Listrik Uwinfly C1 Pro - Hitam",
+              "variation_values": [
+                {
+                  "label": "Warna",
+                  "value": "Hitam"
+                }
+              ],
+              "price": 6750000,
+              "available_qty": 4,
+              "in_stock": true,
+              "package_weight": 32000,
+              "image_url": "https://jubelio.blob.core.windows.net/images/abc/hitam.jpg"
+            },
+            "product": {
+              "id": 12,
+              "slug": "sepeda-listrik-uwinfly-c1-pro",
+              "name": "Sepeda Listrik Uwinfly C1 Pro",
+              "min_qty": 1,
+              "max_qty": 2
+            },
+            "qty": 2,
+            "subtotal": 13500000,
+            "weight_total": 64000,
+            "issue": null
+          }
+        ],
+        "summary": {
+          "item_count": 1,
+          "total_qty": 2,
+          "subtotal": 13500000,
+          "total_weight": 64000,
+          "has_issue": false
+        }
+      }
+    }
+  },
+  "DELETE /api/v1/cart/items/{id}": {
+    "code": "CART-04",
+    "status": 200,
+    "body": {
+      "data": {
+        "items": [],
+        "summary": {
+          "item_count": 0,
+          "total_qty": 0,
+          "subtotal": 0,
+          "total_weight": 0,
+          "has_issue": false
+        }
+      },
+      "message": "Produk dihapus dari keranjang."
+    }
+  },
+  "DELETE /api/v1/cart": {
+    "code": "CART-05",
+    "status": 200,
+    "body": {
+      "data": {
+        "items": [],
+        "summary": {
+          "item_count": 0,
+          "total_qty": 0,
+          "subtotal": 0,
+          "total_weight": 0,
+          "has_issue": false
+        }
+      },
+      "message": "Keranjang dikosongkan."
+    }
+  },
+  "GET /api/v1/cart/count": {
+    "code": "CART-06",
+    "status": 200,
+    "body": {
+      "data": {
+        "total_qty": 3,
+        "has_issue": true
+      }
+    }
+  },
+  "GET /api/v1/regions/provinces": {
+    "code": "REG-01",
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "36",
+          "name": "BANTEN"
+        },
+        {
+          "id": "31",
+          "name": "DKI JAKARTA"
+        },
+        {
+          "id": "32",
+          "name": "JAWA BARAT"
+        }
+      ]
+    }
+  },
+  "GET /api/v1/regions/cities": {
+    "code": "REG-02",
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "3216",
+          "name": "KAB. BEKASI"
+        },
+        {
+          "id": "3275",
+          "name": "KOTA BEKASI"
+        }
+      ]
+    }
+  },
+  "GET /api/v1/regions/districts": {
+    "code": "REG-03",
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "321612",
+          "name": "TAMBUN UTARA"
+        },
+        {
+          "id": "321611",
+          "name": "TAMBUN SELATAN"
+        }
+      ]
+    }
+  },
+  "GET /api/v1/regions/subdistricts": {
+    "code": "REG-04",
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "3216122004",
+          "name": "Satriajaya",
+          "post_code": null
+        },
+        {
+          "id": "3216122001",
+          "name": "Srijaya",
+          "post_code": null
+        }
+      ]
+    }
+  },
+  "GET /api/v1/addresses": {
+    "code": "ADDR-01",
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": 7,
+          "label": "Rumah",
+          "recipient_name": "Budi Santoso",
+          "phone": "081234567890",
+          "address_line": "Jl. Melati No. 12, RT 03/RW 05",
+          "province": {
+            "id": "32",
+            "name": "JAWA BARAT"
+          },
+          "city": {
+            "id": "3216",
+            "name": "KAB. BEKASI"
+          },
+          "district": {
+            "id": "321612",
+            "name": "TAMBUN UTARA"
+          },
+          "subdistrict": {
+            "id": "3216122004",
+            "name": "Satriajaya"
+          },
+          "post_code": "17565",
+          "is_default": true,
+          "created_at": "2026-10-14T21:00:00+07:00",
+          "updated_at": "2026-10-14T21:00:00+07:00"
+        }
+      ]
+    }
+  },
+  "POST /api/v1/addresses": {
+    "code": "ADDR-02",
+    "status": 201,
+    "body": {
+      "data": {
+        "id": 7,
+        "label": "Rumah",
+        "recipient_name": "Budi Santoso",
+        "phone": "081234567890",
+        "address_line": "Jl. Melati No. 12, RT 03/RW 05",
+        "province": {
+          "id": "32",
+          "name": "JAWA BARAT"
+        },
+        "city": {
+          "id": "3216",
+          "name": "KAB. BEKASI"
+        },
+        "district": {
+          "id": "321612",
+          "name": "TAMBUN UTARA"
+        },
+        "subdistrict": {
+          "id": "3216122004",
+          "name": "Satriajaya"
+        },
+        "post_code": "17565",
+        "is_default": true,
+        "created_at": "2026-10-14T21:00:00+07:00",
+        "updated_at": "2026-10-14T21:00:00+07:00"
+      },
+      "message": "Alamat disimpan."
+    }
+  },
+  "GET /api/v1/addresses/{id}": {
+    "code": "ADDR-03",
+    "status": 200,
+    "body": {
+      "data": {
+        "id": 7,
+        "label": "Rumah",
+        "recipient_name": "Budi Santoso",
+        "phone": "081234567890",
+        "address_line": "Jl. Melati No. 12, RT 03/RW 05",
+        "province": {
+          "id": "32",
+          "name": "JAWA BARAT"
+        },
+        "city": {
+          "id": "3216",
+          "name": "KAB. BEKASI"
+        },
+        "district": {
+          "id": "321612",
+          "name": "TAMBUN UTARA"
+        },
+        "subdistrict": {
+          "id": "3216122004",
+          "name": "Satriajaya"
+        },
+        "post_code": "17565",
+        "is_default": true,
+        "created_at": "2026-10-14T21:00:00+07:00",
+        "updated_at": "2026-10-14T21:00:00+07:00"
+      }
+    }
+  },
+  "PUT /api/v1/addresses/{id}": {
+    "code": "ADDR-04",
+    "status": 200,
+    "body": {
+      "data": {
+        "id": 7,
+        "label": "Rumah",
+        "recipient_name": "Budi Santoso",
+        "phone": "081234567890",
+        "address_line": "Jl. Melati No. 14, RT 03/RW 05, dekat masjid",
+        "province": {
+          "id": "32",
+          "name": "JAWA BARAT"
+        },
+        "city": {
+          "id": "3216",
+          "name": "KAB. BEKASI"
+        },
+        "district": {
+          "id": "321612",
+          "name": "TAMBUN UTARA"
+        },
+        "subdistrict": {
+          "id": "3216122004",
+          "name": "Satriajaya"
+        },
+        "post_code": "17565",
+        "is_default": true,
+        "created_at": "2026-10-14T21:00:00+07:00",
+        "updated_at": "2026-10-14T21:20:00+07:00"
+      },
+      "message": "Alamat diperbarui."
+    }
+  },
+  "DELETE /api/v1/addresses/{id}": {
+    "code": "ADDR-05",
+    "status": 200,
+    "body": {
+      "message": "Alamat dihapus."
+    }
+  },
+  "PATCH /api/v1/addresses/{id}/default": {
+    "code": "ADDR-06",
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": 8,
+          "label": "Kantor",
+          "recipient_name": "Budi Santoso",
+          "phone": "081234567890",
+          "address_line": "Gedung Graha Lt. 3, Jl. Sudirman No. 1",
+          "province": {
+            "id": "31",
+            "name": "DKI JAKARTA"
+          },
+          "city": {
+            "id": "3171",
+            "name": "KOTA ADM. JAKARTA SELATAN"
+          },
+          "district": {
+            "id": "317101",
+            "name": "SETIABUDI"
+          },
+          "subdistrict": {
+            "id": "3171011001",
+            "name": "Karet"
+          },
+          "post_code": "12920",
+          "is_default": true,
+          "created_at": "2026-10-14T21:10:00+07:00",
+          "updated_at": "2026-10-14T21:25:00+07:00"
+        }
+      ],
+      "message": "Alamat utama diperbarui."
+    }
+  },
+  "POST /api/v1/shipping/rates": {
+    "code": "SHIP-01",
+    "status": 200,
+    "body": {
+      "data": {
+        "origin": {
+          "name": "Gudang Tambun Utara",
+          "district": "TAMBUN UTARA",
+          "city": "KAB. BEKASI",
+          "post_code": "17566"
+        },
+        "destination": {
+          "address_id": 7,
+          "district": "TAMBUN UTARA",
+          "city": "KAB. BEKASI",
+          "province": "JAWA BARAT",
+          "post_code": "17565"
+        },
+        "package": {
+          "total_weight": 32000,
+          "item_count": 1,
+          "subtotal": 6750000
+        },
+        "rates": [
+          {
+            "rate_id": "rt_9f2c1a7e",
+            "courier_code": "jne",
+            "courier_name": "JNE",
+            "service_code": "JTR",
+            "service_name": "JNE Trucking",
+            "service_type": "cargo",
+            "cost": 185000,
+            "insurance_cost": 0,
+            "etd_min_days": 3,
+            "etd_max_days": 5,
+            "etd_text": "3–5 hari"
+          },
+          {
+            "rate_id": "rt_1b77d0c2",
+            "courier_code": "sap",
+            "courier_name": "SAP Express",
+            "service_code": "CARGO",
+            "service_name": "SAP Cargo",
+            "service_type": "cargo",
+            "cost": 210000,
+            "insurance_cost": 0,
+            "etd_min_days": 2,
+            "etd_max_days": 4,
+            "etd_text": "2–4 hari"
+          }
+        ],
+        "expires_at": "2026-10-14T22:00:00+07:00"
+      }
+    }
+  },
+  "POST /api/v1/checkout": {
+    "code": "ORD-01",
+    "status": 201,
+    "body": {
+      "data": {
+        "order": {
+          "order_number": "WEB-000123",
+          "status": "pending_payment",
+          "status_label": "Menunggu pembayaran",
+          "items": [
+            {
+              "id": 88,
+              "variant_id": 31,
+              "sku": "UWF-C1PRO-HTM",
+              "product_name": "Sepeda Listrik Uwinfly C1 Pro",
+              "variant_name": "Hitam",
+              "image_url": "https://jubelio.blob.core.windows.net/images/abc/hitam.jpg",
+              "price": 6750000,
+              "qty": 1,
+              "weight_gram": 32000,
+              "subtotal": 6750000
+            }
+          ],
+          "shipping_address": {
+            "recipient_name": "Budi Santoso",
+            "phone": "081234567890",
+            "address_line": "Jl. Melati No. 12, RT 03/RW 05",
+            "subdistrict": "Satriajaya",
+            "district": "TAMBUN UTARA",
+            "city": "KAB. BEKASI",
+            "province": "JAWA BARAT",
+            "post_code": "17565"
+          },
+          "shipping": {
+            "courier_code": "jne",
+            "courier_name": "JNE",
+            "service_code": "JTR",
+            "service_name": "JNE Trucking",
+            "tracking_no": null,
+            "etd_text": "3–5 hari"
+          },
+          "amounts": {
+            "subtotal": 6750000,
+            "shipping_cost": 185000,
+            "insurance_cost": 0,
+            "discount": 0,
+            "tax": 0,
+            "grand_total": 6935000
+          },
+          "payment": {
+            "status": "PENDING",
+            "invoice_url": "https://checkout.xendit.co/web/6527a1b2c3d4e5f6a7b8c9d0",
+            "payment_method": null,
+            "payment_channel": null,
+            "expires_at": "2026-10-14T23:30:00+07:00",
+            "paid_at": null
+          },
+          "note": "Tolong dibungkus kardus tebal",
+          "status_history": [
+            {
+              "status": "pending_payment",
+              "label": "Menunggu pembayaran",
+              "at": "2026-10-14T21:30:00+07:00"
+            }
+          ],
+          "can_pay": true,
+          "can_cancel": true,
+          "payment_expires_at": "2026-10-14T23:30:00+07:00",
+          "created_at": "2026-10-14T21:30:00+07:00"
+        },
+        "redirect_url": "https://checkout.xendit.co/web/6527a1b2c3d4e5f6a7b8c9d0"
+      }
+    }
+  },
+  "GET /api/v1/orders": {
+    "code": "ORD-02",
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "order_number": "WEB-000123",
+          "status": "pending_payment",
+          "status_label": "Menunggu pembayaran",
+          "item_count": 1,
+          "first_item": {
+            "name": "Sepeda Listrik Uwinfly C1 Pro - Hitam",
+            "image_url": "https://jubelio.blob.core.windows.net/images/abc/hitam.jpg"
+          },
+          "grand_total": 6935000,
+          "payment_expires_at": "2026-10-14T23:30:00+07:00",
+          "created_at": "2026-10-14T21:30:00+07:00"
+        }
+      ],
+      "meta": {
+        "current_page": 1,
+        "per_page": 10,
+        "total": 1,
+        "last_page": 1
+      }
+    }
+  },
+  "GET /api/v1/orders/{order_number}": {
+    "code": "ORD-03",
+    "status": 200,
+    "body": {
+      "data": {
+        "order_number": "WEB-000123",
+        "status": "shipped",
+        "status_label": "Dikirim",
+        "items": [
+          {
+            "id": 88,
+            "variant_id": 31,
+            "sku": "UWF-C1PRO-HTM",
+            "product_name": "Sepeda Listrik Uwinfly C1 Pro",
+            "variant_name": "Hitam",
+            "image_url": "https://jubelio.blob.core.windows.net/images/abc/hitam.jpg",
+            "price": 6750000,
+            "qty": 1,
+            "weight_gram": 32000,
+            "subtotal": 6750000
+          }
+        ],
+        "shipping_address": {
+          "recipient_name": "Budi Santoso",
+          "phone": "081234567890",
+          "address_line": "Jl. Melati No. 12, RT 03/RW 05",
+          "subdistrict": "Satriajaya",
+          "district": "TAMBUN UTARA",
+          "city": "KAB. BEKASI",
+          "province": "JAWA BARAT",
+          "post_code": "17565"
+        },
+        "shipping": {
+          "courier_code": "jne",
+          "courier_name": "JNE",
+          "service_code": "JTR",
+          "service_name": "JNE Trucking",
+          "tracking_no": "JT1234567890",
+          "etd_text": "3–5 hari"
+        },
+        "amounts": {
+          "subtotal": 6750000,
+          "shipping_cost": 185000,
+          "insurance_cost": 0,
+          "discount": 0,
+          "tax": 0,
+          "grand_total": 6935000
+        },
+        "payment": {
+          "status": "PAID",
+          "invoice_url": null,
+          "payment_method": "BANK_TRANSFER",
+          "payment_channel": "BCA",
+          "expires_at": "2026-10-14T23:30:00+07:00",
+          "paid_at": "2026-10-14T21:42:10+07:00"
+        },
+        "note": "Tolong dibungkus kardus tebal",
+        "status_history": [
+          {
+            "status": "pending_payment",
+            "label": "Menunggu pembayaran",
+            "at": "2026-10-14T21:30:00+07:00"
+          },
+          {
+            "status": "paid",
+            "label": "Dibayar",
+            "at": "2026-10-14T21:42:10+07:00"
+          },
+          {
+            "status": "processing",
+            "label": "Diproses gudang",
+            "at": "2026-10-15T09:10:00+07:00"
+          },
+          {
+            "status": "shipped",
+            "label": "Dikirim",
+            "at": "2026-10-15T15:05:00+07:00"
+          }
+        ],
+        "can_pay": false,
+        "can_cancel": false,
+        "payment_expires_at": "2026-10-14T23:30:00+07:00",
+        "created_at": "2026-10-14T21:30:00+07:00"
+      }
+    }
+  },
+  "GET /api/v1/orders/{order_number}/payment": {
+    "code": "ORD-04",
+    "status": 200,
+    "body": {
+      "data": {
+        "order_number": "WEB-000123",
+        "status": "PENDING",
+        "invoice_url": "https://checkout.xendit.co/web/6527a1b2c3d4e5f6a7b8c9d0",
+        "amount": 6935000,
+        "expires_at": "2026-10-14T23:30:00+07:00",
+        "seconds_left": 5400
+      }
+    }
+  },
+  "POST /api/v1/orders/{order_number}/cancel": {
+    "code": "ORD-05",
+    "status": 200,
+    "body": {
+      "data": {
+        "order_number": "WEB-000123",
+        "status": "cancelled",
+        "status_label": "Dibatalkan",
+        "items": [
+          {
+            "id": 88,
+            "variant_id": 31,
+            "sku": "UWF-C1PRO-HTM",
+            "product_name": "Sepeda Listrik Uwinfly C1 Pro",
+            "variant_name": "Hitam",
+            "image_url": "https://jubelio.blob.core.windows.net/images/abc/hitam.jpg",
+            "price": 6750000,
+            "qty": 1,
+            "weight_gram": 32000,
+            "subtotal": 6750000
+          }
+        ],
+        "shipping_address": {
+          "recipient_name": "Budi Santoso",
+          "phone": "081234567890",
+          "address_line": "Jl. Melati No. 12, RT 03/RW 05",
+          "subdistrict": "Satriajaya",
+          "district": "TAMBUN UTARA",
+          "city": "KAB. BEKASI",
+          "province": "JAWA BARAT",
+          "post_code": "17565"
+        },
+        "shipping": {
+          "courier_code": "jne",
+          "courier_name": "JNE",
+          "service_code": "JTR",
+          "service_name": "JNE Trucking",
+          "tracking_no": null,
+          "etd_text": "3–5 hari"
+        },
+        "amounts": {
+          "subtotal": 6750000,
+          "shipping_cost": 185000,
+          "insurance_cost": 0,
+          "discount": 0,
+          "tax": 0,
+          "grand_total": 6935000
+        },
+        "payment": {
+          "status": "EXPIRED",
+          "invoice_url": null,
+          "payment_method": null,
+          "payment_channel": null,
+          "expires_at": "2026-10-14T23:30:00+07:00",
+          "paid_at": null
+        },
+        "note": "Tolong dibungkus kardus tebal",
+        "status_history": [
+          {
+            "status": "pending_payment",
+            "label": "Menunggu pembayaran",
+            "at": "2026-10-14T21:30:00+07:00"
+          },
+          {
+            "status": "cancelled",
+            "label": "Dibatalkan",
+            "at": "2026-10-14T21:50:00+07:00"
+          }
+        ],
+        "can_pay": false,
+        "can_cancel": false,
+        "payment_expires_at": "2026-10-14T23:30:00+07:00",
+        "created_at": "2026-10-14T21:30:00+07:00"
+      },
+      "message": "Pesanan dibatalkan."
+    }
+  },
+  "GET /api/v1/articles": {
+    "code": "ART-01",
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": 4,
+          "slug": "cara-merawat-baterai-sepeda-listrik",
+          "title": "Cara Merawat Baterai Sepeda Listrik",
+          "image_url": "https://<domain>/storage/articles/baterai.jpg",
+          "excerpt": "Lima kebiasaan sederhana agar baterai lithium awet hingga 3 tahun.",
+          "published_at": "2026-10-10T08:00:00+07:00"
+        },
+        {
+          "id": 3,
+          "slug": "memilih-sepeda-listrik-untuk-harian",
+          "title": "Memilih Sepeda Listrik untuk Pemakaian Harian",
+          "image_url": null,
+          "excerpt": "Perhatikan daya motor, kapasitas baterai, dan berat sepeda sebelum membeli.",
+          "published_at": "2026-10-01T08:00:00+07:00"
+        }
+      ],
+      "meta": {
+        "current_page": 1,
+        "per_page": 9,
+        "total": 2,
+        "last_page": 1
+      }
+    }
+  },
+  "GET /api/v1/articles/{slug}": {
+    "code": "ART-02",
+    "status": 200,
+    "body": {
+      "data": {
+        "id": 4,
+        "slug": "cara-merawat-baterai-sepeda-listrik",
+        "title": "Cara Merawat Baterai Sepeda Listrik",
+        "image_url": "https://<domain>/storage/articles/baterai.jpg",
+        "excerpt": "Lima kebiasaan sederhana agar baterai lithium awet hingga 3 tahun.",
+        "body_html": "<p>Baterai lithium paling awet bila diisi sebelum di bawah 20%…</p><h2>1. Jangan biarkan kosong</h2><p>…</p>",
+        "author": {
+          "name": "Admin Saeful Askar"
+        },
+        "published_at": "2026-10-10T08:00:00+07:00",
+        "updated_at": "2026-10-11T09:30:00+07:00"
+      }
+    }
+  },
+  "GET /api/v1/admin/articles": {
+    "code": "ADM-02",
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": 5,
+          "title": "Promo Akhir Tahun Sepeda Listrik",
+          "slug": "promo-akhir-tahun-sepeda-listrik",
+          "image_url": null,
+          "status": "draft",
+          "published_at": null,
+          "author": {
+            "id": 1,
+            "name": "Admin Saeful Askar"
+          },
+          "created_at": "2026-10-14T20:00:00+07:00",
+          "updated_at": "2026-10-14T20:30:00+07:00"
+        }
+      ],
+      "meta": {
+        "current_page": 1,
+        "per_page": 20,
+        "total": 5,
+        "last_page": 1
+      }
+    }
+  },
+  "POST /api/v1/admin/articles": {
+    "code": "ADM-03",
+    "status": 201,
+    "body": {
+      "data": {
+        "id": 4,
+        "title": "Cara Merawat Baterai Sepeda Listrik",
+        "slug": "cara-merawat-baterai-sepeda-listrik",
+        "image_url": "https://<domain>/storage/articles/baterai.jpg",
+        "body_html": "<p>Baterai lithium paling awet bila diisi sebelum di bawah 20%…</p>",
+        "status": "published",
+        "published_at": "2026-10-10T08:00:00+07:00",
+        "author": {
+          "id": 1,
+          "name": "Admin Saeful Askar"
+        },
+        "created_at": "2026-10-09T15:00:00+07:00",
+        "updated_at": "2026-10-09T15:00:00+07:00"
+      },
+      "message": "Artikel disimpan."
+    }
+  },
+  "GET /api/v1/admin/articles/{id}": {
+    "code": "ADM-04",
+    "status": 200,
+    "body": {
+      "data": {
+        "id": 5,
+        "title": "Promo Akhir Tahun Sepeda Listrik",
+        "slug": "promo-akhir-tahun-sepeda-listrik",
+        "image_url": null,
+        "body_html": "<p>Draft isi promo…</p>",
+        "status": "draft",
+        "published_at": null,
+        "author": {
+          "id": 1,
+          "name": "Admin Saeful Askar"
+        },
+        "created_at": "2026-10-14T20:00:00+07:00",
+        "updated_at": "2026-10-14T20:30:00+07:00"
+      }
+    }
+  },
+  "POST /api/v1/admin/articles/{id}": {
+    "code": "ADM-05",
+    "status": 200,
+    "body": {
+      "data": {
+        "id": 4,
+        "title": "Cara Merawat Baterai Sepeda Listrik agar Awet",
+        "slug": "cara-merawat-baterai-sepeda-listrik",
+        "image_url": "https://<domain>/storage/articles/baterai.jpg",
+        "body_html": "<p>Baterai lithium paling awet bila diisi sebelum di bawah 20%…</p>",
+        "status": "published",
+        "published_at": "2026-10-10T08:00:00+07:00",
+        "author": {
+          "id": 1,
+          "name": "Admin Saeful Askar"
+        },
+        "created_at": "2026-10-09T15:00:00+07:00",
+        "updated_at": "2026-10-14T21:40:00+07:00"
+      },
+      "message": "Artikel diperbarui."
+    }
+  },
+  "DELETE /api/v1/admin/articles/{id}": {
+    "code": "ADM-06",
+    "status": 200,
+    "body": {
+      "message": "Artikel dihapus."
+    }
+  },
+  "PATCH /api/v1/admin/articles/{id}/status": {
+    "code": "ADM-07",
+    "status": 200,
+    "body": {
+      "data": {
+        "id": 5,
+        "title": "Promo Akhir Tahun Sepeda Listrik",
+        "slug": "promo-akhir-tahun-sepeda-listrik",
+        "image_url": null,
+        "status": "published",
+        "published_at": "2026-10-20T08:00:00+07:00",
+        "author": {
+          "id": 1,
+          "name": "Admin Saeful Askar"
+        },
+        "created_at": "2026-10-14T20:00:00+07:00",
+        "updated_at": "2026-10-14T21:45:00+07:00"
+      },
+      "message": "Artikel dijadwalkan terbit 20 Okt 2026 08.00."
+    }
+  },
+  "POST /api/v1/admin/uploads/images": {
+    "code": "ADM-08",
+    "status": 201,
+    "body": {
+      "data": {
+        "url": "https://<domain>/storage/articles/content/9a1c7f.jpg",
+        "width": 1200,
+        "height": 800
+      }
+    }
+  },
+  "GET /api/v1/admin/orders": {
+    "code": "ADM-09",
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "order_number": "WEB-000124",
+          "status": "pending_payment",
+          "status_label": "Menunggu pembayaran",
+          "customer": {
+            "id": 22,
+            "name": "Siti Aminah",
+            "email": "siti@example.com",
+            "phone": "081377788899"
+          },
+          "grand_total": 3585000,
+          "item_count": 1,
+          "payment_status": "PENDING",
+          "jubelio_sync_status": "failed",
+          "jubelio_salesorder_no": null,
+          "tracking_no": null,
+          "created_at": "2026-10-14T21:35:00+07:00"
+        }
+      ],
+      "meta": {
+        "current_page": 1,
+        "per_page": 20,
+        "total": 12,
+        "last_page": 1
+      }
+    }
+  },
+  "GET /api/v1/admin/orders/{order_number}": {
+    "code": "ADM-10",
+    "status": 200,
+    "body": {
+      "data": {
+        "order_number": "WEB-000124",
+        "status": "pending_payment",
+        "status_label": "Menunggu pembayaran",
+        "customer": {
+          "id": 22,
+          "name": "Siti Aminah",
+          "email": "siti@example.com",
+          "phone": "081377788899"
+        },
+        "items": [
+          {
+            "id": 90,
+            "variant_id": 41,
+            "sku": "BAT-48V-20AH",
+            "product_name": "Baterai Lithium 48V",
+            "variant_name": "20Ah",
+            "image_url": null,
+            "price": 3400000,
+            "qty": 1,
+            "weight_gram": 9500,
+            "subtotal": 3400000
+          }
+        ],
+        "shipping_address": {
+          "recipient_name": "Siti Aminah",
+          "phone": "081377788899",
+          "address_line": "Jl. Kenanga No. 3",
+          "subdistrict": "Karet",
+          "district": "SETIABUDI",
+          "city": "KOTA ADM. JAKARTA SELATAN",
+          "province": "DKI JAKARTA",
+          "post_code": "12920"
+        },
+        "shipping": {
+          "courier_code": "sicepat",
+          "courier_name": "SiCepat",
+          "service_code": "REG",
+          "service_name": "SiCepat Reguler",
+          "tracking_no": null,
+          "etd_text": "1–2 hari"
+        },
+        "amounts": {
+          "subtotal": 3400000,
+          "shipping_cost": 185000,
+          "insurance_cost": 0,
+          "discount": 0,
+          "tax": 0,
+          "grand_total": 3585000
+        },
+        "payment": {
+          "status": "PENDING",
+          "invoice_url": "https://checkout.xendit.co/web/6527a1b2c3d4e5f6a7b8c9d1",
+          "payment_method": null,
+          "payment_channel": null,
+          "expires_at": "2026-10-14T23:35:00+07:00",
+          "paid_at": null
+        },
+        "note": null,
+        "status_history": [
+          {
+            "status": "pending_payment",
+            "label": "Menunggu pembayaran",
+            "at": "2026-10-14T21:35:00+07:00",
+            "source": "system"
+          }
+        ],
+        "integration": {
+          "jubelio_salesorder_id": null,
+          "jubelio_salesorder_no": null,
+          "jubelio_sync_status": "failed",
+          "jubelio_last_error": "SQLSTATE 23505",
+          "xendit_invoice_id": "6527a1b2c3d4e5f6a7b8c9d1",
+          "xendit_external_id": "WEB-000124",
+          "sync_logs": [
+            {
+              "id": 301,
+              "type": "order_push",
+              "status": "failed",
+              "message": "SQLSTATE 23505",
+              "started_at": "2026-10-14T21:35:01+07:00",
+              "finished_at": "2026-10-14T21:35:03+07:00"
+            }
+          ]
+        },
+        "can_pay": true,
+        "can_cancel": true,
+        "payment_expires_at": "2026-10-14T23:35:00+07:00",
+        "created_at": "2026-10-14T21:35:00+07:00"
+      }
+    }
+  },
+  "POST /api/v1/admin/orders/{order_number}/push-jubelio": {
+    "code": "ADM-11",
+    "status": 202,
+    "body": {
+      "data": {
+        "order_number": "WEB-000124",
+        "action": "create",
+        "sync_log_id": 305,
+        "jubelio_sync_status": "pending"
+      },
+      "message": "Pesanan dikirim ulang ke Jubelio. Periksa status beberapa saat lagi."
+    }
+  },
+  "POST /api/v1/admin/orders/{order_number}/refresh-payment": {
+    "code": "ADM-12",
+    "status": 200,
+    "body": {
+      "data": {
+        "order_number": "WEB-000124",
+        "xendit_status": "PAID",
+        "order_status_before": "pending_payment",
+        "order_status_after": "paid",
+        "changed": true
+      },
+      "message": "Pembayaran ditemukan. Pesanan ditandai dibayar."
+    }
+  },
+  "POST /api/v1/admin/sync": {
+    "code": "ADM-13",
+    "status": 202,
+    "body": {
+      "data": {
+        "sync_log_id": 310,
+        "type": "products",
+        "status": "running",
+        "started_at": "2026-10-14T21:50:00+07:00"
+      },
+      "message": "Sinkron produk dimulai."
+    }
+  },
+  "GET /api/v1/admin/sync-logs": {
+    "code": "ADM-14",
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": 310,
+          "type": "products",
+          "status": "success",
+          "reference_id": null,
+          "items_processed": 25,
+          "message": null,
+          "started_at": "2026-10-14T21:50:00+07:00",
+          "finished_at": "2026-10-14T21:51:12+07:00",
+          "duration_seconds": 72
+        },
+        {
+          "id": 301,
+          "type": "order_push",
+          "status": "failed",
+          "reference_id": 124,
+          "items_processed": 0,
+          "message": "SQLSTATE 23505",
+          "started_at": "2026-10-14T21:35:01+07:00",
+          "finished_at": "2026-10-14T21:35:03+07:00",
+          "duration_seconds": 2
+        }
+      ],
+      "meta": {
+        "current_page": 1,
+        "per_page": 20,
+        "total": 87,
+        "last_page": 5
+      }
+    }
+  }
+}

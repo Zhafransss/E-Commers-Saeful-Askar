@@ -295,7 +295,7 @@ Acuan: objek OrderDetail, ORD-01 – ORD-05, WH-01, WH-05, ADM-09 – ADM-12. Al
 | Kolom | Tipe | Null | Default | Keterangan |
 | --- | --- | --- | --- | --- |
 | `id` | BIGINT UNSIGNED | — | auto | PK |
-| `order_number` | VARCHAR(20) | Tidak | — | UNIQUE, `WEB-000123`. Dikirim sebagai `ref_no` Jubelio dan `external_id` Xendit |
+| `order_number` | VARCHAR(20) | Ya* | NULL | UNIQUE, `WEB-000123`. *NULL hanya sesaat di dalam transaksi checkout, sebelum nomor dibuat dari `id`. Dikirim sebagai `ref_no` Jubelio dan `external_id` Xendit |
 | `user_id` | BIGINT UNSIGNED | Tidak | — | FK `users.id`, ON DELETE RESTRICT (order tidak boleh hilang) |
 | `address_id` | BIGINT UNSIGNED | Ya | NULL | FK `addresses.id`, ON DELETE SET NULL. Hanya referensi; data kirim memakai kolom `shipping_*` |
 | `status` | VARCHAR(20) | Tidak | `pending_payment` | Enum `OrderStatus`: `pending_payment`, `paid`, `processing`, `shipped`, `completed`, `expired`, `cancelled` |

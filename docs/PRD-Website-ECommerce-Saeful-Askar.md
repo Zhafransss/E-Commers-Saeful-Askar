@@ -196,8 +196,12 @@ saeful-askar/
 │   │   ├── OrderStatus.php                 pending_payment, paid, processing, shipped, completed, cancelled, expired
 │   │   ├── PaymentStatus.php
 │   │   ├── UserRole.php
-│   │   └── WebhookProvider.php
+│   │   ├── WebhookProvider.php
+│   │   └── …                           JubelioSyncStatus, ArticleStatus, OrderStatusSource, SyncType, SyncStatus, …
 │   ├── Exceptions/
+│   │   ├── ApiException.php                basis error format kontrak {message, code, errors}
+│   │   ├── ApiExceptionRenderer.php        error Laravel (401/403/404/419/422/429/500) → kode kontrak
+│   │   ├── NotImplementedException.php     501 untuk endpoint stub selama pengembangan
 │   │   ├── JubelioApiException.php
 │   │   └── InsufficientStockException.php
 │   ├── Http/
@@ -208,7 +212,9 @@ saeful-askar/
 │   │   │   │   ├── CartPageController.php
 │   │   │   │   ├── CheckoutPageController.php
 │   │   │   │   ├── AccountPageController.php
-│   │   │   │   └── ArticlePageController.php
+│   │   │   │   ├── ArticlePageController.php
+│   │   │   │   ├── AuthPageController.php      login, daftar, lupa/reset password
+│   │   │   │   └── AdminPageController.php     halaman panel admin
 │   │   │   ├── Api/V1/                     endpoint JSON sesuai docs/api/*.md
 │   │   │   │   ├── AuthController.php
 │   │   │   │   ├── CategoryController.php
@@ -230,7 +236,9 @@ saeful-askar/
 │   │   ├── Middleware/
 │   │   │   ├── VerifyXenditCallbackToken.php
 │   │   │   ├── VerifyJubelioSignature.php
-│   │   │   └── EnsureUserIsAdmin.php
+│   │   │   ├── EnsureUserIsAdmin.php
+│   │   │   ├── RequirePageRole.php         guard halaman Blade (dilewati saat VITE_API_MOCK=true)
+│   │   │   └── RejectMalformedJson.php     body JSON rusak → 400 BAD_REQUEST
 │   │   ├── Requests/Api/V1/                StoreAddressRequest, AddCartItemRequest, CheckoutRequest, …
 │   │   └── Resources/Api/V1/               ProductResource, ProductDetailResource, VariantResource, OrderResource, ArticleResource, …
 │   ├── Jobs/
@@ -293,10 +301,11 @@ saeful-askar/
 │   │   ├── api/
 │   │   │   ├── client.js                   fetch wrapper: CSRF, JSON, error format kontrak
 │   │   │   ├── endpoints.js                semua path /api/v1 di satu tempat
-│   │   │   └── mocks/                      contoh response dari docs/api/*.md, aktif bila VITE_API_MOCK=true
+│   │   │   └── mocks/                      contract.json (hasil npm run mocks:generate) + overrides.js, aktif bila VITE_API_MOCK=true
 │   │   ├── stores/
 │   │   │   ├── cart.js                     Alpine.store('cart'): badge, total
 │   │   │   └── auth.js
+│   │   ├── utils/format.js                 rupiah, berat, tanggal (juga $format di Alpine)
 │   │   └── components/
 │   │       ├── productList.js              cari, filter kategori, paginasi
 │   │       ├── productDetail.js            pilih varian, cek stok, tambah ke keranjang
@@ -310,6 +319,7 @@ saeful-askar/
 │       ├── layouts/
 │       │   ├── app.blade.php
 │       │   └── admin.blade.php
+│       ├── partials/mock-banner.blade.php  penanda mode mock
 │       ├── components/                     x-product-card, x-price, x-stock-badge, x-variant-picker, x-pagination, …
 │       ├── pages/
 │       │   ├── home.blade.php
@@ -345,6 +355,8 @@ saeful-askar/
 │       ├── jubelio/                        contoh response & webhook dari spec
 │       └── xendit/
 │
+├── lang/id/                                BERSAMA · pesan validasi & auth Bahasa Indonesia
+├── scripts/generate-api-mocks.mjs          BERSAMA · docs/api → resources/js/api/mocks/contract.json
 ├── public/  storage/  vendor/
 ├── .env.example
 ├── README.md                               cara setup lokal & alur branch

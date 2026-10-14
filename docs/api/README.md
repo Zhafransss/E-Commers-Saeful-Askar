@@ -131,6 +131,7 @@ Semua error memakai bentuk yang sama:
 | 422 | `VALIDATION_ERROR` | Field tidak valid |
 | 429 | `TOO_MANY_REQUESTS` | Melebihi batas request |
 | 500 | `SERVER_ERROR` | Error tak terduga di backend |
+| 501 | `NOT_IMPLEMENTED` | **Hanya selama pengembangan:** route sudah terdaftar tapi endpoint belum dibangun backend (response menyertakan `endpoint`, mis. `"CAT-02"`). Tidak boleh ada lagi saat rilis |
 | 502 | `INTEGRATION_ERROR` | Jubelio, Jubelio Shipment, atau Xendit gagal merespons dengan benar |
 | 503 | `SERVICE_UNAVAILABLE` | Mode perawatan |
 

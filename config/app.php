@@ -30,6 +30,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Frontend API Mock Mode
+    |--------------------------------------------------------------------------
+    |
+    | Mirrors VITE_API_MOCK. When true the Alpine API client answers from the
+    | contract mocks in resources/js/api/mocks, and Blade pages skip their
+    | server-side login/role guard so the frontend can be built in parallel
+    | with the backend. Must be false outside local development.
+    |
+    */
+
+    'api_mock' => (bool) env('VITE_API_MOCK', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Debug Mode
     |--------------------------------------------------------------------------
     |
