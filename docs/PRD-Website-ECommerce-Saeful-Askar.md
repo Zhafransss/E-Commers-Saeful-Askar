@@ -92,7 +92,7 @@ Website memakai tiga layanan luar; Jubelio adalah sumber kebenaran untuk katalog
 | Layanan | Dipakai untuk | Endpoint / event utama | Catatan |
 | --- | --- | --- | --- |
 | Jubelio Omnichannel (`api2.jubelio.com`) | Katalog, stok, contact, sales order, region, status kirim | `POST /login`, `GET /inventory/items/`, `GET /inventory/items/group/{id}`, `GET /variations`, `GET /inventory/categories/item-categories/`, `POST /contacts/`, `POST /sales/orders/`, `POST /sales/orders/set-as-paid`, `POST /sales/orders/cancel/`, `GET /region/*` | Token 12 jam; 600 request/menit; order masuk ke toko Internal "Website Saeful Askar" (`store_id`), `source` = 1 |
-| Webhook Jubelio | Perubahan dari Jubelio ke website | `update-product`, `update-price`, `update-qty`, `update-salesorder` | Signature SHA256(body + secret); dicoba ulang hingga 3 kali |
+| Webhook Jubelio | Perubahan dari Jubelio ke website | `update-product`, `update-price`, `update-qty`, `update-salesorder` | Header `sign` = HMAC-SHA256(body + secret, kunci = secret); dicoba ulang hingga 3 kali |
 | Jubelio Shipment | Tarif ongkir saat checkout | API rates (dokumentasi diminta ke Jubelio) | Client ID + Client Secret; ada mode staging |
 | Xendit | Pembayaran | Buat invoice dengan durasi; webhook invoice PAID dan EXPIRED | Verifikasi callback token |
 
@@ -234,8 +234,6 @@ saeful-askar/
 │   │   │       ├── XenditWebhookController.php
 │   │   │       └── JubelioWebhookController.php
 │   │   ├── Middleware/
-│   │   │   ├── VerifyXenditCallbackToken.php
-│   │   │   ├── VerifyJubelioSignature.php
 │   │   │   ├── EnsureUserIsAdmin.php
 │   │   │   ├── RequirePageRole.php         guard halaman Blade (dilewati saat VITE_API_MOCK=true)
 │   │   │   └── RejectMalformedJson.php     body JSON rusak → 400 BAD_REQUEST
@@ -257,9 +255,10 @@ saeful-askar/
 │   │   ├── AddressPolicy.php
 │   │   └── OrderPolicy.php
 │   ├── Services/
+│   │   ├── IntegrationClient.php           timeout, log, retry bersama semua client (INT-HDL)
 │   │   ├── Jubelio/
 │   │   │   ├── JubelioClient.php           satu-satunya pemanggil api2.jubelio.com
-│   │   │   ├── JubelioTokenManager.php     token 12 jam di cache database
+│   │   │   ├── JubelioTokenManager.php     token 11,5 jam di cache database
 │   │   │   ├── ProductSyncService.php
 │   │   │   ├── StockSyncService.php
 │   │   │   ├── ContactService.php
@@ -274,6 +273,8 @@ saeful-askar/
 │   │   ├── Xendit/
 │   │   │   ├── XenditClient.php
 │   │   │   └── InvoiceService.php
+│   │   ├── Webhooks/
+│   │   │   └── WebhookReceiver.php         verifikasi token/signature → webhook_events → queue
 │   │   └── Shop/
 │   │       ├── CartService.php
 │   │       ├── CheckoutService.php         orkestrasi stok → SO → invoice dalam satu alur
@@ -425,8 +426,8 @@ Risiko terbesar adalah dokumentasi API rates Jubelio Shipment yang belum tersedi
 - [ ] Dokumentasi API rates dan kredensial Jubelio Shipment (termasuk staging).
 - [ ] Durasi batas bayar invoice Xendit (usulan 1–2 jam).
 - [ ] Persetujuan frontend atas nama kolom artikel `published_at` dan `title`.
-- [ ] Nama header signature webhook Jubelio (hanya ada di gambar contoh docs).
-- [ ] Toko internal "Website Saeful Askar" dibuat di Jubelio dan `store_id`-nya dicatat.
+- [x] Nama header signature webhook Jubelio: `sign`, berisi HMAC-SHA256 (contoh resmi Jubelio di `api/dist.yaml`, bagian Webhook Signature).
+- [x] Toko internal dibuat di Jubelio dengan nama "Website" (`store_id` -102, dari `GET /locations/store/`).
 - [ ] Metode pembayaran Xendit yang diaktifkan (VA, e-wallet, QRIS, kartu).
 
 **Di luar lingkup versi 1.** Checkout tanpa login, voucher dan promo website, COD, multi-gudang, ulasan produk, wishlist, aplikasi mobile, chat penjual, dan pengelolaan produk atau stok dari website. Endpoint admin berikut juga ditunda ke versi 1.1: ADM-01 (dashboard ringkasan), ADM-15 (daftar webhook masuk), ADM-16 (proses ulang webhook), dan ADM-17 (status konfigurasi integrasi); pemeriksaan order dan pemulihan tetap memakai ADM-09 – ADM-12, rekonsiliasi stok terjadwal, dan perintah `php artisan jubelio:setup`.

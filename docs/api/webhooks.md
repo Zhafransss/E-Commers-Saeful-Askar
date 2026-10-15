@@ -12,7 +12,7 @@ Route webhook dikecualikan dari CSRF dan tidak memakai session. Base URL ada di 
 | Pengirim | Percobaan ulang bila bukan 200 | Verifikasi |
 | --- | --- | --- |
 | Xendit | Dikirim ulang otomatis oleh Xendit | Header `x-callback-token` = callback token di dashboard Xendit |
-| Jubelio | Hingga 3 kali | Signature = SHA256(JSON body + webhook secret key) |
+| Jubelio | Hingga 3 kali | Header `sign` = HMAC-SHA256 dari (body + secret key), dengan secret key sebagai kunci |
 
 ---
 
@@ -122,7 +122,7 @@ Dikirim Xendit. Field yang dipakai:
 
 | Header | Wajib | Keterangan |
 | --- | --- | --- |
-| Header signature Jubelio | Ya | Nama header dipastikan saat uji coba (di docs hanya ada di gambar contoh) |
+| `sign` | Ya | HMAC-SHA256 dari body mentah (di-trim) + `JUBELIO_WEBHOOK_SECRET`, dengan secret sebagai kunci (contoh resmi Jubelio, `dist.yaml` bagian Webhook Signature) |
 | `Content-Type` | Ya | `application/json` |
 
 Didaftarkan di Jubelio: Pengaturan → Developer → Webhook, atau INT-JB-14 (`POST /systemsetting/webhook`).
@@ -174,7 +174,7 @@ Sebagai sistem, saya ingin segera mengambil ulang data produk setelah admin meng
 
 ### Acceptance Criteria
 
-- [ ] Signature dihitung dari body mentah: `sha256(raw_body + JUBELIO_WEBHOOK_SECRET)` dan dibandingkan dengan `hash_equals`.
+- [ ] Signature dihitung dari body mentah: `hash_hmac('sha256', trim(raw_body) . JUBELIO_WEBHOOK_SECRET, JUBELIO_WEBHOOK_SECRET)` dan dibandingkan dengan header `sign` memakai `hash_equals`.
 - [ ] `idempotency_key` = `jubelio:update-product:` + SHA256 body.
 - [ ] Job `SyncProductGroupJob` memanggil INT-JB-04 dan INT-JB-05, lalu memperbarui `products`, `product_variants`, `product_images`.
 - [ ] Varian yang hilang dari Jubelio → `is_active = false` (tidak dihapus, agar order lama tetap terbaca).

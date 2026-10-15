@@ -4,7 +4,7 @@ Dokumen ini adalah kontrak antara frontend (Blade + Alpine.js) dan backend (Lara
 
 - Versi: 1.0
 - Tanggal: 14 Oktober 2026
-- Acuan: PRD Website E-Commerce Saeful Askar (`../PRD-Website-ECommerce-Saeful-Askar.md`), ERD v2 (`../erd.md`), dokumen riset API Jubelio
+- Acuan: PRD Website E-Commerce Saeful Askar (`../PRD-Website-ECommerce-Saeful-Askar.md`), ERD v2 (`../erd.md`), OpenAPI resmi Jubelio (`dist.yaml`)
 
 ## Isi folder
 
@@ -21,6 +21,7 @@ Dokumen ini adalah kontrak antara frontend (Blade + Alpine.js) dan backend (Lara
 | `admin.md` | Panel admin: artikel, pesanan, sinkron | FE + BE |
 | `webhooks.md` | Webhook masuk dari Xendit dan Jubelio | BE |
 | `integrations.md` | Panggilan keluar ke Jubelio, Jubelio Shipment, Xendit | BE |
+| `dist.yaml` | OpenAPI resmi Jubelio (diunduh dari dokumentasi Jubelio), acuan INT-JB-xx dan signature webhook | BE |
 
 ## Format setiap endpoint
 
