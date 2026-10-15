@@ -13,7 +13,7 @@ Isi teknis setiap fase diringkas dari Acceptance Criteria di API Contract. Bila 
 | 0 | Fondasi | 1 | AUTH-01 | — | — | Selesai |
 | 1 | Infrastruktur integrasi | 1–2 | — (INT-HDL, INT-JB-01, INT-JB-14) | 0 | Sedang | Selesai |
 | 2 | Katalog & sinkron Jubelio | 2 | CAT-01–03, WH-02–04 | 1 | Besar | Selesai (webhook asli pertama belum diterima) |
-| 3 | Akun, alamat, keranjang | 3 | AUTH-02–09, REG-01–04, ADDR-01–06, CART-01–06 | 0 (REG: 1, CART: 2) | Besar | Belum mulai |
+| 3 | Akun, alamat, keranjang | 3 | AUTH-02–09, REG-01–04, ADDR-01–06, CART-01–06 | 0 (REG: 1, CART: 2) | Besar | Selesai |
 | 4 | Ongkir & checkout | 4 | SHIP-01, ORD-01 | 2, 3 | Besar | Belum mulai |
 | 5 | Pembayaran & siklus pesanan | 4–5 | WH-01, WH-05, ORD-02–05 | 4 | Besar | Belum mulai |
 | 6 | Artikel & panel admin | 5 | ART-01–02, ADM-02–14 | 0 (ADM-09–12: 5, ADM-13–14: 2) | Sedang | Belum mulai |
@@ -171,9 +171,19 @@ Endpoint WH-01 – WH-05 sengaja masih `501` sampai handler-nya dibangun (Fase 2
 
 **Definisi selesai.**
 
-- [ ] Feature test setiap Acceptance Criteria, termasuk akses ke alamat atau item keranjang milik user lain (dibalas 404, bukan 403, agar ID tidak bocor).
-- [ ] Rate limit `auth` tetap per endpoint (test yang sudah ada tetap lulus).
-- [ ] Field yang dibaca store frontend (`data.role`, `data.total_qty`, `data.has_issue`, `data.summary.*`) muncul di response asli, bukan hanya di mock.
+- [x] Feature test setiap Acceptance Criteria, termasuk akses ke alamat atau item keranjang milik user lain (dibalas 404, bukan 403, agar ID tidak bocor).
+- [x] Rate limit `auth` tetap per endpoint (test yang sudah ada tetap lulus).
+- [x] Field yang dibaca store frontend (`data.role`, `data.total_qty`, `data.has_issue`, `data.summary.*`) muncul di response asli, bukan hanya di mock. Diuji lewat server HTTP dengan alur `client.js` (CSRF asli, cookie session, remember-me) dan dibandingkan dengan `contract.json`, 15 Okt 2026.
+- [x] REG-01 – REG-04 dan ADDR-01 – ADDR-06 diuji sekali terhadap Jubelio asli lewat server HTTP (15 Okt 2026): rantai Jawa Barat → Kab. Bekasi → Tambun Utara → Satriajaya, nama wilayah terisi dari Jubelio. Panggilan pertama REG-01 ±4 detik (login + ambil data Jubelio), berikutnya dari cache.
+
+**Catatan implementasi.**
+
+- Feature test Laravel melewati pemeriksaan CSRF; alur CSRF + session hanya terbukti lewat uji HTTP di atas. Helper test `fromFrontend()` mengirim `Referer` dan cookie (`withCredentials()`) seperti browser; tanpa itu Sanctum tidak memulai session dan cookie tidak terkirim.
+- Login memakai guard `web` (Sanctum stateful). `remember = true` = cookie 30 hari (`config/auth.php` guard `web.remember`).
+- AUTH-07 / AUTH-09 mengeluarkan session lain dengan menghapus baris tabel `sessions` (`SESSION_DRIVER=database`) dan merotasi `remember_token`. Driver session lain tidak bisa mendaftar session per user, jadi wajib `database` di semua lingkungan.
+- Email reset (AUTH-08) memakai `ResetPasswordNotification` (Bahasa Indonesia, lewat queue); butuh queue worker yang berjalan.
+- Daftar wilayah di-cache "selamanya" dengan cap waktu: segar 30 hari, lalu diambil ulang; bila Jubelio gagal, daftar lama tetap dipakai (REG-01). Kelurahan Jubelio tidak punya kode pos, jadi `post_code` REG-04 selalu `null`.
+- `summary.subtotal` dan `summary.total_weight` CART-01 tidak menghitung item `PRODUCT_INACTIVE` (berat ini dipakai SHIP-01).
 
 **Merge.** Auth bisa di-merge lebih dulu bersama halaman masuk/daftar; keranjang dan alamat menyusul bersama halamannya.
 

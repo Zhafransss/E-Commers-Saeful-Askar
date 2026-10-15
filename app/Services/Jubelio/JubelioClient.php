@@ -195,6 +195,30 @@ class JubelioClient extends IntegrationClient
     }
 
     /**
+     * INT-JB-08 · Region lists, one level at a time; a parent Jubelio does not
+     * know gives an empty list. No slash before the query string: Jubelio
+     * answers `/region/cities/?province_id=` with 404.
+     *
+     * @param  'provinces'|'cities'|'districts'|'subdistricts'  $level
+     * @param  array<string, string>  $parent  e.g. ['province_id' => '32']
+     * @return list<array<string, mixed>>
+     */
+    public function regions(string $level, array $parent = []): array
+    {
+        try {
+            $json = $this->get("/region/{$level}", $parent)->json();
+        } catch (JubelioApiException $e) {
+            if ($e->httpStatus === 404) {
+                return [];
+            }
+
+            throw $e;
+        }
+
+        return is_array($json) ? ($json['data'] ?? $json) : [];
+    }
+
+    /**
      * @return array{data: list<array<string, mixed>>, totalCount: int}
      */
     private function page(string $path, int $page, int $pageSize, bool $newestFirst = false): array

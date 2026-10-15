@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 /**
  * @extends Factory<Address>
  *
- * Uses the Region IDs from the contract examples (Satriajaya, Tambun Utara).
+ * Uses the Region IDs from the contract examples (Satriajaya, Tambun Utara) as Jubelio returns them.
  */
 class AddressFactory extends Factory
 {
@@ -25,9 +25,9 @@ class AddressFactory extends Factory
             'province_name' => 'JAWA BARAT',
             'city_id' => '3216',
             'city_name' => 'KAB. BEKASI',
-            'district_id' => '321612',
-            'district_name' => 'TAMBUN UTARA',
-            'subdistrict_id' => '3216122004',
+            'district_id' => '321605',
+            'district_name' => 'Tambun Utara',
+            'subdistrict_id' => '3216052001',
             'subdistrict_name' => 'Satriajaya',
             'post_code' => '17565',
             'is_default' => false,

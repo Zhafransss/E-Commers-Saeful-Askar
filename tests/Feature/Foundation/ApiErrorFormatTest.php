@@ -68,7 +68,7 @@ test('auth rate limits are counted per endpoint, so a locked login still allows 
         $this->postJson('/api/v1/auth/login', ['email' => 'budi@example.com']);
     }
 
-    assertApiError($this->postJson('/api/v1/auth/forgot-password', ['email' => 'budi@example.com']), 501, 'NOT_IMPLEMENTED');
+    $this->postJson('/api/v1/auth/forgot-password', ['email' => 'budi@example.com'])->assertOk();
 });
 
 test('unexpected exceptions get 500 SERVER_ERROR without leaking details in production', function () {

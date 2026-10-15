@@ -44,6 +44,22 @@ function assertApiError(TestResponse $response, int $status, string $code): Test
 }
 
 /**
+ * Requests as the Blade pages send them: Sanctum only starts a session (and so
+ * allows login, logout, and session-based auth) for requests coming from a
+ * stateful domain, recognised by the Referer header. withCredentials() sends
+ * cookies with JSON requests, like client.js's `credentials: 'same-origin'`;
+ * without it Laravel's test client drops them.
+ */
+function fromFrontend(): TestCase
+{
+    return test()->withCredentials()->withHeaders([
+        'Referer' => 'http://localhost/',
+        'Accept' => 'application/json',
+        'X-Requested-With' => 'XMLHttpRequest',
+    ]);
+}
+
+/**
  * Raw content of a fixture in tests/Fixtures, e.g. fixtureContent('jubelio/login.json').
  * Webhook tests need the exact bytes, since signatures are computed over the raw body.
  */
@@ -124,6 +140,32 @@ function fakeJubelioCatalog(array $overrides = []): void
             return $response instanceof Closure ? $response($request) : $response;
         });
     }
+}
+
+/**
+ * fakeJubelioCatalog() plus the region lists (INT-JB-08) from
+ * tests/Fixtures/jubelio/regions: Jawa Barat → Kab. Bekasi → Tambun Utara →
+ * Satriajaya/Srijaya. Any other parent gets [], like Jubelio.
+ *
+ * @param  array<string, mixed>  $overrides
+ */
+function fakeJubelioRegions(array $overrides = []): void
+{
+    $byParent = function (string $param, array $files) {
+        return function (Request $request) use ($param, $files) {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+            $file = $files[$query[$param] ?? ''] ?? null;
+
+            return Http::response($file === null ? [] : fixture("jubelio/regions/{$file}"));
+        };
+    };
+
+    fakeJubelioCatalog($overrides + [
+        '/region/provinces' => Http::response(fixture('jubelio/regions/provinces.json')),
+        '/region/cities' => $byParent('province_id', ['32' => 'cities-32.json']),
+        '/region/districts' => $byParent('city_id', ['3216' => 'districts-3216.json']),
+        '/region/subdistricts' => $byParent('district_id', ['321605' => 'subdistricts-321605.json']),
+    ]);
 }
 
 /**
