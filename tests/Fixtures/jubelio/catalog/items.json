@@ -1,0 +1,36 @@
+{
+  "data": [
+    {
+      "item_group_id": 19,
+      "item_name": "Socket Lihtium M23",
+      "last_modified": "2026-10-13T21:42:28.874Z",
+      "variations": [],
+      "sell_price": "75000.0000",
+      "item_category_id": 1000000001,
+      "thumbnail": "https://cdn.example.com/images/19-socket-thumb.png",
+      "total_composition": null,
+      "is_consignment": false,
+      "online_status": null,
+      "variants": [
+        { "item_group_id": 19, "item_id": 21, "item_code": "SD000383N", "item_name": "Socket Lihtium M23", "is_bundle": false, "variation_values": [], "thumbnail": null, "barcode": null, "end_qty": 0, "order_qty": 0, "available_qty": 0, "sell_price": "75000.0000" }
+      ]
+    },
+    {
+      "item_group_id": 18,
+      "item_name": "Baterai Lithium Phylion",
+      "last_modified": "2026-10-13T06:41:03.678Z",
+      "variations": [{ "label": "Kapasitas", "values": ["48V 12Ah", "72V 24Ah"] }],
+      "sell_price": "2500000.0000",
+      "item_category_id": 1000000002,
+      "thumbnail": "https://cdn.example.com/images/18-phylion-thumb.png",
+      "total_composition": null,
+      "is_consignment": false,
+      "online_status": null,
+      "variants": [
+        { "item_group_id": 18, "item_id": 19, "item_code": "SC000384N", "item_name": "Baterai Lithium Phylion 72V 24Ah", "is_bundle": false, "variation_values": [{ "label": "Kapasitas", "value": "72V 24Ah" }], "thumbnail": null, "barcode": null, "end_qty": 4, "order_qty": 1, "available_qty": 3, "sell_price": "4500000.0000" },
+        { "item_group_id": 18, "item_id": 20, "item_code": "SC000381N", "item_name": "Baterai Lithium Phylion 48V 12Ah", "is_bundle": false, "variation_values": [{ "label": "Kapasitas", "value": "48V 12Ah" }], "thumbnail": null, "barcode": "8991234500011", "end_qty": 2, "order_qty": 0, "available_qty": 2, "sell_price": "2500000.0000" }
+      ]
+    }
+  ],
+  "totalCount": 2
+}

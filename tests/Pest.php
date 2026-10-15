@@ -2,6 +2,8 @@
 
 use App\Exceptions\IntegrationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Testing\TestResponse;
 use Monolog\Handler\TestHandler;
@@ -67,6 +69,71 @@ function fixture(string $path): array
 function jubelioSignature(string $body, string $secret = 'rahasia-webhook'): string
 {
     return hash_hmac('sha256', trim($body).$secret, $secret);
+}
+
+/**
+ * Answers Jubelio catalog calls from tests/Fixtures/jubelio/catalog, routed by
+ * path. $overrides replaces or adds paths, e.g. ['/inventory/items/group/18' =>
+ * Http::response([], 404)]. Unknown paths answer 404, like Jubelio does.
+ * Stock search (`/inventory/?q=`) also returns similar SKUs, as the real one does.
+ *
+ * @param  array<string, mixed>  $overrides  path => response or fn (Request) => response
+ */
+function fakeJubelioCatalog(array $overrides = []): void
+{
+    config([
+        'jubelio.base_url' => 'https://api2.jubelio.com',
+        'jubelio.email' => 'owner@saefulaskar.id',
+        'jubelio.password' => 'rahasia-jubelio',
+        'jubelio.store_id' => '-102',
+        'jubelio.location_id' => -1,
+    ]);
+
+    $routes = $overrides + [
+        '/login' => Http::response(fixture('jubelio/login.json')),
+        '/inventory/categories/item-categories/' => Http::response(fixture('jubelio/catalog/categories.json')),
+        '/inventory/items/' => Http::response(fixture('jubelio/catalog/items.json')),
+        '/inventory/item-bundles/' => Http::response(fixture('jubelio/catalog/item-bundles.json')),
+        '/inventory/items/group/18' => Http::response(fixture('jubelio/catalog/item-group-18.json')),
+        '/inventory/items/group/19' => Http::response(fixture('jubelio/catalog/item-group-19.json')),
+        '/inventory/items/group/25' => Http::response(fixture('jubelio/catalog/item-group-25.json')),
+        '/variations/' => Http::response(fixture('jubelio/catalog/variations.json')),
+        '/inventory/' => function (Request $request) {
+            $stock = fixture('jubelio/catalog/inventory.json');
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+            $search = $query['q'] ?? null;
+
+            if ($search !== null) {
+                $stock['data'] = array_values(array_filter($stock['data'], fn (array $row) => str_contains($row['item_code'], $search)));
+                $stock['totalCount'] = count($stock['data']);
+            }
+
+            return Http::response($stock);
+        },
+    ];
+
+    // Http::fake() stubs accumulate and the first match wins, so later calls in
+    // the same test only swap the routes the single registered stub reads.
+    $registered = app()->bound('tests.jubelio-routes');
+    app()->instance('tests.jubelio-routes', $routes);
+
+    if (! $registered) {
+        Http::fake(function (Request $request) {
+            $response = app('tests.jubelio-routes')[parse_url($request->url(), PHP_URL_PATH)] ?? Http::response(['message' => 'Not Found'], 404);
+
+            return $response instanceof Closure ? $response($request) : $response;
+        });
+    }
+}
+
+/**
+ * Paths of the Jubelio calls recorded by Http::fake(), e.g. ['/login', '/variations/'].
+ *
+ * @return list<string>
+ */
+function jubelioCalls(): array
+{
+    return Http::recorded()->map(fn (array $pair) => parse_url($pair[0]->url(), PHP_URL_PATH))->values()->all();
 }
 
 /**

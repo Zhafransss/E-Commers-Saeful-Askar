@@ -1,0 +1,55 @@
+{
+  "item_group_id": 18,
+  "item_group_name": "Baterai Lithium Phylion",
+  "description": "<p><strong>Baterai Lithium Phylion</strong></p>\n<p>Sel lithium berkualitas.<script>alert(1)</script></p>\n<p><br></p>",
+  "notes": null,
+  "sell_tax_id": 1,
+  "sell_this": true,
+  "is_active": true,
+  "status": null,
+  "item_category_id": 1000000002,
+  "sell_unit": "Buah",
+  "package_weight": "8800.0000",
+  "package_height": "20.0000",
+  "package_width": "15.0000",
+  "package_length": "35.0000",
+  "variations": [{ "label": "Kapasitas", "values": ["48V 12Ah", "72V 24Ah"] }],
+  "sell_price": "2500000.0000",
+  "last_modified": "2026-10-13T06:41:03.678Z",
+  "brand_name": null,
+  "min": 0,
+  "max": 0,
+  "product_skus": [
+    {
+      "item_id": 20,
+      "item_code": "SC000381N",
+      "barcode": "8991234500011",
+      "sell_price": "2500000.0000",
+      "end_qty": 2,
+      "average_cost": "1800000.0000",
+      "amount": null,
+      "variation_values": [{ "label": "Kapasitas", "value": "48V 12Ah" }],
+      "prices": [],
+      "images": [
+        { "item_id": 20, "image_id": 301, "cloud_key": "https://cdn.example.com/images/18-phylion-12ah.png", "thumbnail": "https://cdn.example.com/images/18-phylion-12ah-thumb.png", "file_name": "18-phylion-12ah.png", "sequence_number": 0, "channel_info": null }
+      ]
+    },
+    {
+      "item_id": 19,
+      "item_code": "SC000384N",
+      "barcode": null,
+      "sell_price": "4500000.0000",
+      "end_qty": 4,
+      "average_cost": "3200000.0000",
+      "amount": null,
+      "variation_values": [{ "label": "Kapasitas", "value": "72V 24Ah" }],
+      "prices": [],
+      "images": [
+        { "item_id": 19, "image_id": 303, "cloud_key": "https://cdn.example.com/images/18-phylion-24ah-b.png", "thumbnail": null, "file_name": "18-phylion-24ah-b.png", "sequence_number": 1, "channel_info": null },
+        { "item_id": 19, "image_id": 302, "cloud_key": "https://cdn.example.com/images/18-phylion-24ah.png", "thumbnail": "https://cdn.example.com/images/18-phylion-24ah-thumb.png", "file_name": "18-phylion-24ah.png", "sequence_number": 0, "channel_info": null }
+      ]
+    }
+  ],
+  "bundles": [],
+  "attributes": []
+}

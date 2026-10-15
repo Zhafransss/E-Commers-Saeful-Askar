@@ -12,7 +12,7 @@ Isi teknis setiap fase diringkas dari Acceptance Criteria di API Contract. Bila 
 | --- | --- | --- | --- | --- | --- | --- |
 | 0 | Fondasi | 1 | AUTH-01 | — | — | Selesai |
 | 1 | Infrastruktur integrasi | 1–2 | — (INT-HDL, INT-JB-01, INT-JB-14) | 0 | Sedang | Selesai |
-| 2 | Katalog & sinkron Jubelio | 2 | CAT-01–03, WH-02–04 | 1 | Besar | Belum mulai |
+| 2 | Katalog & sinkron Jubelio | 2 | CAT-01–03, WH-02–04 | 1 | Besar | Selesai (webhook asli pertama belum diterima) |
 | 3 | Akun, alamat, keranjang | 3 | AUTH-02–09, REG-01–04, ADDR-01–06, CART-01–06 | 0 (REG: 1, CART: 2) | Besar | Belum mulai |
 | 4 | Ongkir & checkout | 4 | SHIP-01, ORD-01 | 2, 3 | Besar | Belum mulai |
 | 5 | Pembayaran & siklus pesanan | 4–5 | WH-01, WH-05, ORD-02–05 | 4 | Besar | Belum mulai |
@@ -126,20 +126,27 @@ Endpoint WH-01 – WH-05 sengaja masih `501` sampai handler-nya dibangun (Fase 2
 | API publik | CAT-01: `product_count` hanya produk aktif dengan varian aktif; kategori kosong disembunyikan kecuali `with_empty=1`; di-cache maks 10 menit dan dihapus setelah sinkron. CAT-02: pencarian nama dan SKU persis, filter kategori dan rentang harga varian, `in_stock=1`, `sort=latest` berdasarkan `jubelio_last_modified`. CAT-03: varian aktif saja (stok 0 tetap tampil), gambar urut `sort_order`, `min_qty`/`max_qty` boleh `null`, slug tidak berubah walau nama berubah, 404 `PRODUCT_NOT_FOUND` | CAT-01 – CAT-03 |
 | Halaman Blade | `products/show` memakai data yang sama untuk judul dan meta deskripsi (SEO) | CAT-03 |
 
-**Keputusan teknis di fase ini.** Sanitasi HTML (deskripsi produk, lalu dipakai lagi untuk isi artikel di Fase 6) butuh satu library sanitizer yang dipilih bersama; daftar tag yang diizinkan mengikuti ART-02.
+**Keputusan teknis di fase ini.**
+
+- Sanitasi HTML memakai `ezyang/htmlpurifier` (`App\Support\HtmlSanitizer`); daftar tag mengikuti ART-02. Deskripsi asli Jubelio sudah berupa HTML (`<p>`, `<strong>`, `<br>`), jadi tidak perlu konversi teks biasa.
+- Bundle tidak ada di `/inventory/items/`; sinkron penuh dan inkremental juga membaca `/inventory/item-bundles/` (bentuk data sama). Stok bundle dibaca lewat INT-JB-06 seperti SKU biasa.
+- Nama, berat, dan penanda bundle per SKU diambil dari INT-JB-05 (`/variations/`), karena `product_skus` di INT-JB-04 tidak memuatnya.
+- Handler WH-02 – WH-04 (`App\Services\Webhooks\Handlers`) memanggil `ProductSyncService` / `StockSyncService` langsung, agar status `webhook_events` mencerminkan hasil sinkron. `SyncProductGroupJob` dan `SyncStockJob` (nama dari kontrak) adalah job tipis di atas service yang sama, untuk sinkron di latar belakang seperti ADM-13.
+- Batas waktu sinkron inkremental disimpan di cache (`jubelio:products:listed-at`), bukan dibaca dari `sync_logs`, karena sinkron satu produk dari webhook juga menulis `sync_logs` dan akan menggeser batasnya. Bila cache kosong, sinkron inkremental berjalan penuh.
 
 **Definisi selesai.**
 
-- [ ] Sinkron penuh dengan fixture mengisi `categories`, `products`, `product_variants`, `product_images` sesuai pemetaan di `integrations.md`.
-- [ ] Produk dan varian yang hilang atau nonaktif di Jubelio menjadi `is_active = false`, tidak dihapus, dan hilang dari CAT-02/CAT-03.
-- [ ] Feature test CAT-01–03 untuk setiap Acceptance Criteria, termasuk respons CAT-02 < 500 ms untuk 48 item.
-- [ ] Test WH-02–04, termasuk event ganda yang tidak diproses dua kali dan stok dari gudang lain yang diabaikan.
-- [ ] Sinkron dijalankan sekali terhadap akun Jubelio asli, dan jumlah produk aktif cocok dengan dashboard Jubelio.
+- [x] Sinkron penuh dengan fixture mengisi `categories`, `products`, `product_variants`, `product_images` sesuai pemetaan di `integrations.md`.
+- [x] Produk dan varian yang hilang atau nonaktif di Jubelio menjadi `is_active = false`, tidak dihapus, dan hilang dari CAT-02/CAT-03.
+- [x] Feature test CAT-01–03 untuk setiap Acceptance Criteria, termasuk respons CAT-02 < 500 ms untuk 48 item.
+- [x] Test WH-02–04, termasuk event ganda yang tidak diproses dua kali dan stok dari gudang lain yang diabaikan.
+- [x] Sinkron dijalankan sekali terhadap akun Jubelio asli, dan jumlah produk aktif cocok dengan dashboard Jubelio. 15 Okt 2026: 4 kategori, 9 produk (8 item + 1 bundle), 30 varian, 30 gambar; sama dengan `/inventory/items/` + `/inventory/item-bundles/` dan `/variations/`.
 
 **Blocker / risiko.**
 
-- Berat per varian mungkin tidak didukung Jubelio (INT-JB-05, PRD §9). Perlu dicek di akun asli pada fase ini.
-- Harga per toko memakai `JUBELIO_STORE_ID` (-102). Bila produk tidak punya harga khusus toko website, harga jatuh ke `sell_price`.
+- ~~Berat per varian mungkin tidak didukung Jubelio~~ Terjawab 15 Okt 2026: didukung.
+- Harga per toko memakai `JUBELIO_STORE_ID` (-102). Di akun asli `prices[]` masih kosong, jadi harga jatuh ke `sell_price`.
+- **Idempotency key WH-02 – WH-04 = SHA256 body.** Body `update-qty` hanya berisi `item_ids` dan `location_id`, sehingga dua perubahan stok berbeda untuk item yang sama menghasilkan key yang sama, dan yang kedua dianggap duplikat. Stok tetap terkoreksi oleh rekonsiliasi 15 menit (kriteria rilis PRD terpenuhi), tetapi target "1 menit" WH-04 tidak terjamin untuk perubahan berulang. Perlu dicek dengan webhook asli pertama (apakah body memuat penanda waktu); bila tidak, kontrak `webhooks.md` perlu direvisi di `development`.
 
 **Merge.** Bersama halaman daftar dan detail produk dari frontend.
 
@@ -276,7 +283,7 @@ Endpoint WH-01 – WH-05 sengaja masih `501` sampai handler-nya dibangun (Fase 2
 - Test penjaga: tidak ada lagi `NotImplementedException` di controller v1 (kode `501` tidak boleh ada saat rilis).
 - Uji end-to-end dengan akun asli (mode test): katalog, checkout, bayar, kedaluwarsa, batal, resi. Nilai pemetaan WH-05 dipastikan dengan contoh webhook asli.
 - Ukur kinerja API katalog (< 500 ms) dengan data asli; tambah index atau eager loading bila perlu.
-- Produksi: cron `php artisan schedule:run` tiap menit, queue worker yang selalu hidup, `APP_DEBUG=false`, cookie session `Secure` (AUTH-01), Xendit mode live (`xnd_production_…`), kredensial hanya di `.env`, `ADMIN_EMAIL`/`ADMIN_PASSWORD` diisi, URL webhook didaftarkan ke domain produksi (`jubelio:setup`), backup database.
+- Produksi: OPcache aktif dan `php artisan optimize` (config/route/view cache) — tanpa keduanya, memuat Laravel saja makan ±240 ms per request di lokal Windows (diukur 15 Okt 2026), cron `php artisan schedule:run` tiap menit, queue worker yang selalu hidup, `APP_DEBUG=false`, cookie session `Secure` (AUTH-01), Xendit mode live (`xnd_production_…`), kredensial hanya di `.env`, `ADMIN_EMAIL`/`ADMIN_PASSWORD` diisi, URL webhook didaftarkan ke domain produksi (`jubelio:setup`), backup database.
 
 **Definisi selesai = kriteria rilis PRD §8.**
 

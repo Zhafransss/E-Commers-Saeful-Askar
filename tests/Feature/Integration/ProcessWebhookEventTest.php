@@ -104,12 +104,12 @@ test('WebhookEventRejected marks the event failed without retry and logs a warni
 });
 
 test('an event type without a handler is marked failed', function () {
-    $event = WebhookEvent::factory()->create();
+    $event = WebhookEvent::factory()->create(['event_type' => 'update-unknown']);
 
     (new ProcessJubelioWebhookJob($event->id))->handle();
 
     expect($event->fresh())->status->toBe(WebhookEventStatus::Failed)
-        ->error->toBe('Belum ada pemroses untuk event update-product.');
+        ->error->toBe('Belum ada pemroses untuk event update-unknown.');
 });
 
 test('other errors are rethrown for the queue to retry, and failed() settles the event at the end', function () {

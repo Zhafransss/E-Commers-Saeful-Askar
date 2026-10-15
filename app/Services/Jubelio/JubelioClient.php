@@ -112,6 +112,105 @@ class JubelioClient extends IntegrationClient
     }
 
     /**
+     * INT-JB-02 · Item categories, flat; `parent_id` 0 marks a root.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function categories(): array
+    {
+        $json = $this->get('/inventory/categories/item-categories/')->json();
+
+        return $json['data'] ?? $json ?? [];
+    }
+
+    /**
+     * INT-JB-03 · One page of item groups with their variants. Bundles are not
+     * in this list: they come from bundles().
+     *
+     * @return array{data: list<array<string, mixed>>, totalCount: int}
+     */
+    public function items(int $page, int $pageSize = 200, bool $newestFirst = false): array
+    {
+        return $this->page('/inventory/items/', $page, $pageSize, $newestFirst);
+    }
+
+    /**
+     * INT-JB-03 · One page of bundle item groups, same shape as items().
+     *
+     * @return array{data: list<array<string, mixed>>, totalCount: int}
+     */
+    public function bundles(int $page, int $pageSize = 200, bool $newestFirst = false): array
+    {
+        return $this->page('/inventory/item-bundles/', $page, $pageSize, $newestFirst);
+    }
+
+    /**
+     * INT-JB-04 · Item group detail, or null when Jubelio no longer has it.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function itemGroup(int $itemGroupId): ?array
+    {
+        try {
+            $json = $this->get("/inventory/items/group/{$itemGroupId}")->json();
+        } catch (JubelioApiException $e) {
+            if ($e->httpStatus === 404) {
+                return null;
+            }
+
+            throw $e;
+        }
+
+        return is_array($json) && isset($json['item_group_id']) ? $json : null;
+    }
+
+    /**
+     * INT-JB-05 · One page of SKUs with their package weight. The trailing
+     * slash is required: `/variations` answers 404.
+     *
+     * @return array{data: list<array<string, mixed>>, totalCount: int}
+     */
+    public function variations(int $page, int $pageSize = 200): array
+    {
+        return $this->page('/variations/', $page, $pageSize);
+    }
+
+    /**
+     * INT-JB-06 · One page of stock per warehouse, optionally searched by SKU
+     * (the search also returns similar SKUs; callers match item_code exactly).
+     *
+     * @return array{data: list<array<string, mixed>>, totalCount: int}
+     */
+    public function inventory(int $page, int $pageSize = 200, ?string $search = null): array
+    {
+        $query = ['page' => $page, 'pageSize' => $pageSize];
+
+        if ($search !== null) {
+            $query['q'] = $search;
+        }
+
+        $json = $this->get('/inventory/', $query)->json();
+
+        return ['data' => $json['data'] ?? [], 'totalCount' => (int) ($json['totalCount'] ?? 0)];
+    }
+
+    /**
+     * @return array{data: list<array<string, mixed>>, totalCount: int}
+     */
+    private function page(string $path, int $page, int $pageSize, bool $newestFirst = false): array
+    {
+        $query = ['page' => $page, 'pageSize' => $pageSize];
+
+        if ($newestFirst) {
+            $query += ['sortBy' => 'last_modified', 'sortDirection' => 'DESC'];
+        }
+
+        $json = $this->get($path, $query)->json();
+
+        return ['data' => $json['data'] ?? [], 'totalCount' => (int) ($json['totalCount'] ?? 0)];
+    }
+
+    /**
      * @param  array<string, mixed>  $query
      */
     public function get(string $path, array $query = []): Response

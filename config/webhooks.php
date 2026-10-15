@@ -1,5 +1,7 @@
 <?php
 
+use App\Services\Webhooks\Handlers;
+
 /*
 | Handler per webhook event type (docs/api/webhooks.md). Each handler implements
 | App\Services\Webhooks\WebhookHandler and is added in the phase that builds the
@@ -13,9 +15,12 @@ return [
         // event_type 'invoice' → WH-01 (Fase 5)
         'xendit' => [],
 
-        // event_type = Jubelio action: 'update-product' → WH-02, 'update-price' → WH-03,
-        // 'update-qty' → WH-04 (Fase 2); 'update-salesorder' → WH-05 (Fase 5)
-        'jubelio' => [],
+        // event_type = Jubelio action; 'update-salesorder' → WH-05 (Fase 5)
+        'jubelio' => [
+            'update-product' => Handlers\JubelioProductUpdated::class,  // WH-02
+            'update-price' => Handlers\JubelioProductUpdated::class,    // WH-03
+            'update-qty' => Handlers\JubelioStockUpdated::class,        // WH-04
+        ],
 
     ],
 

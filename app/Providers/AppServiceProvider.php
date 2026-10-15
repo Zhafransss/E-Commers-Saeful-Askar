@@ -4,8 +4,11 @@ namespace App\Providers;
 
 use App\Services\Jubelio\JubelioClient;
 use App\Services\Jubelio\JubelioTokenManager;
+use App\Services\Jubelio\Mappers\ProductMapper;
+use App\Services\Jubelio\StockSyncService;
 use App\Services\JubelioShipment\JubelioShipmentClient;
 use App\Services\Xendit\XenditClient;
+use App\Support\HtmlSanitizer;
 use Carbon\CarbonInterface;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -29,6 +32,14 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(JubelioClient::class, fn ($app) => new JubelioClient(
             config('jubelio'),
             $app->make(JubelioTokenManager::class),
+        ));
+        $this->app->bind(ProductMapper::class, fn () => new ProductMapper(
+            new HtmlSanitizer,
+            filled(config('jubelio.store_id')) ? (string) config('jubelio.store_id') : null,
+        ));
+        $this->app->bind(StockSyncService::class, fn ($app) => new StockSyncService(
+            $app->make(JubelioClient::class),
+            config('jubelio.location_id'),
         ));
         $this->app->singleton(JubelioShipmentClient::class, fn () => new JubelioShipmentClient(config('jubelio_shipment')));
         $this->app->singleton(XenditClient::class, fn () => new XenditClient(config('xendit')));

@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "item_group_id": 25,
+      "item_name": "Paket Konversi 72V24Ah + Charger + Socket M23",
+      "last_modified": "2026-10-10T08:00:00.000Z",
+      "variations": [],
+      "sell_price": "6750000.0000",
+      "item_category_id": 1000000004,
+      "thumbnail": null,
+      "total_composition": 3,
+      "is_consignment": false,
+      "online_status": null,
+      "variants": [
+        { "item_group_id": 25, "item_id": 29, "item_code": "72V24Ah-10A-M23", "item_name": "Paket Konversi 72V24Ah + Charger + Socket M23", "is_bundle": true, "variation_values": [], "thumbnail": null, "barcode": null, "end_qty": 0, "order_qty": 0, "available_qty": 0, "sell_price": "6750000.0000" }
+      ]
+    }
+  ],
+  "totalCount": 1
+}
