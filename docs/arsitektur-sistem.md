@@ -163,8 +163,6 @@ saeful-askar/
 │   │   │       ├── XenditWebhookController.php
 │   │   │       └── JubelioWebhookController.php
 │   │   ├── Middleware/
-│   │   │   ├── VerifyXenditCallbackToken.php
-│   │   │   ├── VerifyJubelioSignature.php
 │   │   │   ├── EnsureUserIsAdmin.php
 │   │   │   ├── RequirePageRole.php         guard halaman Blade (dilewati saat VITE_API_MOCK=true)
 │   │   │   └── RejectMalformedJson.php     body JSON rusak → 400 BAD_REQUEST
@@ -186,9 +184,10 @@ saeful-askar/
 │   │   ├── AddressPolicy.php
 │   │   └── OrderPolicy.php
 │   ├── Services/
+│   │   ├── IntegrationClient.php           timeout, log, retry bersama semua client (INT-HDL)
 │   │   ├── Jubelio/
 │   │   │   ├── JubelioClient.php           satu-satunya pemanggil api2.jubelio.com
-│   │   │   ├── JubelioTokenManager.php     token 12 jam di cache database
+│   │   │   ├── JubelioTokenManager.php     token 11,5 jam di cache database
 │   │   │   ├── ProductSyncService.php
 │   │   │   ├── StockSyncService.php
 │   │   │   ├── ContactService.php
@@ -203,6 +202,8 @@ saeful-askar/
 │   │   ├── Xendit/
 │   │   │   ├── XenditClient.php
 │   │   │   └── InvoiceService.php
+│   │   ├── Webhooks/
+│   │   │   └── WebhookReceiver.php         verifikasi token/signature → webhook_events → queue
 │   │   └── Shop/
 │   │       ├── CartService.php
 │   │       ├── CheckoutService.php         orkestrasi stok → SO → invoice dalam satu alur

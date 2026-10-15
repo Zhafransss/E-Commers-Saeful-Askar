@@ -400,7 +400,7 @@ Tidak ada. Header `authorization`\*.
     "sell_price": 6750000,
     "promotion_price": null,
     "sell_unit": "Unit",
-    "sell_tax_id": -1,
+    "sell_tax_id": 1,
     "rate": 0,
     "tax_name": "No Tax",
     "uom_id": -1
@@ -634,7 +634,7 @@ Item (`items[]`):
       "salesorder_detail_id": 0,
       "item_id": 2976,
       "description": "Sepeda Listrik Uwinfly C1 Pro - Hitam",
-      "tax_id": -1,
+      "tax_id": 1,
       "price": 6750000,
       "unit": "Unit",
       "qty_in_base": 1,
@@ -825,7 +825,7 @@ Lihat INT-HDL.
 
 | Panggilan | Path | Untuk |
 | --- | --- | --- |
-| Daftar toko | `GET https://api2.jubelio.com/marketplace/store/?page=1&pageSize=200` | Cari `store_id` toko internal "Website Saeful Askar" (`channel_id = 1`) |
+| Daftar toko | `GET https://api2.jubelio.com/locations/store/?page=1&pageSize=200` | Cari `store_id` toko internal website (`channel_id = 1`). `/marketplace/store/` hanya memuat toko marketplace (dan membawa `extra_info` berisi secret), jadi tidak dipakai |
 | Daftar gudang | `GET https://api2.jubelio.com/locations/?page=1&pageSize=200` | Cari `location_id` gudang Tambun Utara |
 | Daftar pajak | `GET https://api2.jubelio.com/taxes/?page=1&pageSize=200` | Cari `tax_id` "No Tax" |
 | Daftarkan webhook | `POST https://api2.jubelio.com/systemsetting/webhook` | Pasang URL WH-02 – WH-05 |
@@ -857,17 +857,21 @@ Secret key diisi lewat dashboard Jubelio (Pengaturan → Developer → Webhook) 
 
 ### Response Success
 
-`200 OK` — contoh daftar toko (dipotong):
+`200 OK` — contoh daftar toko dari akun toko (`GET /locations/store/`):
 
 ```json
 {
   "data": [
-    { "channel_id": 64, "store_id": "38565", "store_name": "Saeful Askar Official" },
-    { "channel_id": 1, "store_id": "-1043", "store_name": "Website Saeful Askar" }
+    { "store_id": -100, "store_name": "Toko Default", "channel_id": 1, "location_id": null },
+    { "store_id": 99936, "store_name": "Ebike Part", "channel_id": 64, "location_id": null },
+    { "store_id": -101, "store_name": "SIMDISA", "channel_id": 1, "location_id": null },
+    { "store_id": -102, "store_name": "Website", "channel_id": 1, "location_id": null }
   ],
-  "totalCount": 2
+  "totalCount": 4
 }
 ```
+
+`store_id` berupa angka (toko internal bernilai negatif); dibandingkan sebagai string dengan `JUBELIO_STORE_ID`. Di akun toko, pajak `No Tax` = `1`, sedangkan `-1` = PPN 10%: `tax_id` di contoh lain dokumen ini hanya ilustrasi, jangan disalin.
 
 Daftarkan webhook: `{ "status": "ok" }`.
 
