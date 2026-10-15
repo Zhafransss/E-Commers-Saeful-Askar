@@ -201,6 +201,22 @@ test('AUTH-04 for a guest answers 401', function () {
 
 // --- AUTH-05 Me ------------------------------------------------------------------
 
+test('AUTH-02, AUTH-03, and AUTH-06 answer the User object with a message; AUTH-05 without one', function () {
+    $register = fromFrontend()->postJson('/api/v1/auth/register', registration())->assertCreated();
+    expect(array_keys($register->json()))->toBe(['data', 'message'])
+        ->and($register->json('message'))->toBe('Pendaftaran berhasil.');
+
+    fromFrontend()->putJson('/api/v1/auth/profile', ['name' => 'Budi S.', 'phone' => '081298765432'])
+        ->assertOk()->assertJsonPath('message', 'Profil diperbarui.')->assertJsonPath('data.name', 'Budi S.');
+
+    expect(array_keys(fromFrontend()->getJson('/api/v1/auth/me')->assertOk()->json()))->toBe(['data']);
+
+    fromFrontend()->postJson('/api/v1/auth/logout')->assertOk();
+    app('auth')->forgetGuards();
+    fromFrontend()->postJson('/api/v1/auth/login', ['email' => 'budi@example.com', 'password' => 'rahasia123'])
+        ->assertOk()->assertJsonPath('message', 'Login berhasil.')->assertJsonPath('data.email', 'budi@example.com');
+});
+
 test('AUTH-05 never exposes password, remember_token, or jubelio_contact_id', function () {
     $user = User::factory()->create();
     $user->forceFill(['jubelio_contact_id' => 555])->save();

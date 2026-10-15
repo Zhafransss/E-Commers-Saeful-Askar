@@ -45,7 +45,7 @@ class AuthController extends Controller
         Auth::guard('web')->login($user);
         $request->session()->regenerate();
 
-        return (new UserResource($user))->response()->setStatusCode(201);
+        return $this->user($user, 'Pendaftaran berhasil.', 201);
     }
 
     /**
@@ -63,7 +63,7 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return $this->user(Auth::guard('web')->user());
+        return $this->user(Auth::guard('web')->user(), 'Login berhasil.');
     }
 
     /**
@@ -98,7 +98,7 @@ class AuthController extends Controller
             'phone' => PhoneNumber::normalize($request->validated('phone')),
         ]);
 
-        return $this->user($user);
+        return $this->user($user, 'Profil diperbarui.');
     }
 
     /**
@@ -158,11 +158,15 @@ class AuthController extends Controller
     }
 
     /**
-     * 200 with the User object. Set explicitly: JsonResource answers 201 for a
-     * model created in the same request (registration followed by login).
+     * The User object, with a message for the customer on AUTH-02/03/06. The
+     * status is always set: JsonResource would answer 201 for any model created
+     * in the same request (registration followed by login).
      */
-    private function user(User $user): JsonResponse
+    private function user(User $user, ?string $message = null, int $status = 200): JsonResponse
     {
-        return (new UserResource($user))->response()->setStatusCode(200);
+        return (new UserResource($user))
+            ->additional($message === null ? [] : ['message' => $message])
+            ->response()
+            ->setStatusCode($status);
     }
 }
