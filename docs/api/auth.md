@@ -19,6 +19,8 @@ Objek **User** yang dipakai di file ini:
 
 `role`: `customer` | `admin`. `jubelio_contact_id` tidak pernah dikirim ke frontend.
 
+AUTH-02, AUTH-03, dan AUTH-06 mengembalikan objek User di `data` beserta `message` untuk ditampilkan ke pengguna (pola sama dengan CART-02 dan ADDR-02). AUTH-05 hanya membaca, jadi tanpa `message`.
+
 ---
 
 ## AUTH-01 · Ambil cookie CSRF
@@ -98,7 +100,8 @@ Sebagai pengunjung, saya ingin membuat akun dengan nama, email, nomor HP, dan pa
     "email_verified_at": null,
     "has_default_address": false,
     "created_at": "2026-10-14T21:00:00+07:00"
-  }
+  },
+  "message": "Pendaftaran berhasil."
 }
 ```
 
@@ -173,7 +176,8 @@ Sebagai customer, saya ingin masuk dengan email dan password, agar bisa mengakse
     "email_verified_at": null,
     "has_default_address": true,
     "created_at": "2026-10-14T21:00:00+07:00"
-  }
+  },
+  "message": "Login berhasil."
 }
 ```
 
@@ -337,7 +341,8 @@ Email tidak bisa diubah lewat endpoint ini.
     "email_verified_at": null,
     "has_default_address": true,
     "created_at": "2026-10-14T21:00:00+07:00"
-  }
+  },
+  "message": "Profil diperbarui."
 }
 ```
 
