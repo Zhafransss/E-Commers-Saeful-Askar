@@ -15,6 +15,27 @@ test('every v1 contract endpoint has a route', function (string $code, string $m
     expect($route->uri())->not->toBe('{fallbackPlaceholder}');
 })->with(contractEndpoints());
 
+test('every API and webhook route is documented in the contract', function () {
+    // Normalise "/api/v1/orders/WEB-000001" and "api/v1/orders/{orderNumber}" to the same shape.
+    $shape = fn (string $method, string $uri) => $method.' /'.ltrim(preg_replace('#\{[^}]+\}|contoh-slug|WEB-000001|(?<=/)1(?=/|$)#', '{}', $uri), '/');
+
+    $documented = collect(contractEndpoints())->map(fn ($endpoint) => $shape($endpoint[1], $endpoint[2]));
+
+    $routed = collect(Route::getRoutes()->getRoutes())
+        ->filter(fn ($route) => str_starts_with($route->uri(), 'api/') || str_starts_with($route->uri(), 'webhooks/'))
+        ->flatMap(fn ($route) => collect($route->methods())->reject(fn ($m) => $m === 'HEAD')->map(fn ($m) => $shape($m, $route->uri())));
+
+    expect($routed->diff($documented)->values()->all())->toBe([]);
+});
+
+test('ADM-05 is reachable the way the frontend sends it: multipart POST with _method=PUT', function () {
+    $this->actingAs(User::factory()->admin()->create());
+
+    $response = $this->post('/api/v1/admin/articles/1', ['_method' => 'PUT', 'title' => 'Judul'], ['Accept' => 'application/json']);
+
+    assertApiError($response, 501, 'NOT_IMPLEMENTED')->assertJsonPath('endpoint', 'ADM-05');
+});
+
 test('the contract index lists 49 frontend endpoints and 5 webhooks for v1', function () {
     $codes = array_column(contractEndpoints(), 0);
 

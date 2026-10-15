@@ -72,18 +72,27 @@ Buka http://localhost:8000.
    Error selalu berupa `ApiError` dengan `code` dari kontrak (`OUT_OF_STOCK`, `VALIDATION_ERROR`, …) dan `fieldError('email')` untuk pesan per field.
 3. Untuk mencoba kondisi gagal atau mock yang bereaksi terhadap input, tulis di `resources/js/api/mocks/overrides.js`. Jangan mengedit `contract.json`, karena file itu di-generate.
 4. Halaman ada di `resources/views/pages/**`. Setiap placeholder menyebutkan kode endpoint yang dipakainya. Komponen Alpine ditaruh di `resources/js/components/` lalu didaftarkan di `app.js`.
-5. Set kembali `VITE_API_MOCK=false` untuk mencoba endpoint asli dari backend.
+5. Set kembali `VITE_API_MOCK=false` untuk mencoba endpoint asli dari backend. **Setiap kali nilai ini diubah, jalankan ulang `composer dev`** (atau `npm run build`); bila server dan bundle JS berbeda, console browser menampilkan peringatan `VITE_API_MOCK berbeda`.
+6. Boolean di query string dan form-data dikirim `1`/`0` — `client.js` mengubah `true`/`false` di `query` secara otomatis; untuk `FormData` isi sendiri dengan `'1'`/`'0'`.
 
 ### Tim backend (branch `backend`)
 
 1. Semua route v1 sudah terdaftar (`routes/api.php`, `routes/webhooks.php`). Endpoint yang belum dibangun membalas `501 NOT_IMPLEMENTED` beserta kode endpointnya. Ganti `throw new NotImplementedException(...)` di controller dengan implementasi sesuai `docs/api/*.md`.
-2. Error domain dilempar sebagai `App\Exceptions\ApiException` (atau turunannya) dengan `code` dari kontrak; error Laravel (auth, validasi, 404, 429, …) sudah otomatis diubah ke format kontrak.
-3. Panggilan ke Jubelio, Jubelio Shipment, dan Xendit hanya lewat `app/Services/*/…Client.php`. Test memakai `Http::fake()` + fixture di `tests/Fixtures/`.
-4. Setiap endpoint wajib punya feature test; helper `assertApiError($response, 409, 'OUT_OF_STOCK')` tersedia di `tests/Pest.php`.
+2. Setiap Resource meng-extend `App\Http\Resources\ApiResource` (bukan `JsonResource`), sehingga `XResource::collection($paginator)` otomatis berbentuk `{ data, meta: { current_page, per_page, total, last_page } }` seperti kontrak. Tanggal otomatis diformat ISO 8601 `+07:00`.
+3. Error domain dilempar sebagai `App\Exceptions\ApiException` (atau turunannya) dengan `code` dari kontrak; error Laravel (auth, validasi, 404, 429, …) sudah otomatis diubah ke format kontrak.
+4. Panggilan ke Jubelio, Jubelio Shipment, dan Xendit hanya lewat `app/Services/*/…Client.php`. Test memakai `Http::fake()` + fixture di `tests/Fixtures/`.
+5. Setiap endpoint wajib punya feature test; helper `assertApiError($response, 409, 'OUT_OF_STOCK')` tersedia di `tests/Pest.php`.
 
 ### Saat kontrak API berubah
 
-Ubah `docs/api/*.md` di branch `development` (disepakati kedua tim), jalankan `npm run mocks:generate`, commit keduanya bersama, lalu merge `development` ke `backend` dan `frontend`. Test `ContractRoutesTest` gagal bila ada endpoint di kontrak yang belum punya route.
+Ubah `docs/api/*.md` di branch `development` (disepakati kedua tim), jalankan `npm run mocks:generate`, commit keduanya bersama, lalu merge `development` ke `backend` dan `frontend`.
+
+Dua pemeriksaan menjaga BE dan FE tetap sejalan — **wajib lulus sebelum merge ke `development`**:
+
+| Perintah | Memeriksa |
+|---|---|
+| `composer test` (`ContractRoutesTest`) | Setiap endpoint kontrak punya route, dan tidak ada route API yang tidak tercatat di kontrak |
+| `npm run contract:check` | `contract.json` tidak basi, `endpoints.js` ↔ kontrak cocok dua arah, field yang dibaca store FE ada di response kontrak |
 
 ## Testing
 

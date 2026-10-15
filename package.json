@@ -5,7 +5,8 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "mocks:generate": "node scripts/generate-api-mocks.mjs"
+        "mocks:generate": "node scripts/generate-api-mocks.mjs",
+        "contract:check": "node scripts/check-api-contract.mjs"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

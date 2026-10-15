@@ -4,6 +4,9 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        {{-- Read by resources/js/api/client.js: base URL (works from a subfolder) and the server-side mock flag. --}}
+        <meta name="app-url" content="{{ url('/') }}">
+        <meta name="api-mock" content="{{ config('app.api_mock') ? '1' : '0' }}">
         <meta name="robots" content="noindex, nofollow">
 
         <title>@hasSection('title')@yield('title') | @endif Admin {{ config('app.name') }}</title>

@@ -12,9 +12,29 @@
  *   const { data, meta } = await api.get(endpoints.products.index, { query: { q: 'baterai' } });
  */
 
-const BASE_URL = '/api/v1';
-const CSRF_URL = '/sanctum/csrf-cookie';
+const API_PREFIX = '/api/v1';
 const USE_MOCK = import.meta.env.VITE_API_MOCK === 'true';
+
+const meta = (name) => document.querySelector(`meta[name="${name}"]`)?.content;
+
+/**
+ * Application root from the layout's <meta name="app-url"> (Laravel url('/')),
+ * so API calls also work when the site runs from a subfolder, e.g. XAMPP's
+ * http://localhost/E-Commers%20Saeful%20Askar/public.
+ */
+export const APP_URL = (meta('app-url') || window.location.origin).replace(/\/+$/, '');
+
+const CSRF_URL = `${APP_URL}/sanctum/csrf-cookie`;
+
+// The server decides page guards from the same VITE_API_MOCK; a stale Vite build
+// would silently mix mock data with real guards (or the reverse).
+const serverMock = meta('api-mock');
+if (serverMock !== undefined && (serverMock === '1') !== USE_MOCK) {
+    console.error(
+        `[api] VITE_API_MOCK berbeda: server=${serverMock === '1'}, bundle JS=${USE_MOCK}. ` +
+            'Jalankan ulang `npm run dev` (atau `npm run build`) setelah mengubah .env.',
+    );
+}
 
 export class ApiError extends Error {
     /**
@@ -47,12 +67,15 @@ async function ensureCsrfCookie(force = false) {
 }
 
 function buildUrl(path, query) {
-    const url = new URL(BASE_URL + path, window.location.origin);
+    const url = new URL(APP_URL + API_PREFIX + path);
     Object.entries(query || {}).forEach(([key, value]) => {
         if (value === undefined || value === null || value === '') return;
+        // Query-string conventions from docs/api/README.md: booleans as 1/0
+        // (Laravel's `boolean` rule rejects "true"), lists comma-separated.
+        if (typeof value === 'boolean') value = value ? '1' : '0';
         url.searchParams.set(key, Array.isArray(value) ? value.join(',') : value);
     });
-    return url.pathname + url.search;
+    return url.href;
 }
 
 async function send(method, path, { query, body, headers = {} } = {}, retried = false) {
@@ -103,7 +126,7 @@ async function send(method, path, { query, body, headers = {} } = {}, retried = 
 async function request(method, path, options = {}) {
     if (USE_MOCK) {
         const { mockRequest } = await import('./mocks/index.js');
-        return mockRequest(method, BASE_URL + path, options);
+        return mockRequest(method, API_PREFIX + path, options);
     }
     return send(method, path, options);
 }

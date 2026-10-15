@@ -1,4 +1,4 @@
-import { api, ApiError } from '../api/client.js';
+import { api, ApiError, APP_URL } from '../api/client.js';
 import { endpoints } from '../api/endpoints.js';
 
 /**
@@ -47,7 +47,7 @@ export default {
             await api.post(endpoints.auth.logout);
         } finally {
             this.user = null;
-            window.location.href = '/';
+            window.location.href = `${APP_URL}/`;
         }
     },
 };

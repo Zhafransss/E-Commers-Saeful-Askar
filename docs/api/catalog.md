@@ -18,7 +18,7 @@ Aturan tampil yang berlaku untuk semua endpoint katalog:
 
 | Query | Tipe | Wajib | Keterangan |
 | --- | --- | --- | --- |
-| `with_empty` | boolean | Tidak | Default `false`: kategori tanpa produk aktif tidak ikut |
+| `with_empty` | boolean | Tidak | Default `0`: kategori tanpa produk aktif tidak ikut |
 
 ### User Story
 
@@ -53,7 +53,7 @@ Tidak ada.
 
 - [ ] Data berasal dari tabel `categories` hasil sinkron Jubelio (INT-JB-02).
 - [ ] `product_count` hanya menghitung produk aktif dengan minimal satu varian aktif.
-- [ ] Kategori dengan `product_count = 0` tidak muncul kecuali `with_empty=true`.
+- [ ] Kategori dengan `product_count = 0` tidak muncul kecuali `with_empty=1`.
 - [ ] Response di-cache maksimal 10 menit dan cache dihapus setelah sinkron kategori/produk.
 
 ---
@@ -68,7 +68,7 @@ Tidak ada.
 | --- | --- | --- | --- |
 | `q` | string | Tidak | Cari di nama produk, nama varian, dan SKU; maks 100 karakter |
 | `category` | string | Tidak | Slug kategori; kategori induk ikut menampilkan produk kategori anak |
-| `in_stock` | boolean | Tidak | `true` = hanya produk dengan stok > 0 |
+| `in_stock` | boolean | Tidak | `1` = hanya produk dengan stok > 0 |
 | `price_min` | integer | Tidak | Rupiah, ≥ 0 |
 | `price_max` | integer | Tidak | Rupiah, ≥ `price_min` |
 | `sort` | string | Tidak | `latest` (default), `price_asc`, `price_desc`, `name_asc` |
@@ -147,7 +147,7 @@ Hasil kosong tetap `200` dengan `"data": []` dan `"total": 0`.
 
 - [ ] Hanya produk aktif dengan minimal satu varian aktif yang tampil.
 - [ ] `price_min`/`price_max` dihitung dari varian aktif; produk satu varian punya nilai yang sama.
-- [ ] `in_stock` = `total_available_qty > 0`; produk habis tetap tampil kecuali `in_stock=true`.
+- [ ] `in_stock` = `total_available_qty > 0`; produk habis tetap tampil kecuali `in_stock=1`.
 - [ ] Pencarian SKU persis (mis. `UWF-C1PRO-HTM`) menemukan produknya.
 - [ ] Filter harga memakai rentang harga varian (produk tampil bila ada varian di dalam rentang).
 - [ ] `sort=latest` mengurutkan berdasarkan `jubelio_last_modified` terbaru, lalu `id`.

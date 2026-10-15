@@ -159,6 +159,15 @@ Kode khusus per endpoint ditulis di file masing-masing. Daftar lengkapnya ada di
 | `q` | string | — | Kata kunci, maks 100 karakter |
 | `sort` | string | per endpoint | Nilai yang diizinkan ditulis di tiap endpoint |
 
+Nilai di query string dan `multipart/form-data` (keduanya hanya membawa teks):
+
+| Tipe | Dikirim sebagai | Contoh |
+| --- | --- | --- |
+| boolean | `1` / `0` (bukan `true`/`false`, karena rule `boolean` Laravel menolak string itu) | `?in_stock=1`, `remove_image=1` |
+| daftar | Dipisah koma | `?status=paid,processing` |
+
+Boolean di body JSON tetap `true` / `false`.
+
 ### Batas request (rate limit)
 
 | Kelompok | Batas |

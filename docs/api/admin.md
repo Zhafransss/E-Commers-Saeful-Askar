@@ -321,7 +321,7 @@ Sama dengan ADM-03, ditambah:
 | Field | Tipe | Wajib | Aturan |
 | --- | --- | --- | --- |
 | `_method` | string | Ya | `PUT` |
-| `remove_image` | boolean | Tidak | `true` = hapus gambar sampul; diabaikan bila `image` dikirim |
+| `remove_image` | boolean | Tidak | `1` = hapus gambar sampul (form-data: kirim `1`/`0`); diabaikan bila `image` dikirim |
 
 ```json
 {
@@ -331,7 +331,7 @@ Sama dengan ADM-03, ditambah:
   "body": "<p>Baterai lithium paling awet bila diisi sebelum di bawah 20%…</p>",
   "status": "published",
   "published_at": "2026-10-10T08:00:00+07:00",
-  "remove_image": false
+  "remove_image": "0"
 }
 ```
 

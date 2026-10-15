@@ -63,6 +63,14 @@ test('rate limits answer 429 TOO_MANY_REQUESTS with Retry-After', function () {
         ->assertHeader('Retry-After');
 });
 
+test('auth rate limits are counted per endpoint, so a locked login still allows forgot-password', function () {
+    foreach (range(1, 6) as $attempt) {
+        $this->postJson('/api/v1/auth/login', ['email' => 'budi@example.com']);
+    }
+
+    assertApiError($this->postJson('/api/v1/auth/forgot-password', ['email' => 'budi@example.com']), 501, 'NOT_IMPLEMENTED');
+});
+
 test('unexpected exceptions get 500 SERVER_ERROR without leaking details in production', function () {
     config(['app.debug' => false]);
     Route::get('/api/v1/__test/boom', fn () => throw new RuntimeException('secret detail'))->middleware('api');
