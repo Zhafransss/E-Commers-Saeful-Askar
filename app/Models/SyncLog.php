@@ -60,7 +60,7 @@ class SyncLog extends Model
             throw $e;
         }
 
-        $log->markSucceeded($items ?? $log->items_processed);
+        $log->markSucceeded($items ?? $log->items_processed ?? 0);
 
         return $log;
     }
@@ -89,7 +89,8 @@ class SyncLog extends Model
 
         $this->update([
             'status' => SyncStatus::Failed,
-            'items_processed' => $itemsProcessed ?? $this->items_processed,
+            // A run that fails before counting anything has no count yet; the column is NOT NULL.
+            'items_processed' => $itemsProcessed ?? $this->items_processed ?? 0,
             'message' => Str::limit($message, 5000),
             'finished_at' => now(),
         ]);

@@ -40,3 +40,21 @@ test('track() records a failure with the Jubelio error verbatim and rethrows it'
         ->message->toBe('jubelio POST /sales/orders/ → HTTP 500 [23505] duplicate key value')
         ->finished_at->not->toBeNull();
 });
+
+test('a run that fails before counting anything is still recorded as failed with 0 items', function () {
+    $error = new JubelioApiException('jubelio', 'GET', '/inventory/items/', 500, providerMessage: 'timeout');
+
+    expect(fn () => SyncLog::track(SyncType::Products, SyncTrigger::Schedule, fn () => throw $error))
+        ->toThrow(JubelioApiException::class);
+
+    expect(SyncLog::sole())
+        ->status->toBe(SyncStatus::Failed)
+        ->items_processed->toBe(0)
+        ->message->toContain('/inventory/items/');
+});
+
+test('a run whose work returns nothing is recorded as a success with 0 items', function () {
+    expect(SyncLog::track(SyncType::Stock, SyncTrigger::Schedule, fn () => null)->fresh())
+        ->status->toBe(SyncStatus::Success)
+        ->items_processed->toBe(0);
+});
