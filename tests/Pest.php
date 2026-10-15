@@ -21,6 +21,9 @@ pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
 
+// Unit tests get the application (config, storage paths) but no database refresh.
+pest()->extend(TestCase::class)->in('Unit');
+
 /*
 |--------------------------------------------------------------------------
 | Helpers
