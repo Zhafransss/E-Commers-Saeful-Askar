@@ -91,7 +91,7 @@ Website memakai tiga layanan luar; Jubelio adalah sumber kebenaran untuk katalog
 
 | Layanan | Dipakai untuk | Endpoint / event utama | Catatan |
 | --- | --- | --- | --- |
-| Jubelio Omnichannel (`api2.jubelio.com`) | Katalog, stok, contact, sales order, region, status kirim | `POST /login`, `GET /inventory/items/`, `GET /inventory/items/group/{id}`, `GET /variations`, `GET /inventory/categories/item-categories/`, `POST /contacts/`, `POST /sales/orders/`, `POST /sales/orders/set-as-paid`, `POST /sales/orders/cancel/`, `GET /region/*` | Token 12 jam; 600 request/menit; order masuk ke toko Internal "Website Saeful Askar" (`store_id`), `source` = 1 |
+| Jubelio Omnichannel (`api2.jubelio.com`) | Katalog, stok, contact, sales order, region, status kirim | `POST /login`, `GET /inventory/items/`, `GET /inventory/items/group/{id}`, `GET /variations/`, `GET /inventory/categories/item-categories/`, `POST /contacts/`, `POST /sales/orders/`, `POST /sales/orders/set-as-paid`, `POST /sales/orders/cancel/`, `GET /region/*` | Token 12 jam; 600 request/menit; order masuk ke toko Internal "Website Saeful Askar" (`store_id`), `source` = 1 |
 | Webhook Jubelio | Perubahan dari Jubelio ke website | `update-product`, `update-price`, `update-qty`, `update-salesorder` | Header `sign` = HMAC-SHA256(body + secret, kunci = secret); dicoba ulang hingga 3 kali |
 | Jubelio Shipment | Tarif ongkir saat checkout | API rates (dokumentasi diminta ke Jubelio) | Client ID + Client Secret; ada mode staging |
 | Xendit | Pembayaran | Buat invoice dengan durasi; webhook invoice PAID dan EXPIRED | Verifikasi callback token |
@@ -101,7 +101,7 @@ Website memakai tiga layanan luar; Jubelio adalah sumber kebenaran untuk katalog
 1. Sinkron penuh setiap malam dan inkremental setiap 30 menit memakai `last_modified`.
 2. Webhook `update-product` dan `update-price` memicu pengambilan ulang item group; `update-qty` memicu pengambilan ulang stok varian.
 3. Rekonsiliasi stok setiap 15 menit sebagai cadangan bila webhook terlewat.
-4. Berat diambil per varian (`GET /variations`), dengan cadangan berat item group.
+4. Berat diambil per varian (`GET /variations/`), dengan cadangan berat item group. Berat per varian sudah dipastikan didukung di akun asli (15 Okt 2026).
 
 **Checkout dan pembayaran.**
 
@@ -417,7 +417,7 @@ Risiko terbesar adalah dokumentasi API rates Jubelio Shipment yang belum tersedi
 | --- | --- | --- |
 | Dokumentasi API rates Jubelio Shipment tidak publik | Ongkir di checkout tertunda | Minta dokumentasi + Client ID/Secret ke Jubelio; kontrak `POST /api/v1/shipping/rates` tetap dipakai FE dengan mock |
 | Sales order belum bayar mungkin tidak mengurangi stok tersedia | Oversell dengan Shopee | Uji di akun; bila tidak, tambah reservasi stok (`POST /inventory/reserved/`) |
-| Berat per varian mungkin tidak didukung Jubelio | Ongkir salah untuk baterai | Cek di akun; bila tidak, pisahkan varian berbeda berat menjadi produk sendiri |
+| ~~Berat per varian mungkin tidak didukung Jubelio~~ | — | Terjawab 15 Okt 2026: didukung, berat varian baterai 3.000–27.500 g |
 | Webhook terlewat atau terlambat | Stok atau status tidak segar | Rekonsiliasi stok 15 menit dan job pembatalan 5 menit |
 | Error Jubelio hanya berupa kode SQL | Order gagal tanpa pesan jelas | Push idempotent via `ref_no`, `sync_logs`, retry otomatis, tombol kirim ulang di admin |
 
