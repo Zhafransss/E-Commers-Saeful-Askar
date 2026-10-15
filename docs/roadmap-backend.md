@@ -11,7 +11,7 @@ Isi teknis setiap fase diringkas dari Acceptance Criteria di API Contract. Bila 
 | Fase | Nama | Tahap PRD | Endpoint v1 | Bergantung pada | Ukuran | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | 0 | Fondasi | 1 | AUTH-01 | — | — | Selesai |
-| 1 | Infrastruktur integrasi | 1–2 | — (INT-HDL, INT-JB-01, INT-JB-14) | 0 | Sedang | Selesai di kode; menunggu akun Jubelio |
+| 1 | Infrastruktur integrasi | 1–2 | — (INT-HDL, INT-JB-01, INT-JB-14) | 0 | Sedang | Selesai |
 | 2 | Katalog & sinkron Jubelio | 2 | CAT-01–03, WH-02–04 | 1 | Besar | Belum mulai |
 | 3 | Akun, alamat, keranjang | 3 | AUTH-02–09, REG-01–04, ADDR-01–06, CART-01–06 | 0 (REG: 1, CART: 2) | Besar | Belum mulai |
 | 4 | Ongkir & checkout | 4 | SHIP-01, ORD-01 | 2, 3 | Besar | Belum mulai |
@@ -76,7 +76,7 @@ Sudah ada di commit `80aca15`:
 | Penahan laju | Job sinkron dijaga di bawah 600 request/menit; bila 429, tunggu 60 dtk | INT-HDL |
 | Pencatat sinkron | Service penulis `sync_logs` (mulai, selesai, gagal, jumlah item, `reference_id`, pesan error Jubelio apa adanya) | ERD `sync_logs`, ADM-10 |
 | Penerima webhook | Pola `webhooks.md`: verifikasi → simpan ke `webhook_events` (`idempotency_key` unik; key yang sudah ada → `200` tanpa diproses lagi) → balas `200` (< 1 dtk) → proses di `ProcessXenditWebhookJob` / `ProcessJubelioWebhookJob` → status event `processed` / `ignored` / `failed` | `webhooks.md` |
-| Verifikasi webhook | Jubelio: `sha256(raw_body + JUBELIO_WEBHOOK_SECRET)` dibandingkan dengan `hash_equals`, **nama header diatur lewat config**. Xendit: header `x-callback-token`. Gagal → `401 INVALID_SIGNATURE` / `INVALID_CALLBACK_TOKEN`, tetapi event tetap dicatat dengan `signature_valid = false` | WH-01 – WH-05 |
+| Verifikasi webhook | Jubelio: header `sign` = `hash_hmac('sha256', trim(raw_body) . secret, secret)` dibandingkan dengan `hash_equals` (contoh resmi di `api/dist.yaml`; nama header tetap bisa diubah lewat config). Xendit: header `x-callback-token`. Gagal → `401 INVALID_SIGNATURE` / `INVALID_CALLBACK_TOKEN`, tetapi event tetap dicatat dengan `signature_valid = false` | WH-01 – WH-05 |
 | Setup awal | `php artisan jubelio:setup`: menampilkan `store_id`, `location_id`, `tax_id`; menampilkan nama toko dan gudang dari ID yang terpasang di `.env`; (opsional) mendaftarkan URL webhook | INT-JB-14 |
 | Fixture | Contoh response Jubelio dan Xendit di `tests/Fixtures/jubelio`, `tests/Fixtures/xendit` | INT-HDL |
 
@@ -84,7 +84,7 @@ Sudah ada di commit `80aca15`:
 
 - [x] Unit test client: token di-cache, login hanya sekali walau dua proses meminta bersamaan, login ulang sekali saat 401, timeout menjadi exception yang benar, data pribadi tidak masuk log.
 - [x] Test webhook generik: event yang sama dikirim dua kali hanya diproses sekali; signature/token salah dibalas 401 dan event tercatat `signature_valid = false`.
-- [ ] `jubelio:setup` dijalankan di akun asli, dan hasil ID-nya disalin ke `.env`. **Menunggu** `JUBELIO_EMAIL`/`JUBELIO_PASSWORD` dan toko internal di Jubelio.
+- [x] `jubelio:setup` dijalankan di akun asli (15 Okt 2026), dan hasil ID-nya disalin ke `.env`: toko "Website" `-102`, gudang "Pusat" `-1`, pajak "No Tax" `1`.
 
 **Cara memakai hasil Fase 1 di fase berikutnya.**
 
@@ -103,8 +103,8 @@ Endpoint WH-01 – WH-05 sengaja masih `501` sampai handler-nya dibangun (Fase 2
 
 **Blocker / pertanyaan terbuka.**
 
-- Nama header signature webhook Jubelio (PRD §9). Dibuat bisa diatur lewat config, lalu dipastikan di akun asli.
-- Toko internal "Website Saeful Askar" harus sudah dibuat di Jubelio agar `store_id` bisa diambil.
+- ~~Nama header signature webhook Jubelio~~ Terjawab dari `api/dist.yaml`: header `sign`, HMAC-SHA256. Tetap dipastikan dengan webhook asli pertama di Fase 2.
+- ~~Toko internal~~ Sudah dibuat: "Website", `store_id` -102. Toko internal hanya muncul di `GET /locations/store/`, bukan di `/marketplace/store/`.
 
 ---
 
@@ -139,7 +139,7 @@ Endpoint WH-01 – WH-05 sengaja masih `501` sampai handler-nya dibangun (Fase 2
 **Blocker / risiko.**
 
 - Berat per varian mungkin tidak didukung Jubelio (INT-JB-05, PRD §9). Perlu dicek di akun asli pada fase ini.
-- Harga per toko memakai `JUBELIO_STORE_ID`. Selama ID belum ada, harga jatuh ke `sell_price`.
+- Harga per toko memakai `JUBELIO_STORE_ID` (-102). Bila produk tidak punya harga khusus toko website, harga jatuh ke `sell_price`.
 
 **Merge.** Bersama halaman daftar dan detail produk dari frontend.
 
@@ -203,7 +203,7 @@ Endpoint WH-01 – WH-05 sengaja masih `501` sampai handler-nya dibangun (Fase 2
 | Dokumentasi rates + kredensial Jubelio Shipment | Ongkir asli belum bisa dipakai | Driver `stub`; cukup ganti driver saat dokumen ada |
 | Durasi batas bayar Xendit | Nilai default invoice | `XENDIT_INVOICE_DURATION=7200` (2 jam) sampai diputuskan |
 | Metode pembayaran Xendit | Isi `payment_methods` invoice | Diatur lewat config |
-| `store_id` toko internal | SO tidak bisa dibuat | Diambil lewat `jubelio:setup` (Fase 1) |
+| ~~`store_id` toko internal~~ | — | Selesai: "Website" `-102` (Fase 1) |
 | SO belum bayar mungkin tidak mengurangi stok tersedia | Oversell dengan Shopee | Diuji di akun asli (INT-JB-06); bila terjadi, tambah reservasi stok (`POST /inventory/reserved/`) |
 
 **Merge.** Bersama halaman checkout. Halaman "lanjut bayar" menunggu ORD-04 di Fase 5.
@@ -297,8 +297,8 @@ Diambil dari PRD §9 dan `integrations.md`. Kolom kedua menunjukkan fase yang pa
 
 | Pertanyaan | Dibutuhkan di | Bisa jalan dulu dengan |
 | --- | --- | --- |
-| Toko internal "Website Saeful Askar" + `store_id` | Fase 1 (setup), Fase 2 (harga per toko), Fase 4 (SO) | Harga jatuh ke `sell_price`; SO belum bisa dibuat |
-| Nama header signature webhook Jubelio | Fase 1–2 | Header diatur lewat config |
+| ~~Toko internal + `store_id`~~ | — | Terjawab: "Website" `-102` |
+| ~~Nama header signature webhook Jubelio~~ | — | Terjawab: `sign`, HMAC-SHA256 (`api/dist.yaml`); dipastikan dengan webhook asli pertama |
 | Dokumentasi rates + kredensial Jubelio Shipment | Fase 4 | Driver `stub` |
 | Durasi batas bayar Xendit | Fase 4 | Default 2 jam |
 | Metode pembayaran Xendit | Fase 4 | Diatur lewat config |

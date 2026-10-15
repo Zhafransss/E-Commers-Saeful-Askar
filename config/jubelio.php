@@ -13,7 +13,8 @@ return [
 
     'password' => env('JUBELIO_PASSWORD'),
 
-    // Internal store "Website Saeful Askar" (channel_id 1); sent as sales order store_id.
+    // The website's internal store (channel_id 1; named "Website" in the store's account),
+    // listed by GET /locations/store/. Sent as sales order store_id.
     'store_id' => env('JUBELIO_STORE_ID'),
 
     // Warehouse Tambun Utara; the only stock location used by the website.
@@ -22,14 +23,14 @@ return [
     // Tax "No Tax": the store does not charge VAT.
     'tax_id' => (int) env('JUBELIO_TAX_ID', 0) ?: null,
 
-    // Webhook signature = sha256(raw body + secret) (WH-02 – WH-05).
+    // Same value as the Webhook Secret Key in Jubelio (Pengaturan → Developer → Webhook).
+    // Signature = HMAC-SHA256(trim(body) + secret, key = secret) (WH-02 – WH-05).
     'webhook_secret' => env('JUBELIO_WEBHOOK_SECRET'),
 
-    // Header that carries the signature. Jubelio's docs only show it in a screenshot
-    // (PRD §9): while empty, every Jubelio webhook is rejected and the rejected event
-    // lists the header names it arrived with, so the right one can be read from
-    // webhook_events.error during the first trial.
-    'webhook_signature_header' => env('JUBELIO_WEBHOOK_SIGNATURE_HEADER'),
+    // Header carrying the signature: `sign` in Jubelio's official example
+    // (docs/api/dist.yaml, "Webhook Signature"). A rejected delivery lists the
+    // header names it arrived with in webhook_events.error, in case it changes.
+    'webhook_signature_header' => env('JUBELIO_WEBHOOK_SIGNATURE_HEADER') ?: 'sign',
 
     'timeout' => (int) env('JUBELIO_TIMEOUT', 15),
 

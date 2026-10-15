@@ -13,17 +13,17 @@ beforeEach(function () {
     Cache::put('jubelio:token', 'token-ada', 3600);
     config([
         'jubelio.base_url' => 'https://api2.jubelio.com',
-        'jubelio.store_id' => '-1043',
-        'jubelio.location_id' => 1,
-        'jubelio.tax_id' => -1,
-        'jubelio.webhook_signature_header' => 'X-Signature',
+        'jubelio.store_id' => '-102',
+        'jubelio.location_id' => -1,
+        'jubelio.tax_id' => 1,
     ]);
 });
 
 function fakeJubelioSetupData(): void
 {
     Http::fake([
-        '*/marketplace/store/*' => Http::response(fixture('jubelio/stores.json')),
+        // /locations/store/ first: the next pattern would also match it.
+        '*/locations/store/*' => Http::response(fixture('jubelio/stores.json')),
         '*/locations/*' => Http::response(fixture('jubelio/locations.json')),
         '*/taxes/*' => Http::response(fixture('jubelio/taxes.json')),
         '*/systemsetting/webhook' => Http::response(['status' => 'ok']),
@@ -43,16 +43,17 @@ function runJubelioSetup(): array
     return [$exitCode, $lines];
 }
 
-test('lists stores, warehouses, and taxes, and confirms the IDs in .env by name', function () {
+test('lists internal and marketplace stores, warehouses, and taxes, and confirms the IDs in .env by name', function () {
     fakeJubelioSetupData();
 
     [$exitCode, $lines] = runJubelioSetup();
 
     expect($exitCode)->toBe(0)
-        ->and(implode("\n", $lines))->toContain('Saeful Askar Official')->toContain('← toko internal')->toContain('PPN 11%')
-        ->and($lines)->toContain('JUBELIO_STORE_ID = -1043 | Website Saeful Askar')
-        ->toContain('JUBELIO_LOCATION_ID = 1 | Gudang Tambun Utara')
-        ->toContain('JUBELIO_TAX_ID = -1 | No Tax');
+        ->and(implode("\n", $lines))->toContain('Ebike Part')->toContain('SIMDISA')->toContain('PPN 10%')
+        ->and(substr_count(implode("\n", $lines), '← toko internal'))->toBe(3)
+        ->and($lines)->toContain('JUBELIO_STORE_ID = -102 | Website')
+        ->toContain('JUBELIO_LOCATION_ID = -1 | Pusat')
+        ->toContain('JUBELIO_TAX_ID = 1 | No Tax');
 
     Http::assertNotSent(fn (Request $request) => str_contains($request->url(), 'systemsetting'));
 });
@@ -64,7 +65,7 @@ test('fails when an ID in .env does not exist in Jubelio or is empty', function 
     [$exitCode, $lines] = runJubelioSetup();
 
     expect($exitCode)->toBe(1)
-        ->and($lines)->toContain('JUBELIO_STORE_ID = -1043 | Website Saeful Askar')
+        ->and($lines)->toContain('JUBELIO_STORE_ID = -102 | Website')
         ->toContain('JUBELIO_LOCATION_ID = 99 | TIDAK DITEMUKAN di Jubelio')
         ->toContain('JUBELIO_TAX_ID | belum diisi');
 });

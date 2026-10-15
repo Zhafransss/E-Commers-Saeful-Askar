@@ -1,7 +1,9 @@
 {
   "data": [
-    { "location_id": 1, "location_name": "Gudang Tambun Utara" },
-    { "location_id": 2, "location_name": "Gudang Lama" }
+    {
+      "location_id": -1,
+      "location_name": "Pusat"
+    }
   ],
-  "totalCount": 2
+  "totalCount": 1
 }

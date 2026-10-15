@@ -36,7 +36,7 @@ test('logs in once, caches the token, and sends it as the authorization header',
     $token = fixture('jubelio/login.json')['token'];
 
     $client = app(JubelioClient::class);
-    expect($client->locations())->toHaveCount(2);
+    expect($client->locations())->toHaveCount(1);
     $client->locations();
 
     Http::assertSentCount(3);
@@ -96,7 +96,7 @@ test('a 401 drops the token, logs in again once, and repeats the request once', 
         '*/locations/*' => Http::sequence()->push([], 401)->push(fixture('jubelio/locations.json')),
     ]);
 
-    expect(app(JubelioClient::class)->locations())->toHaveCount(2);
+    expect(app(JubelioClient::class)->locations())->toHaveCount(1);
 
     $calls = Http::recorded(fn (Request $request) => str_contains($request->url(), '/locations/'))->values();
     expect($calls)->toHaveCount(2)
@@ -152,7 +152,7 @@ test('missing credentials fail without calling Jubelio, and do not pause logins 
     config(['jubelio.email' => 'owner@saefulaskar.id']);
     $this->app->forgetInstance(JubelioClient::class);
 
-    expect(app(JubelioClient::class)->locations())->toHaveCount(2);
+    expect(app(JubelioClient::class)->locations())->toHaveCount(1);
 });
 
 test('a Jubelio SQL error keeps its code and message verbatim and stays retryable', function () {

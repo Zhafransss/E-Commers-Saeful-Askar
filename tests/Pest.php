@@ -58,6 +58,15 @@ function fixture(string $path): array
 }
 
 /**
+ * Jubelio webhook signature for the `sign` header, built the way Jubelio's
+ * official example does (docs/api/dist.yaml, "Webhook Signature").
+ */
+function jubelioSignature(string $body, string $secret = 'rahasia-webhook'): string
+{
+    return hash_hmac('sha256', trim($body).$secret, $secret);
+}
+
+/**
  * Runs a call that must fail with an IntegrationException and returns it for inspection.
  */
 function catchIntegration(Closure $call): IntegrationException

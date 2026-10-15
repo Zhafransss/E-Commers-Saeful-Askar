@@ -68,14 +68,15 @@ class JubelioClient extends IntegrationClient
     }
 
     /**
-     * INT-JB-14 · Stores (marketplace and internal). The website's store is the
-     * internal one, channel_id 1.
+     * INT-JB-14 · All stores, internal (channel_id 1) and marketplace. The website
+     * uses its own internal store. /marketplace/store/ is not used: it lists
+     * marketplace stores only and returns their secrets in extra_info.
      *
      * @return list<array<string, mixed>>
      */
     public function stores(): array
     {
-        return $this->get('/marketplace/store/', ['page' => 1, 'pageSize' => 200])->json('data') ?? [];
+        return $this->get('/locations/store/', ['page' => 1, 'pageSize' => 200])->json('data') ?? [];
     }
 
     /**

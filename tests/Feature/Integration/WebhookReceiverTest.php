@@ -24,7 +24,6 @@ beforeEach(function () {
 
     config([
         'jubelio.webhook_secret' => 'rahasia-webhook',
-        'jubelio.webhook_signature_header' => 'X-Test-Signature',
         'xendit.callback_token' => 'token-callback',
     ]);
 
@@ -47,7 +46,7 @@ function postRawWebhook(string $uri, string $body, array $headers): TestResponse
 function postJubelio(string $body, ?string $signature = null): TestResponse
 {
     return postRawWebhook('/webhooks/__test/jubelio', $body, [
-        'X-Test-Signature' => $signature ?? hash('sha256', $body.'rahasia-webhook'),
+        'sign' => $signature ?? jubelioSignature($body),
     ]);
 }
 
@@ -85,7 +84,28 @@ test('the signature is checked against the raw body, so a re-encoded body is rej
     $body = fixtureContent('jubelio/webhooks/update-product.json');
     $reencoded = json_encode(json_decode($body, true));
 
-    assertApiError(postJubelio($reencoded, hash('sha256', $body.'rahasia-webhook')), 401, 'INVALID_SIGNATURE');
+    assertApiError(postJubelio($reencoded, jubelioSignature($body)), 401, 'INVALID_SIGNATURE');
+});
+
+test('the signature matches the vector from the official Jubelio Node.js example', function () {
+    // Vector computed independently with Node's crypto.createHmac for the body and
+    // secret shown in docs/api/dist.yaml ("Webhook Signature").
+    config(['jubelio.webhook_secret' => 'abcd1234']);
+    $body = '{"action":"update-product","item_group_id":5495}';
+
+    postJubelio($body, 'a90c27525492da2b91ecfc18311904c85c8950cbe5648138a54e1a09d04613ff')->assertOk();
+});
+
+test('a plain SHA256 of body + secret (the earlier contract assumption) is rejected', function () {
+    $body = fixtureContent('jubelio/webhooks/update-product.json');
+
+    assertApiError(postJubelio($body, hash('sha256', trim($body).'rahasia-webhook')), 401, 'INVALID_SIGNATURE');
+});
+
+test('surrounding whitespace in the body is ignored, as in the Jubelio example (trim)', function () {
+    $body = "\n".trim(fixtureContent('jubelio/webhooks/update-product.json'))."\n\n";
+
+    postJubelio($body, jubelioSignature(trim($body)))->assertOk();
 });
 
 test('a wrong signature answers 401 INVALID_SIGNATURE and is recorded with signature_valid = false', function () {
@@ -110,21 +130,28 @@ test('a rejected delivery never blocks the genuine one that follows', function (
     Queue::assertPushed(ProcessJubelioWebhookJob::class, 1);
 });
 
-test('while the signature header name is not configured, deliveries are rejected and list the headers they came with', function () {
-    config(['jubelio.webhook_signature_header' => null]);
+test('the signature is read from the sign header by default; a rejected delivery lists the headers it came with', function () {
     $body = fixtureContent('jubelio/webhooks/update-product.json');
 
-    $response = postRawWebhook('/webhooks/__test/jubelio', $body, ['Sign' => hash('sha256', $body.'rahasia-webhook')]);
+    $response = postRawWebhook('/webhooks/__test/jubelio', $body, ['X-Signature' => jubelioSignature($body)]);
 
     assertApiError($response, 401, 'INVALID_SIGNATURE');
-    expect(WebhookEvent::sole()->error)->toContain('sign')->toContain('content-type');
+    expect(config('jubelio.webhook_signature_header'))->toBe('sign')
+        ->and(WebhookEvent::sole()->error)->toContain('x-signature')->toContain('content-type');
+});
+
+test('the signature header name can be changed in config', function () {
+    config(['jubelio.webhook_signature_header' => 'X-Jubelio-Sign']);
+    $body = fixtureContent('jubelio/webhooks/update-product.json');
+
+    postRawWebhook('/webhooks/__test/jubelio', $body, ['X-Jubelio-Sign' => jubelioSignature($body)])->assertOk();
 });
 
 test('without a webhook secret nothing is trusted', function () {
     config(['jubelio.webhook_secret' => null]);
     $body = fixtureContent('jubelio/webhooks/update-product.json');
 
-    assertApiError(postJubelio($body, hash('sha256', $body)), 401, 'INVALID_SIGNATURE');
+    assertApiError(postJubelio($body, jubelioSignature($body, '')), 401, 'INVALID_SIGNATURE');
 });
 
 test('a Jubelio payload missing a required field answers 422 VALIDATION_ERROR', function () {

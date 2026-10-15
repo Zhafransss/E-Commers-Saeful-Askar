@@ -126,14 +126,14 @@ test('other errors are rethrown for the queue to retry, and failed() settles the
 
 test('end to end: a delivered webhook is processed through the queue', function () {
     useJubelioHandler(RecordingWebhookHandler::class);
-    config(['jubelio.webhook_secret' => 'rahasia-webhook', 'jubelio.webhook_signature_header' => 'X-Test-Signature']);
+    config(['jubelio.webhook_secret' => 'rahasia-webhook']);
     Route::post('/webhooks/__test/jubelio', fn (Request $request, WebhookReceiver $receiver) => $receiver
         ->jubelio($request, 'update-product', ['item_group_id' => ['required', 'integer']]));
     $body = fixtureContent('jubelio/webhooks/update-product.json');
 
     $this->call('POST', '/webhooks/__test/jubelio', [], [], [], [
         'CONTENT_TYPE' => 'application/json',
-        'HTTP_X_TEST_SIGNATURE' => hash('sha256', $body.'rahasia-webhook'),
+        'HTTP_SIGN' => jubelioSignature($body),
     ], $body)->assertOk();
 
     expect(WebhookEvent::sole()->status)->toBe(WebhookEventStatus::Processed)

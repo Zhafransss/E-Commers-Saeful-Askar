@@ -92,8 +92,10 @@ class WebhookReceiver
     }
 
     /**
-     * signature = sha256(raw body + secret), compared in constant time (WH-02).
-     * No secret or no configured header means nothing can be trusted.
+     * Header `sign` = HMAC-SHA256 of (trimmed raw body + secret) keyed with the
+     * secret, as in Jubelio's official PHP example (docs/api/dist.yaml, "Webhook
+     * Signature"; WH-02). Compared in constant time. No secret means nothing can
+     * be trusted.
      */
     private function validJubelioSignature(Request $request, string $raw): bool
     {
@@ -104,7 +106,9 @@ class WebhookReceiver
             return false;
         }
 
-        return hash_equals(hash('sha256', $raw.$secret), strtolower((string) $request->header($header)));
+        $expected = hash_hmac('sha256', trim($raw).$secret, $secret);
+
+        return hash_equals($expected, strtolower((string) $request->header($header)));
     }
 
     /**

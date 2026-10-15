@@ -39,7 +39,7 @@ class JubelioSetup extends Command
             return self::FAILURE;
         }
 
-        $this->components->info('Toko (JUBELIO_STORE_ID = toko internal "Website Saeful Askar", channel_id 1)');
+        $this->components->info('Toko (JUBELIO_STORE_ID = toko internal yang dibuat untuk website, channel_id 1)');
         $this->table(['store_id', 'store_name', 'channel_id', ''], array_map(fn (array $store) => [
             $store['store_id'] ?? '',
             $store['store_name'] ?? '',
@@ -144,10 +144,6 @@ class JubelioSetup extends Command
         }
 
         $this->components->info('Webhook terdaftar. Isi secret key di Jubelio (Pengaturan → Developer → Webhook) sama dengan JUBELIO_WEBHOOK_SECRET.');
-
-        if (blank(config('jubelio.webhook_signature_header'))) {
-            $this->components->warn('JUBELIO_WEBHOOK_SIGNATURE_HEADER belum diisi: webhook pertama akan ditolak, dan nama header yang dikirim Jubelio tercatat di kolom webhook_events.error.');
-        }
 
         return true;
     }
