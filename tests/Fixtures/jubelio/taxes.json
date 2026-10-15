@@ -1,0 +1,7 @@
+{
+  "data": [
+    { "tax_id": -1, "tax_name": "No Tax" },
+    { "tax_id": 1, "tax_name": "PPN 11%" }
+  ],
+  "totalCount": 2
+}

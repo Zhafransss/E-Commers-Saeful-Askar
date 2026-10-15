@@ -65,6 +65,15 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // One line per outgoing call to Jubelio, Jubelio Shipment, and Xendit (INT-HDL).
+        'integrations' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/integrations.log'),
+            'level' => env('LOG_INTEGRATIONS_LEVEL', 'info'),
+            'days' => 30,
+            'replace_placeholders' => true,
+        ],
+
         'daily' => [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),

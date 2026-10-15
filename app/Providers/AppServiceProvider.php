@@ -3,11 +3,13 @@
 namespace App\Providers;
 
 use App\Services\Jubelio\JubelioClient;
+use App\Services\Jubelio\JubelioTokenManager;
 use App\Services\JubelioShipment\JubelioShipmentClient;
 use App\Services\Xendit\XenditClient;
 use Carbon\CarbonInterface;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -19,7 +21,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(JubelioClient::class, fn () => new JubelioClient(config('jubelio')));
+        $this->app->singleton(JubelioTokenManager::class, fn () => new JubelioTokenManager(
+            Cache::store(),
+            config('jubelio.token_ttl'),
+            config('jubelio.login_failure_cooldown'),
+        ));
+        $this->app->singleton(JubelioClient::class, fn ($app) => new JubelioClient(
+            config('jubelio'),
+            $app->make(JubelioTokenManager::class),
+        ));
         $this->app->singleton(JubelioShipmentClient::class, fn () => new JubelioShipmentClient(config('jubelio_shipment')));
         $this->app->singleton(XenditClient::class, fn () => new XenditClient(config('xendit')));
     }

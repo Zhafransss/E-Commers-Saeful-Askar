@@ -1,7 +1,10 @@
 <?php
 
+use App\Exceptions\IntegrationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Testing\TestResponse;
+use Monolog\Handler\TestHandler;
 use Tests\TestCase;
 
 /*
@@ -33,6 +36,49 @@ function assertApiError(TestResponse $response, int $status, string $code): Test
         ->assertStatus($status)
         ->assertJsonPath('code', $code)
         ->assertJsonStructure(['message', 'code']);
+}
+
+/**
+ * Raw content of a fixture in tests/Fixtures, e.g. fixtureContent('jubelio/login.json').
+ * Webhook tests need the exact bytes, since signatures are computed over the raw body.
+ */
+function fixtureContent(string $path): string
+{
+    return file_get_contents(__DIR__.'/Fixtures/'.$path);
+}
+
+/**
+ * Decoded JSON fixture, e.g. Http::fake(['*' => Http::response(fixture('jubelio/stores.json'))]).
+ *
+ * @return array<string, mixed>
+ */
+function fixture(string $path): array
+{
+    return json_decode(fixtureContent($path), true, flags: JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Runs a call that must fail with an IntegrationException and returns it for inspection.
+ */
+function catchIntegration(Closure $call): IntegrationException
+{
+    try {
+        $call();
+    } catch (IntegrationException $e) {
+        return $e;
+    }
+
+    throw new RuntimeException('Expected an IntegrationException.');
+}
+
+/**
+ * Records written to the `integrations` log channel. The test first points the
+ * channel at Monolog's TestHandler:
+ * config(['logging.channels.integrations' => ['driver' => 'monolog', 'handler' => TestHandler::class]]).
+ */
+function integrationLog(): TestHandler
+{
+    return Log::channel('integrations')->getLogger()->getHandlers()[0];
 }
 
 /**

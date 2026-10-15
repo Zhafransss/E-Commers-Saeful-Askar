@@ -1,0 +1,4 @@
+{
+  "error_code": "API_VALIDATION_ERROR",
+  "message": "amount must be a number"
+}

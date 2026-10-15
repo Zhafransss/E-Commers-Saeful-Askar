@@ -11,7 +11,7 @@ Isi teknis setiap fase diringkas dari Acceptance Criteria di API Contract. Bila 
 | Fase | Nama | Tahap PRD | Endpoint v1 | Bergantung pada | Ukuran | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | 0 | Fondasi | 1 | AUTH-01 | — | — | Selesai |
-| 1 | Infrastruktur integrasi | 1–2 | — (INT-HDL, INT-JB-01, INT-JB-14) | 0 | Sedang | Belum mulai |
+| 1 | Infrastruktur integrasi | 1–2 | — (INT-HDL, INT-JB-01, INT-JB-14) | 0 | Sedang | Selesai di kode; menunggu akun Jubelio |
 | 2 | Katalog & sinkron Jubelio | 2 | CAT-01–03, WH-02–04 | 1 | Besar | Belum mulai |
 | 3 | Akun, alamat, keranjang | 3 | AUTH-02–09, REG-01–04, ADDR-01–06, CART-01–06 | 0 (REG: 1, CART: 2) | Besar | Belum mulai |
 | 4 | Ongkir & checkout | 4 | SHIP-01, ORD-01 | 2, 3 | Besar | Belum mulai |
@@ -41,6 +41,8 @@ Sebuah endpoint dianggap selesai bila:
 5. `composer test` dan `npm run contract:check` lulus, dan Pint bersih untuk file yang diubah.
 
 Nama kelas yang sudah disebut kontrak (mis. `CheckoutService`, `JubelioTokenManager`, `MarkSalesOrderPaidJob`) dipakai apa adanya.
+
+Pesan commit diberi label fase: `<type> [fase N]: <ringkasan>`, mis. `feat [fase 2]: add catalog sync from Jubelio` atau `fix [fase 3]: keep cart after logout`.
 
 Merge ke `development` dilakukan per modul, setelah halaman frontend untuk modul yang sama juga siap (PRD §8). Bila kontrak perlu diubah, perubahannya dibuat di `development` lebih dulu, bukan di `backend`.
 
@@ -80,9 +82,24 @@ Sudah ada di commit `80aca15`:
 
 **Definisi selesai.**
 
-- [ ] Unit test client: token di-cache, login hanya sekali walau dua proses meminta bersamaan, login ulang sekali saat 401, timeout menjadi exception yang benar, data pribadi tidak masuk log.
-- [ ] Test webhook generik: event yang sama dikirim dua kali hanya diproses sekali; signature/token salah dibalas 401 dan event tercatat `signature_valid = false`.
-- [ ] `jubelio:setup` dijalankan di akun asli, dan hasil ID-nya disalin ke `.env`.
+- [x] Unit test client: token di-cache, login hanya sekali walau dua proses meminta bersamaan, login ulang sekali saat 401, timeout menjadi exception yang benar, data pribadi tidak masuk log.
+- [x] Test webhook generik: event yang sama dikirim dua kali hanya diproses sekali; signature/token salah dibalas 401 dan event tercatat `signature_valid = false`.
+- [ ] `jubelio:setup` dijalankan di akun asli, dan hasil ID-nya disalin ke `.env`. **Menunggu** `JUBELIO_EMAIL`/`JUBELIO_PASSWORD` dan toko internal di Jubelio.
+
+**Cara memakai hasil Fase 1 di fase berikutnya.**
+
+| Kebutuhan | Pakai | Catatan |
+| --- | --- | --- |
+| Panggil Jubelio | `JubelioClient::get()` / `post()`, atau tambah method INT-JB-xx di kelas itu | Token, login ulang saat 401, batas laju, dan log sudah otomatis |
+| Panggil Xendit / Jubelio Shipment | Tambah method INT-XD-xx / INT-JS-01 di `XenditClient` / `JubelioShipmentClient` (memakai `get()`/`post()` protected) | Error 4xx Xendit otomatis tidak di-retry |
+| Panggilan saat customer menunggu | `$client->withinCustomerRequest()->…` | Retry paling banyak sekali |
+| Pesan 502 khusus endpoint | `catch (IntegrationException $e) { throw $e->withMessage('…'); }` | Teks dari kontrak endpoint |
+| Job yang memanggil layanan luar | `use Queueable, RetriesIntegrationCalls;` + method `failed()` | 6 percobaan, jeda 10 dtk – 15 mnt; 4xx langsung gagal; 429 menunggu 60 dtk |
+| Catat sinkron / push order | `SyncLog::track(SyncType::…, SyncTrigger::…, fn ($log) => $jumlahItem, referenceId: $order->id)` | Pesan error Jubelio tersimpan apa adanya |
+| Endpoint webhook WH-xx | Controller: `return $receiver->jubelio($request, 'update-qty', [aturan validasi]);` atau `$receiver->xendit($request)`; logika di kelas `WebhookHandler` yang didaftarkan di `config/webhooks.php` | Lempar `WebhookEventIgnored` untuk `ignored`, `WebhookEventRejected` untuk `failed` tanpa retry |
+| Fixture test | `fixture('jubelio/….json')`, `fixtureContent()` untuk body mentah webhook | `Http::preventStrayRequests()` aktif di semua test |
+
+Endpoint WH-01 – WH-05 sengaja masih `501` sampai handler-nya dibangun (Fase 2 dan 5), agar Jubelio/Xendit tetap mengirim ulang event yang belum bisa diproses.
 
 **Blocker / pertanyaan terbuka.**
 
