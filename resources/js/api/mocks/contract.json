@@ -518,7 +518,7 @@
     "body": {
       "data": [
         {
-          "id": "321612",
+          "id": "321605",
           "name": "TAMBUN UTARA"
         },
         {
@@ -534,12 +534,12 @@
     "body": {
       "data": [
         {
-          "id": "3216122004",
+          "id": "3216052001",
           "name": "Satriajaya",
           "post_code": null
         },
         {
-          "id": "3216122001",
+          "id": "3216052006",
           "name": "Srijaya",
           "post_code": null
         }
@@ -566,11 +566,11 @@
             "name": "KAB. BEKASI"
           },
           "district": {
-            "id": "321612",
+            "id": "321605",
             "name": "TAMBUN UTARA"
           },
           "subdistrict": {
-            "id": "3216122004",
+            "id": "3216052001",
             "name": "Satriajaya"
           },
           "post_code": "17565",
@@ -600,11 +600,11 @@
           "name": "KAB. BEKASI"
         },
         "district": {
-          "id": "321612",
+          "id": "321605",
           "name": "TAMBUN UTARA"
         },
         "subdistrict": {
-          "id": "3216122004",
+          "id": "3216052001",
           "name": "Satriajaya"
         },
         "post_code": "17565",
@@ -634,11 +634,11 @@
           "name": "KAB. BEKASI"
         },
         "district": {
-          "id": "321612",
+          "id": "321605",
           "name": "TAMBUN UTARA"
         },
         "subdistrict": {
-          "id": "3216122004",
+          "id": "3216052001",
           "name": "Satriajaya"
         },
         "post_code": "17565",
@@ -667,11 +667,11 @@
           "name": "KAB. BEKASI"
         },
         "district": {
-          "id": "321612",
+          "id": "321605",
           "name": "TAMBUN UTARA"
         },
         "subdistrict": {
-          "id": "3216122004",
+          "id": "3216052001",
           "name": "Satriajaya"
         },
         "post_code": "17565",

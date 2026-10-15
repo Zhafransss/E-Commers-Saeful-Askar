@@ -276,7 +276,10 @@ Tidak ada. Header `authorization`\*.
 - [ ] `is_active = false` atau `sell_this = false` → produk tidak tampil di website.
 - [ ] Harga: `prices[]` dengan `store_id = JUBELIO_STORE_ID` bila ada, selain itu `sell_price` SKU.
 - [ ] `description` disanitasi lalu disimpan.
-- [ ] Angka string (`package_weight`, dimensi) dikonversi ke integer.
+- [ ] Angka string (`package_weight`, dimensi) dikonversi ke integer. Nilainya berupa desimal (`"200.0000"`), jadi dibulatkan dulu, bukan langsung di-cast.
+- [ ] `min` / `max` bernilai `0` berarti tanpa batas → disimpan `null`. Bila tidak, `max_qty = 0` memblokir semua pembelian.
+
+**Hasil uji akun asli (15 Okt 2026).** `prices[]` kosong di seluruh 8 item group, jadi harga jatuh ke `sell_price`. Ini tetap benar sampai toko memasang harga khusus "Website" di Jubelio. Pada 8 item group itu `min = 0` dan `max = 0`, `brand_name = null`, dan `package_weight` berupa string desimal.
 
 ---
 
@@ -284,7 +287,9 @@ Tidak ada. Header `authorization`\*.
 
 ### Endpoint
 
-`GET https://api2.jubelio.com/variations?page={n}&pageSize=200`
+`GET https://api2.jubelio.com/variations/?page={n}&pageSize=200`
+
+Garis miring di akhir `/variations/` **wajib**: tanpa garis miring Jubelio membalas 404, walau `dist.yaml` menulis `/variations` (diuji 15 Okt 2026).
 
 ### User Story
 
@@ -301,8 +306,9 @@ Tidak ada. Header `authorization`\*.
 ```json
 {
   "data": [
-    { "item_group_id": 1940, "item_id": 3001, "item_code": "BAT-48V-12AH", "package_weight": 6500, "is_variant": true },
-    { "item_group_id": 1940, "item_id": 3002, "item_code": "BAT-48V-20AH", "package_weight": 9500, "is_variant": true }
+    { "item_group_id": 1940, "item_id": 3001, "item_code": "BAT-48V-12AH", "package_weight": "6500.0000", "is_variant": true },
+    { "item_group_id": 1940, "item_id": 3002, "item_code": "BAT-48V-20AH", "package_weight": "9500.0000", "is_variant": true },
+    { "item_group_id": 1941, "item_id": 3010, "item_code": "SOKET-M23", "package_weight": null, "is_variant": false }
   ],
   "totalCount": 52
 }
@@ -314,9 +320,9 @@ Lihat INT-HDL.
 
 ### Acceptance Criteria
 
-- [ ] `package_weight` → `product_variants.package_weight` (gram) dicocokkan lewat `item_id`.
-- [ ] Bila `package_weight` per SKU kosong/0, pakai `package_weight` item group (INT-JB-04).
-- [ ] **Diuji di akun Jubelio**: apakah berat per varian benar-benar bisa berbeda. Bila tidak, varian dengan berat berbeda dipisah menjadi produk sendiri di Jubelio.
+- [ ] `package_weight` → `product_variants.package_weight` (gram) dicocokkan lewat `item_id`. Nilainya string desimal (`"6500.0000"`) atau `null`; dibulatkan ke integer.
+- [ ] Bila `package_weight` per SKU `null`/0, pakai `package_weight` item group (INT-JB-04).
+- [x] **Diuji di akun Jubelio (15 Okt 2026)**: berat per varian didukung dan dipakai. Contoh: Baterai Lithium Phylion punya 10 varian 3.000–27.500 g. `weight_in_gram` di INT-JB-07 sama dengan `package_weight` di sini untuk 29 dari 30 SKU; satu SKU dengan `package_weight = null` sudah diisi cadangan oleh Jubelio di INT-JB-07.
 
 ---
 
@@ -342,11 +348,12 @@ Tidak ada. Header `authorization`\*. Untuk rekonsiliasi semua stok, `q` dikosong
 {
   "data": [
     {
-      "item_id": "2976",
+      "item_id": 2976,
       "item_code": "UWF-C1PRO-HTM",
-      "item_group_id": "1931",
+      "item_group_id": 1931,
       "location_stocks": [
-        { "item_id": "2976", "location_id": "1", "on_hand": 5, "on_order": 0, "reserved": 1, "available": 4 }
+        { "item_id": 2976, "location_id": 0, "on_hand": 0, "on_order": 0, "reserved": 0, "available": 0 },
+        { "item_id": 2976, "location_id": -1, "on_hand": 5, "on_order": 0, "reserved": 1, "available": 4 }
       ],
       "total_stocks": { "on_hand": 5, "on_order": 0, "reserved": 1, "available": 4 }
     }
@@ -360,8 +367,8 @@ Lihat INT-HDL. Saat checkout (ORD-01) kegagalan dibalas `502 INTEGRATION_ERROR` 
 
 ### Acceptance Criteria
 
-- [ ] Stok yang dipakai = `location_stocks[].available` dengan `location_id = JUBELIO_LOCATION_ID`.
-- [ ] `item_id` di response berupa string; dicocokkan setelah dikonversi ke integer.
+- [ ] Stok yang dipakai = `location_stocks[].available` dengan `location_id = JUBELIO_LOCATION_ID` (-1). Baris `location_id = 0` juga muncul di akun asli dan diabaikan.
+- [ ] `item_id` dan `location_id` dibandingkan setelah dikonversi ke integer: di akun asli keduanya integer, sedangkan contoh lama di spec menulis string.
 - [ ] Hasil cocok persis berdasarkan `item_code` (pencarian `q` bisa mengembalikan SKU mirip).
 - [ ] **Diuji di akun Jubelio**: sales order belum bayar (INT-JB-10) mengurangi `available`. Bila tidak, tambah reservasi stok (`POST /inventory/reserved/`).
 
@@ -376,7 +383,7 @@ Lihat INT-HDL. Saat checkout (ORD-01) kegagalan dibalas `502 INTEGRATION_ERROR` 
 | Parameter | Wajib | Nilai |
 | --- | --- | --- |
 | `location_id`\* | Ya | `JUBELIO_LOCATION_ID` |
-| `type`\* | Ya | Nilai tidak dijelaskan di spec; dipastikan saat uji coba |
+| `type`\* | Ya | `0`. Nilai `0`, `1`, dan `2` memberi hasil yang sama di akun asli (diuji 15 Okt 2026) |
 | `page`\*, `pageSize`\* | Ya | 1, 200 |
 
 ### User Story
@@ -403,10 +410,14 @@ Tidak ada. Header `authorization`\*.
     "sell_tax_id": 1,
     "rate": 0,
     "tax_name": "No Tax",
-    "uom_id": -1
+    "uom_id": -1,
+    "available_qty": 4,
+    "weight_in_gram": "32000.0000"
   }
 ]
 ```
+
+`weight_in_gram` berisi berat varian dengan cadangan berat item group yang sudah diterapkan Jubelio; nilainya sama dengan INT-JB-05.
 
 ### Response Failed
 
@@ -427,9 +438,9 @@ Lihat INT-HDL.
 | Panggilan | Path |
 | --- | --- |
 | Provinsi | `GET https://api2.jubelio.com/region/provinces` |
-| Kota | `GET https://api2.jubelio.com/region/cities/?province_id={id}` |
-| Kecamatan | `GET https://api2.jubelio.com/region/districts/?city_id={id}` |
-| Kelurahan | `GET https://api2.jubelio.com/region/subdistricts/?district_id={id}` |
+| Kota | `GET https://api2.jubelio.com/region/cities?province_id={id}` |
+| Kecamatan | `GET https://api2.jubelio.com/region/districts?city_id={id}` |
+| Kelurahan | `GET https://api2.jubelio.com/region/subdistricts?district_id={id}` |
 
 ### User Story
 
@@ -439,17 +450,21 @@ Sebagai backend, saya ingin menyediakan daftar wilayah dengan ID yang sama denga
 
 Tidak ada. Header `authorization`\*.
 
+Query string **tanpa** garis miring sebelum `?`: `/region/cities/?province_id=32` dibalas 404, `/region/cities?province_id=32` dibalas 200, walau `dist.yaml` menulis versi bergaris miring (diuji 15 Okt 2026). Kebalikan dari INT-JB-05.
+
 ### Response Success
 
 `200 OK` — contoh kelurahan:
 
 ```json
 [
-  { "subdistrict_id": "3216122004", "district_id": "321612", "name": "Satriajaya" }
+  { "subdistrict_id": "3216052001", "district_id": "321605", "name": "Satriajaya" }
 ]
 ```
 
 Provinsi: `province_id`, `name`. Kota: `city_id`, `province_id`, `name`. Kecamatan: `district_id`, `city_id`, `name`.
+
+Kelurahan Jubelio **tidak memuat kode pos**, jadi `post_code` di REG-04 selalu `null` dan customer mengisinya sendiri. Penulisan nama mengikuti Jubelio apa adanya: kota huruf besar ("KAB. BEKASI"), kecamatan dan kelurahan huruf kapital di awal kata ("Tambun Utara", "Satriajaya").
 
 ### Response Failed
 
@@ -499,9 +514,9 @@ Sebagai backend, saya ingin memastikan setiap customer website punya contact di 
   "s_province_id": 32,
   "s_city": "KAB. BEKASI",
   "s_city_id": 3216,
-  "s_district_id": "321612",
+  "s_district_id": "321605",
   "s_subdistrict": "Satriajaya",
-  "s_subdistrict_id": 3216122004,
+  "s_subdistrict_id": 3216052001,
   "s_post_code": "17565",
   "payment_term": -1,
   "source_detail": "Website Saeful Askar"
@@ -622,8 +637,8 @@ Item (`items[]`):
   "shipping_province": "JAWA BARAT",
   "shipping_province_id": "32",
   "shipping_city_id": "3216",
-  "shipping_district_id": "321612",
-  "shipping_subdistrict_id": "3216122004",
+  "shipping_district_id": "321605",
+  "shipping_subdistrict_id": "3216052001",
   "shipping_post_code": "17565",
   "shipping_country": "Indonesia",
   "add_disc": 0,
@@ -910,8 +925,8 @@ Data yang **akan dikirim** (nama field menyesuaikan dokumentasi yang diterima):
 
 ```json
 {
-  "origin": { "subdistrict_id": "3216122004", "post_code": "17566" },
-  "destination": { "subdistrict_id": "3216122004", "post_code": "17565" },
+  "origin": { "subdistrict_id": "3216052001", "post_code": "17566" },
+  "destination": { "subdistrict_id": "3216052001", "post_code": "17565" },
   "weight_gram": 32000,
   "dimensions_cm": { "length": 150, "width": 30, "height": 80 },
   "item_value": 6750000

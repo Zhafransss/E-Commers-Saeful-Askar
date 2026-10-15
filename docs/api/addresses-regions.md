@@ -111,7 +111,7 @@ Tidak ada.
 
 ### Acceptance Criteria
 
-- [ ] Memanggil `GET /region/cities/?province_id=` Jubelio; di-cache 30 hari per `province_id`.
+- [ ] Memanggil `GET /region/cities?province_id=` Jubelio; di-cache 30 hari per `province_id`.
 - [ ] `province_id` yang tidak dikenal menghasilkan `"data": []`, bukan error.
 
 ---
@@ -141,7 +141,7 @@ Tidak ada.
 ```json
 {
   "data": [
-    { "id": "321612", "name": "TAMBUN UTARA" },
+    { "id": "321605", "name": "TAMBUN UTARA" },
     { "id": "321611", "name": "TAMBUN SELATAN" }
   ]
 }
@@ -157,7 +157,7 @@ Tidak ada.
 
 ### Acceptance Criteria
 
-- [ ] Memanggil `GET /region/districts/?city_id=` Jubelio; di-cache 30 hari per `city_id`.
+- [ ] Memanggil `GET /region/districts?city_id=` Jubelio; di-cache 30 hari per `city_id`.
 - [ ] `city_id` yang tidak dikenal menghasilkan `"data": []`.
 
 ---
@@ -187,8 +187,8 @@ Tidak ada.
 ```json
 {
   "data": [
-    { "id": "3216122004", "name": "Satriajaya", "post_code": null },
-    { "id": "3216122001", "name": "Srijaya", "post_code": null }
+    { "id": "3216052001", "name": "Satriajaya", "post_code": null },
+    { "id": "3216052006", "name": "Srijaya", "post_code": null }
   ]
 }
 ```
@@ -203,7 +203,7 @@ Tidak ada.
 
 ### Acceptance Criteria
 
-- [ ] Memanggil `GET /region/subdistricts/?district_id=` Jubelio; di-cache 30 hari per `district_id`.
+- [ ] Memanggil `GET /region/subdistricts?district_id=` Jubelio; di-cache 30 hari per `district_id`.
 - [ ] Field `post_code` selalu ada (boleh `null`).
 
 ---
@@ -237,8 +237,8 @@ Tidak ada.
       "address_line": "Jl. Melati No. 12, RT 03/RW 05",
       "province": { "id": "32", "name": "JAWA BARAT" },
       "city": { "id": "3216", "name": "KAB. BEKASI" },
-      "district": { "id": "321612", "name": "TAMBUN UTARA" },
-      "subdistrict": { "id": "3216122004", "name": "Satriajaya" },
+      "district": { "id": "321605", "name": "TAMBUN UTARA" },
+      "subdistrict": { "id": "3216052001", "name": "Satriajaya" },
       "post_code": "17565",
       "is_default": true,
       "created_at": "2026-10-14T21:00:00+07:00",
@@ -297,8 +297,8 @@ Nama wilayah tidak dikirim frontend; backend mengisinya dari data region.
   "address_line": "Jl. Melati No. 12, RT 03/RW 05",
   "province_id": "32",
   "city_id": "3216",
-  "district_id": "321612",
-  "subdistrict_id": "3216122004",
+  "district_id": "321605",
+  "subdistrict_id": "3216052001",
   "post_code": "17565",
   "is_default": true
 }
@@ -318,8 +318,8 @@ Nama wilayah tidak dikirim frontend; backend mengisinya dari data region.
     "address_line": "Jl. Melati No. 12, RT 03/RW 05",
     "province": { "id": "32", "name": "JAWA BARAT" },
     "city": { "id": "3216", "name": "KAB. BEKASI" },
-    "district": { "id": "321612", "name": "TAMBUN UTARA" },
-    "subdistrict": { "id": "3216122004", "name": "Satriajaya" },
+    "district": { "id": "321605", "name": "TAMBUN UTARA" },
+    "subdistrict": { "id": "3216052001", "name": "Satriajaya" },
     "post_code": "17565",
     "is_default": true,
     "created_at": "2026-10-14T21:00:00+07:00",
@@ -388,8 +388,8 @@ Tidak ada.
     "address_line": "Jl. Melati No. 12, RT 03/RW 05",
     "province": { "id": "32", "name": "JAWA BARAT" },
     "city": { "id": "3216", "name": "KAB. BEKASI" },
-    "district": { "id": "321612", "name": "TAMBUN UTARA" },
-    "subdistrict": { "id": "3216122004", "name": "Satriajaya" },
+    "district": { "id": "321605", "name": "TAMBUN UTARA" },
+    "subdistrict": { "id": "3216052001", "name": "Satriajaya" },
     "post_code": "17565",
     "is_default": true,
     "created_at": "2026-10-14T21:00:00+07:00",
@@ -444,8 +444,8 @@ Sama dengan ADDR-02 (semua field dikirim ulang).
   "address_line": "Jl. Melati No. 14, RT 03/RW 05, dekat masjid",
   "province_id": "32",
   "city_id": "3216",
-  "district_id": "321612",
-  "subdistrict_id": "3216122004",
+  "district_id": "321605",
+  "subdistrict_id": "3216052001",
   "post_code": "17565",
   "is_default": true
 }
@@ -465,8 +465,8 @@ Sama dengan ADDR-02 (semua field dikirim ulang).
     "address_line": "Jl. Melati No. 14, RT 03/RW 05, dekat masjid",
     "province": { "id": "32", "name": "JAWA BARAT" },
     "city": { "id": "3216", "name": "KAB. BEKASI" },
-    "district": { "id": "321612", "name": "TAMBUN UTARA" },
-    "subdistrict": { "id": "3216122004", "name": "Satriajaya" },
+    "district": { "id": "321605", "name": "TAMBUN UTARA" },
+    "subdistrict": { "id": "3216052001", "name": "Satriajaya" },
     "post_code": "17565",
     "is_default": true,
     "created_at": "2026-10-14T21:00:00+07:00",
