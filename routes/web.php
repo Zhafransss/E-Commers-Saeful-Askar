@@ -7,7 +7,6 @@
 */
 
 use App\Http\Controllers\Web;
-use App\Models\Article;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Support\Facades\Route;
@@ -28,12 +27,9 @@ Route::get('/sitemap.xml', fn () => response()
                 ->pluck('slug')
                 ->map(fn ($slug) => [route('products.index', ['category' => $slug]), '0.8', 'daily']),
             [route('service'), '0.8', 'monthly'],
-            [route('about'), '0.6', 'monthly'],
             [route('contact'), '0.6', 'monthly'],
-            [route('articles.index'), '0.6', 'weekly'],
         ],
         'products' => Product::visible()->get(['slug', 'updated_at']),
-        'articles' => Article::published()->get(['slug', 'updated_at']),
     ])
     ->header('Content-Type', 'application/xml; charset=UTF-8'))->name('sitemap');
 
@@ -42,13 +38,9 @@ Route::get('/robots.txt', fn () => response()
     ->header('Content-Type', 'text/plain; charset=UTF-8'))->name('robots');
 
 // Static company pages; the home page shows a short preview of each.
-Route::view('/tentang-kami', 'pages.about')->name('about');
 Route::view('/jasa-service', 'pages.service')->name('service');
 Route::view('/testimoni', 'pages.testimonials')->name('testimonials');
 Route::view('/kontak', 'pages.contact')->name('contact');
-
-Route::get('/articles', [Web\ArticlePageController::class, 'index'])->name('articles.index');
-Route::get('/articles/{slug}', [Web\ArticlePageController::class, 'show'])->name('articles.show');
 
 Route::get('/login', [Web\AuthPageController::class, 'login'])->name('login');
 Route::get('/register', [Web\AuthPageController::class, 'register'])->name('register');
@@ -67,9 +59,6 @@ Route::middleware('page.role:customer')->group(function () {
 
 Route::middleware('page.role:admin')->prefix('admin')->name('admin.')->group(function () {
     Route::redirect('/', '/admin/orders');
-    Route::get('/articles', [Web\AdminPageController::class, 'articles'])->name('articles.index');
-    Route::get('/articles/create', [Web\AdminPageController::class, 'articleCreate'])->name('articles.create');
-    Route::get('/articles/{id}/edit', [Web\AdminPageController::class, 'articleEdit'])->whereNumber('id')->name('articles.edit');
     Route::get('/orders', [Web\AdminPageController::class, 'orders'])->name('orders.index');
     Route::get('/sync', [Web\AdminPageController::class, 'sync'])->name('sync.index');
 });

@@ -28,18 +28,10 @@ test('every API and webhook route is documented in the contract', function () {
     expect($routed->diff($documented)->values()->all())->toBe([]);
 });
 
-test('ADM-05 is reachable the way the frontend sends it: multipart POST with _method=PUT', function () {
-    $this->actingAs(User::factory()->admin()->create());
-
-    $response = $this->post('/api/v1/admin/articles/1', ['_method' => 'PUT', 'title' => 'Judul'], ['Accept' => 'application/json']);
-
-    assertApiError($response, 501, 'NOT_IMPLEMENTED')->assertJsonPath('endpoint', 'ADM-05');
-});
-
-test('the contract index lists 49 frontend endpoints and 5 webhooks for v1', function () {
+test('the contract index lists 40 frontend endpoints and 5 webhooks for v1', function () {
     $codes = array_column(contractEndpoints(), 0);
 
-    expect(array_filter($codes, fn ($code) => ! str_starts_with($code, 'WH-')))->toHaveCount(49)
+    expect(array_filter($codes, fn ($code) => ! str_starts_with($code, 'WH-')))->toHaveCount(40)
         ->and(array_filter($codes, fn ($code) => str_starts_with($code, 'WH-')))->toHaveCount(5);
 });
 

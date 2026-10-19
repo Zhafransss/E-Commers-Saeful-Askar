@@ -7,7 +7,7 @@ beforeEach(fn () => $this->withoutVite());
 
 test('public pages render', function (string $uri) {
     $this->get($uri)->assertOk()->assertSee(config('app.name'));
-})->with(['/', '/products', '/articles', '/login', '/register', '/forgot-password', '/reset-password?token=abc&email=a@b.test']);
+})->with(['/', '/products', '/login', '/register', '/forgot-password', '/reset-password?token=abc&email=a@b.test']);
 
 test('product page renders SEO meta from the synced catalog', function () {
     $this->seed(DemoCatalogSeeder::class);
@@ -55,7 +55,7 @@ test('admin pages render for admins', function (string $uri) {
     $this->actingAs(User::factory()->admin()->create());
 
     $this->get($uri)->assertOk();
-})->with(['/admin/orders', '/admin/articles', '/admin/articles/create', '/admin/articles/1/edit', '/admin/sync']);
+})->with(['/admin/orders', '/admin/sync']);
 
 test('customer pages render for logged-in customers', function (string $uri) {
     config(['app.api_mock' => false]);

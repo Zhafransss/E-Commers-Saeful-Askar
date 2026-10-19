@@ -3,7 +3,7 @@
 use App\Support\HtmlSanitizer;
 
 /*
-| Sanitizing rules from INT-JB-04 / CAT-03 / ART-02: no <script>, <iframe>,
+| Sanitizing rules from INT-JB-04 / CAT-03: no <script>, <iframe>,
 | on* attributes; text, heading, list, link, image, and table markup is kept.
 */
 

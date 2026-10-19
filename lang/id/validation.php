@@ -143,7 +143,6 @@ return [
         'image' => 'gambar',
         'body' => 'isi',
         'status' => 'status',
-        'published_at' => 'tanggal terbit',
         'action' => 'aksi',
         'type' => 'jenis',
         'q' => 'kata kunci',

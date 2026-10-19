@@ -22,8 +22,7 @@ Website e-commerce Toko Sepeda Listrik Saeful Askar adalah channel penjualan bar
 - Registrasi, login, dan buku alamat customer.
 - Keranjang, cek ongkir lewat Jubelio Shipment, checkout, dan pembayaran Xendit.
 - Riwayat dan pelacakan pesanan (status dan nomor resi dari Jubelio), serta pembatalan pesanan yang belum dibayar.
-- Artikel blog yang dikelola admin.
-- Panel admin sederhana: artikel, daftar order, dan sinkron manual.
+- Panel admin sederhana: daftar order dan sinkron manual.
 
 ## 2. Pengguna dan user stories
 
@@ -31,9 +30,9 @@ Ada dua peran di website: customer yang membeli dan admin toko yang mengelola ko
 
 | Peran | Siapa | Kebutuhan utama |
 | --- | --- | --- |
-| Pengunjung | Calon pembeli yang belum login | Menjelajah katalog dan artikel tanpa akun |
+| Pengunjung | Calon pembeli yang belum login | Menjelajah katalog tanpa akun |
 | Customer | Pembeli yang sudah login | Membeli, menyimpan alamat, melacak pesanan |
-| Admin toko | Pemilik atau staf toko | Menulis artikel, memantau order website, memicu sinkron |
+| Admin toko | Pemilik atau staf toko | Memantau order website, memicu sinkron |
 | Staf gudang | Pengguna Jubelio (bukan pengguna website) | Picking, packing, resi di Jubelio seperti order Shopee |
 
 **User stories.**
@@ -47,8 +46,7 @@ Ada dua peran di website: customer yang membeli dan admin toko yang mengelola ko
 7. Sebagai customer, saya melihat status pesanan dan nomor resi setelah barang dikirim.
 8. Sebagai customer, saya diberi tahu bila pesanan dibatalkan karena batas bayar habis.
 9. Sebagai customer, saya bisa membatalkan pesanan yang belum saya bayar, agar tagihan ditutup dan stok kembali untuk pembeli lain.
-10. Sebagai admin, saya bisa membuat, menyunting, menjadwalkan, dan menerbitkan artikel.
-11. Sebagai admin, saya bisa melihat order website beserta status sinkron ke Jubelio dan menjalankan sinkron katalog manual.
+10. Sebagai admin, saya bisa melihat order website beserta status sinkron ke Jubelio dan menjalankan sinkron katalog manual.
 
 ## 3. Kebutuhan fungsional
 
@@ -69,8 +67,6 @@ Kebutuhan dibagi per modul; kode di kolom pertama dipakai sebagai acuan di API C
 | F-11 | Pembayaran | Webhook EXPIRED (atau job cadangan) membatalkan sales order Jubelio dan order website | Wajib |
 | F-12 | Pesanan | Riwayat pesanan, detail, status, nomor resi, dan riwayat status | Wajib |
 | F-13 | Sinkron | Sinkron kategori, produk, varian, gambar, harga, stok dari Jubelio (terjadwal + webhook) | Wajib |
-| F-14 | Artikel | Daftar dan detail artikel publik berdasarkan slug, hanya status published | Wajib |
-| F-15 | Admin | CRUD artikel (image, slug, title, published\_at, body, status) | Wajib |
 | F-16 | Admin | Daftar order website dengan status pembayaran dan status sinkron Jubelio; kirim ulang order gagal | Wajib |
 | F-17 | Admin | Tombol sinkron katalog manual dan log sinkron | Sebaiknya |
 | F-18 | Notifikasi | Email konfirmasi order, pembayaran diterima, dan pembatalan | Sebaiknya |
@@ -83,7 +79,6 @@ Kebutuhan dibagi per modul; kode di kolom pertama dipakai sebagai acuan di API C
 - Toko tidak memakai PPN: pajak setiap item 0.
 - Semua order diambil dari satu gudang: Jl. Raya Pisangan No.1, RT.02/RW.02, Satriajaya, Kec. Tambun Utara, Kab. Bekasi, Jawa Barat 17566.
 - Nomor order website berformat WEB-xxxxxx dan dikirim sebagai `ref_no` ke Jubelio.
-- Kolom artikel mengikuti permintaan frontend, dengan `date` menjadi `published_at` dan `Title` menjadi `title` (menunggu persetujuan frontend).
 
 ## 4. Integrasi dan alur bisnis
 
@@ -128,7 +123,7 @@ Yang paling penting adalah keandalan integrasi: tidak ada order hilang, ganda, a
 | Batas API | Panggilan Jubelio di bawah 600 request/menit; token Jubelio di-cache 12 jam |
 | Keamanan | Session cookie + CSRF untuk API; verifikasi signature webhook; kredensial hanya di `.env`; customer hanya bisa melihat alamat dan order miliknya (Policy) |
 | Responsif | Semua halaman toko nyaman di layar HP 360 px ke atas |
-| SEO | Halaman produk dan artikel dirender Blade dengan judul, deskripsi meta, dan slug yang tetap |
+| SEO | Halaman produk dirender Blade dengan judul, deskripsi meta, dan slug yang tetap |
 | Observabilitas | `sync_logs` untuk sinkron dan push order; `order_status_histories` untuk jejak status; log error integrasi |
 | Pengujian | Feature test tiap endpoint terhadap API Contract; test webhook PAID, EXPIRED, update-qty, dan idempotensi memakai fixture |
 
@@ -151,14 +146,13 @@ Webhook dari Xendit dan Jubelio dicatat dulu lalu diproses di antrean, sehingga 
 | Kontrak dan mock | Markdown per modul (`docs/api/*.md`) + mock JSON di frontend |
 | Pengujian | PHPUnit/Pest feature + unit test dengan fixture |
 
-**Model data (ERD v2, 14 tabel).** Rincian kolom, relasi, dan index ada di [`erd.md`](erd.md).
+**Model data (ERD v2, 13 tabel).** Rincian kolom, relasi, dan index ada di [`erd.md`](erd.md).
 
 | Kelompok | Tabel | Catatan |
 | --- | --- | --- |
 | Akun | `users`, `addresses` | `users.jubelio_contact_id`; alamat memakai ID Region Jubelio |
 | Katalog (salinan Jubelio) | `categories`, `products`, `product_variants`, `product_images` | product = item group, variant = SKU; `package_weight` per varian |
 | Transaksi | `cart_items`, `orders`, `order_items`, `payments`, `order_status_histories` | order menyimpan salinan alamat, nama produk, harga; `jubelio_salesorder_id`, `ref_no` WEB-xxxxxx |
-| Konten | `articles` | image, slug, title, published\_at, body, author\_id, status |
 | Integrasi | `webhook_events`, `sync_logs` | idempotensi webhook dan riwayat sinkron |
 
 Konfigurasi integrasi (`store_id` toko website, `location_id` gudang, tax No Tax, kredensial) disimpan di `.env`, bukan di tabel.
@@ -178,13 +172,12 @@ saeful-askar/
 │   │   ├── addresses-regions.md
 │   │   ├── shipping.md                     tarif Jubelio Shipment
 │   │   ├── checkout-orders.md
-│   │   ├── articles.md
-│   │   ├── admin.md                        panel admin: artikel, pesanan, sinkron
+│   │   ├── admin.md                        panel admin: pesanan, sinkron
 │   │   ├── webhooks.md                     webhook masuk Xendit & Jubelio
 │   │   └── integrations.md                 panggilan keluar ke Jubelio, Jubelio Shipment, Xendit
 │   ├── PRD-Website-ECommerce-Saeful-Askar.md   kebutuhan produk (acuan utama)
 │   ├── arsitektur-sistem.md                diagram arsitektur, alur checkout, struktur folder
-│   └── erd.md                              ERD v2: kolom, relasi, index 14 tabel (pemetaan field Jubelio ada di api/integrations.md)
+│   └── erd.md                              ERD v2: kolom, relasi, index 13 tabel (pemetaan field Jubelio ada di api/integrations.md)
 │
 ├── app/                                    BE
 │   ├── Console/Commands/
@@ -197,7 +190,7 @@ saeful-askar/
 │   │   ├── PaymentStatus.php
 │   │   ├── UserRole.php
 │   │   ├── WebhookProvider.php
-│   │   └── …                           JubelioSyncStatus, ArticleStatus, OrderStatusSource, SyncType, SyncStatus, …
+│   │   └── …                           JubelioSyncStatus, OrderStatusSource, SyncType, SyncStatus, …
 │   ├── Exceptions/
 │   │   ├── ApiException.php                basis error format kontrak {message, code, errors}
 │   │   ├── ApiExceptionRenderer.php        error Laravel (401/403/404/419/422/429/500) → kode kontrak
@@ -212,7 +205,6 @@ saeful-askar/
 │   │   │   │   ├── CartPageController.php
 │   │   │   │   ├── CheckoutPageController.php
 │   │   │   │   ├── AccountPageController.php
-│   │   │   │   ├── ArticlePageController.php
 │   │   │   │   ├── AuthPageController.php      login, daftar, lupa/reset password
 │   │   │   │   └── AdminPageController.php     halaman panel admin
 │   │   │   ├── Api/V1/                     endpoint JSON sesuai docs/api/*.md
@@ -224,10 +216,8 @@ saeful-askar/
 │   │   │   │   ├── RegionController.php        proxy + cache Region Jubelio
 │   │   │   │   ├── ShippingRateController.php  tarif Jubelio Shipment
 │   │   │   │   ├── CheckoutController.php
-│   │   │   │   ├── OrderController.php
-│   │   │   │   └── ArticleController.php
+│   │   │   │   └── OrderController.php
 │   │   │   ├── Admin/
-│   │   │   │   ├── ArticleController.php
 │   │   │   │   ├── OrderController.php
 │   │   │   │   └── SyncController.php          tombol sinkron manual + log
 │   │   │   └── Webhook/
@@ -238,7 +228,7 @@ saeful-askar/
 │   │   │   ├── RequirePageRole.php         guard halaman Blade (dilewati saat VITE_API_MOCK=true)
 │   │   │   └── RejectMalformedJson.php     body JSON rusak → 400 BAD_REQUEST
 │   │   ├── Requests/Api/V1/                StoreAddressRequest, AddCartItemRequest, CheckoutRequest, …
-│   │   └── Resources/Api/V1/               ProductResource, ProductDetailResource, VariantResource, OrderResource, ArticleResource, …
+│   │   └── Resources/Api/V1/               ProductResource, ProductDetailResource, VariantResource, OrderResource, …
 │   ├── Jobs/
 │   │   ├── Jubelio/
 │   │   │   ├── SyncProductGroupJob.php
@@ -250,7 +240,7 @@ saeful-askar/
 │   │       ├── ProcessJubelioWebhookJob.php
 │   │       └── ProcessXenditWebhookJob.php
 │   ├── Models/                             User, Address, Category, Product, ProductVariant, ProductImage, CartItem,
-│   │                                       Order, OrderItem, Payment, OrderStatusHistory, Article, WebhookEvent, SyncLog
+│   │                                       Order, OrderItem, Payment, OrderStatusHistory, WebhookEvent, SyncLog
 │   ├── Policies/
 │   │   ├── AddressPolicy.php
 │   │   └── OrderPolicy.php
@@ -288,7 +278,7 @@ saeful-askar/
 │   └── xendit.php                          secret_key, callback_token, invoice_duration
 │
 ├── database/                               BE
-│   ├── migrations/                         14 tabel sesuai docs/erd.md
+│   ├── migrations/                         13 tabel sesuai docs/erd.md
 │   ├── factories/
 │   └── seeders/
 │       ├── DatabaseSeeder.php
@@ -332,11 +322,8 @@ saeful-askar/
 │       │   ├── account/orders/index.blade.php
 │       │   ├── account/orders/show.blade.php
 │       │   ├── account/addresses.blade.php
-│       │   ├── articles/index.blade.php
-│       │   ├── articles/show.blade.php
 │       │   └── auth/login.blade.php · register.blade.php
 │       └── admin/
-│           ├── articles/index.blade.php · form.blade.php
 │           ├── orders/index.blade.php
 │           └── sync/index.blade.php
 │
@@ -372,7 +359,7 @@ Backend dan frontend mulai bersamaan setelah API Contract disepakati; frontend m
 
 **Aturan kerja paralel.**
 
-- Semua endpoint sudah disiapkan sejak awal di folder `docs/api/` (API Contract v1, satu file Markdown per modul: `README.md` untuk konvensi dan indeks, lalu `auth.md`, `catalog.md`, `cart.md`, `addresses-regions.md`, `shipping.md`, `checkout-orders.md`, `articles.md`, `admin.md`, `webhooks.md`, `integrations.md`) sebelum pengerjaan dimulai; bila kontrak perlu diubah di tengah jalan, perubahan disepakati berdua dan di-commit terpisah.
+- Semua endpoint sudah disiapkan sejak awal di folder `docs/api/` (API Contract v1, satu file Markdown per modul: `README.md` untuk konvensi dan indeks, lalu `auth.md`, `catalog.md`, `cart.md`, `addresses-regions.md`, `shipping.md`, `checkout-orders.md`, `admin.md`, `webhooks.md`, `integrations.md`) sebelum pengerjaan dimulai; bila kontrak perlu diubah di tengah jalan, perubahan disepakati berdua dan di-commit terpisah.
 - Setiap endpoint di file modul memuat Endpoint, User Story, Request Body, Response Success, Response Failed, dan Acceptance Criteria. Frontend menyalin contoh response ke `resources/js/api/mocks/` dan menyalakannya dengan `VITE_API_MOCK=true`; setelah backend siap cukup mematikan mock.
 - Backend menulis feature test yang memastikan response sesuai struktur JSON di dokumen kontrak, dengan fixture Jubelio dan Xendit agar tes tidak memanggil API asli.
 - `DemoCatalogSeeder` mengisi katalog contoh agar halaman bisa diuji sebelum Jubelio tersambung.
@@ -391,11 +378,11 @@ Backend dan frontend mulai bersamaan setelah API Contract disepakati; frontend m
 
 **Tahapan.** Tanggal belum ditetapkan; urutannya:
 
-1. Fondasi: API Contract v1, migrasi 14 tabel, autentikasi, kerangka layout Blade dan API client.
+1. Fondasi: API Contract v1, migrasi 13 tabel, autentikasi, kerangka layout Blade dan API client.
 2. Katalog: sinkron Jubelio (kategori, produk, varian, gambar, stok, berat), webhook produk dan stok, halaman daftar dan detail produk.
 3. Akun dan keranjang: registrasi, login, buku alamat dengan Region Jubelio, keranjang.
 4. Checkout: tarif Jubelio Shipment, contact dan sales order Jubelio, invoice Xendit, webhook PAID dan EXPIRED, job pembatalan.
-5. Pesanan dan konten: riwayat dan pelacakan pesanan, artikel publik, panel admin.
+5. Pesanan dan panel admin: riwayat dan pelacakan pesanan, panel admin.
 6. Uji terpadu dan rilis: uji end-to-end dengan akun Jubelio dan Xendit mode test, lalu produksi.
 
 **Kriteria rilis.**
@@ -425,7 +412,6 @@ Risiko terbesar adalah dokumentasi API rates Jubelio Shipment yang belum tersedi
 
 - [ ] Dokumentasi API rates dan kredensial Jubelio Shipment (termasuk staging).
 - [ ] Durasi batas bayar invoice Xendit (usulan 1–2 jam).
-- [ ] Persetujuan frontend atas nama kolom artikel `published_at` dan `title`.
 - [x] Nama header signature webhook Jubelio: `sign`, berisi HMAC-SHA256 (contoh resmi Jubelio di `api/dist.yaml`, bagian Webhook Signature).
 - [x] Toko internal dibuat di Jubelio dengan nama "Website" (`store_id` -102, dari `GET /locations/store/`).
 - [ ] Metode pembayaran Xendit yang diaktifkan (VA, e-wallet, QRIS, kartu).

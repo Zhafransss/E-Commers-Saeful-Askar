@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Resources\ApiResource;
-use App\Models\Article;
+use App\Models\Category;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -14,37 +14,37 @@ beforeEach(function () {
     {
         public function toArray($request): array
         {
-            return ['id' => $this->id, 'published_at' => $this->published_at];
+            return ['id' => $this->id, 'created_at' => $this->created_at];
         }
     };
 
-    Route::get('/api/v1/__test/articles', fn () => $resource::collection(Article::orderBy('id')->paginate(2)))->middleware('api');
-    Route::get('/api/v1/__test/article', fn () => new $resource(Article::first()))->middleware('api');
+    Route::get('/api/v1/__test/categories', fn () => $resource::collection(Category::orderBy('id')->paginate(2)))->middleware('api');
+    Route::get('/api/v1/__test/category', fn () => new $resource(Category::first()))->middleware('api');
 });
 
 test('paginated lists use the contract meta block and nothing else', function () {
-    Article::factory()->count(3)->create();
+    Category::factory()->count(3)->create();
 
-    $this->getJson('/api/v1/__test/articles')
+    $this->getJson('/api/v1/__test/categories')
         ->assertOk()
         ->assertExactJsonStructure([
-            'data' => ['*' => ['id', 'published_at']],
+            'data' => ['*' => ['id', 'created_at']],
             'meta' => ['current_page', 'per_page', 'total', 'last_page'],
         ])
         ->assertJsonPath('meta', ['current_page' => 1, 'per_page' => 2, 'total' => 3, 'last_page' => 2]);
 });
 
 test('single objects are wrapped in data', function () {
-    Article::factory()->create();
+    Category::factory()->create();
 
-    $this->getJson('/api/v1/__test/article')
+    $this->getJson('/api/v1/__test/category')
         ->assertOk()
-        ->assertExactJsonStructure(['data' => ['id', 'published_at']]);
+        ->assertExactJsonStructure(['data' => ['id', 'created_at']]);
 });
 
 test('dates are ISO 8601 in WIB (+07:00), matching the contract examples', function () {
-    Article::factory()->create(['published_at' => '2026-10-10 08:00:00']);
+    Category::factory()->create(['created_at' => '2026-10-10 08:00:00']);
 
-    $this->getJson('/api/v1/__test/article')
-        ->assertJsonPath('data.published_at', '2026-10-10T08:00:00+07:00');
+    $this->getJson('/api/v1/__test/category')
+        ->assertJsonPath('data.created_at', '2026-10-10T08:00:00+07:00');
 });

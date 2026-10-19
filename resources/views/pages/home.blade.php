@@ -23,12 +23,14 @@
 
 {{--
     Static preview in the saefulaskar.com style. Live data later: CAT-02 (catalog),
-    ART-01 (articles). Section ids are the targets of the header menu anchors.
+    Section ids are the targets of the header menu anchors.
 --}}
 @php
     $static = require resource_path('static/catalog.php');
     $store = require resource_path('static/store.php');
 @endphp
+
+@section('header_overlay', '1')
 
 @section('content')
     {{-- Hero --}}
@@ -242,44 +244,6 @@
         </div>
     </section>
 
-    {{-- About preview (full page: /tentang-kami) --}}
-    <section class="border-t border-neutral-800/50 py-20 md:py-28">
-        <div class="mx-auto grid max-w-7xl items-center gap-12 px-4 md:px-8 lg:grid-cols-2">
-            <div class="relative">
-                <div class="overflow-hidden rounded-3xl border border-neutral-800">
-                    <img src="{{ asset('images/products/1-640.webp') }}" alt="Sepeda listrik di toko Saeful Askar" loading="lazy" class="aspect-[4/3] w-full object-cover">
-                </div>
-                <div class="absolute -bottom-6 right-6 rounded-2xl bg-brand px-6 py-4 text-ink shadow-2xl shadow-black/40">
-                    <p class="text-3xl font-extrabold leading-none">10+</p>
-                    <p class="text-xs font-semibold uppercase tracking-wider">Tahun melayani</p>
-                </div>
-            </div>
-
-            <div>
-                <x-section-heading eyebrow="Tentang Kami" :center="false" flush class="mb-6">
-                    Tentang <span class="text-brand">Saeful Askar</span>
-                </x-section-heading>
-                <p class="leading-relaxed text-neutral-300">
-                    Saeful Askar adalah toko sepeda listrik dan motor listrik yang berlokasi di Bekasi, Jawa Barat. Dengan pengalaman lebih dari 10 tahun, kami menyediakan produk berkualitas dengan harga bersaing.
-                </p>
-                <dl class="mt-8 grid grid-cols-3 gap-4">
-                    @foreach ($store['stats'] as [$value, $label])
-                        <div class="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 sm:p-5">
-                            <dt class="sr-only">{{ $label }}</dt>
-                            <dd class="text-2xl font-extrabold text-brand sm:text-3xl">{{ $value }}</dd>
-                            <dd class="mt-1 text-xs text-neutral-400 sm:text-sm">{{ $label }}</dd>
-                        </div>
-                    @endforeach
-                </dl>
-                <a href="{{ route('about') }}"
-                   class="mt-8 inline-flex h-12 items-center justify-center gap-2 rounded-full border border-neutral-700 px-7 text-sm font-semibold transition hover:scale-[1.02] hover:border-neutral-500 hover:bg-neutral-800/50">
-                    Selengkapnya tentang kami
-                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M3 10a.75.75 0 0 1 .75-.75h10.64l-3.22-3.22a.75.75 0 1 1 1.06-1.06l4.5 4.5a.75.75 0 0 1 0 1.06l-4.5 4.5a.75.75 0 1 1-1.06-1.06l3.22-3.22H3.75A.75.75 0 0 1 3 10Z" clip-rule="evenodd" /></svg>
-                </a>
-            </div>
-        </div>
-    </section>
-
     {{-- Testimonials preview (full page: /testimoni) --}}
     <section class="border-t border-neutral-800/50 py-20 md:py-28">
         <div class="mx-auto max-w-7xl px-4 md:px-8">
@@ -298,21 +262,6 @@
                    class="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-neutral-700 px-7 text-sm font-semibold transition hover:scale-[1.02] hover:border-neutral-500 hover:bg-neutral-800/50">
                     Lihat Semua Testimoni
                 </a>
-            </div>
-        </div>
-    </section>
-
-    {{-- Articles --}}
-    <section class="border-t border-neutral-800/50 py-20 md:py-28">
-        <div class="mx-auto max-w-7xl px-4 md:px-8">
-            <div class="mb-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <x-section-heading eyebrow="Artikel" :center="false" flush>Tips &amp; kabar terbaru</x-section-heading>
-                <a href="{{ route('articles.index') }}" class="shrink-0 text-sm font-semibold text-brand underline underline-offset-4 transition hover:text-accent">Semua artikel</a>
-            </div>
-            <div class="grid gap-6 md:grid-cols-3">
-                @foreach (array_slice($static['articles'], 0, 3) as $article)
-                    <x-article-card :article="$article" dark />
-                @endforeach
             </div>
         </div>
     </section>

@@ -1,6 +1,6 @@
 # Arsitektur Sistem — E-Commerce Saeful Askar
 
-Laravel monolit: Blade + Alpine.js + Tailwind (FE) memanggil REST API `/api/v1` (BE). Auth session cookie (Sanctum stateful). MySQL sekaligus menjadi cache (token Jubelio, ongkir, region), antrean job, dan atomic lock lewat driver `database` Laravel — tanpa Redis. Storage lokal untuk gambar artikel. Integrasi keluar hanya lewat `app/Services/*/...Client` (JubelioClient, JubelioShipmentClient, XenditClient). Webhook Xendit & Jubelio → verifikasi → `webhook_events` → job di queue (idempotent). Scheduler: sinkron katalog (malam penuh, 30 menit inkremental), rekonsiliasi stok 15 menit, batalkan order kedaluwarsa 5 menit, retry push order.
+Laravel monolit: Blade + Alpine.js + Tailwind (FE) memanggil REST API `/api/v1` (BE). Auth session cookie (Sanctum stateful). MySQL sekaligus menjadi cache (token Jubelio, ongkir, region), antrean job, dan atomic lock lewat driver `database` Laravel — tanpa Redis.  Integrasi keluar hanya lewat `app/Services/*/...Client` (JubelioClient, JubelioShipmentClient, XenditClient). Webhook Xendit & Jubelio → verifikasi → `webhook_events` → job di queue (idempotent). Scheduler: sinkron katalog (malam penuh, 30 menit inkremental), rekonsiliasi stok 15 menit, batalkan order kedaluwarsa 5 menit, retry push order.
 
 Kerja paralel: semua endpoint disiapkan sejak awal di `docs/api/*.md` (satu file Markdown per modul); FE memakai mock JSON di `resources/js/api/mocks/` (`VITE_API_MOCK=true`); BE feature test sesuai struktur JSON di kontrak dengan fixture Jubelio/Xendit. Branch Git: `backend` dan `frontend` di-merge ke `development`, lalu `development` ke `main` (rincian di PRD §8).
 
@@ -15,7 +15,7 @@ flowchart TB
 
   subgraph APP["Laravel App"]
     direction TB
-    WEB["Blade + Alpine.js + Tailwind<br/>halaman toko & admin artikel"]
+    WEB["Blade + Alpine.js + Tailwind<br/>halaman toko & panel admin"]
     API["REST API /api/v1<br/>Controller → Service"]
     WH["Webhook endpoint<br/>/webhooks/xendit · /webhooks/jubelio"]
     Q["Queue worker<br/>job sinkron & order"]
@@ -26,7 +26,6 @@ flowchart TB
   subgraph DATA["Penyimpanan"]
     direction LR
     DB[("MySQL<br/>data · cache · antrean · lock")]
-    ST[("Storage<br/>gambar artikel")]
   end
 
   subgraph EXT["Layanan eksternal"]
@@ -107,13 +106,12 @@ saeful-askar/
 │   │   ├── addresses-regions.md
 │   │   ├── shipping.md                     tarif Jubelio Shipment
 │   │   ├── checkout-orders.md
-│   │   ├── articles.md
-│   │   ├── admin.md                        panel admin: artikel, pesanan, sinkron
+│   │   ├── admin.md                        panel admin: pesanan, sinkron
 │   │   ├── webhooks.md                     webhook masuk Xendit & Jubelio
 │   │   └── integrations.md                 panggilan keluar ke Jubelio, Jubelio Shipment, Xendit
 │   ├── PRD-Website-ECommerce-Saeful-Askar.md   kebutuhan produk (acuan utama)
 │   ├── arsitektur-sistem.md                diagram arsitektur, alur checkout, struktur folder
-│   └── erd.md                              ERD v2: kolom, relasi, index 14 tabel (pemetaan field Jubelio ada di api/integrations.md)
+│   └── erd.md                              ERD v2: kolom, relasi, index 13 tabel (pemetaan field Jubelio ada di api/integrations.md)
 │
 ├── app/                                    BE
 │   ├── Console/Commands/
@@ -126,7 +124,7 @@ saeful-askar/
 │   │   ├── PaymentStatus.php
 │   │   ├── UserRole.php
 │   │   ├── WebhookProvider.php
-│   │   └── …                           JubelioSyncStatus, ArticleStatus, OrderStatusSource, SyncType, SyncStatus, …
+│   │   └── …                           JubelioSyncStatus, OrderStatusSource, SyncType, SyncStatus, …
 │   ├── Exceptions/
 │   │   ├── ApiException.php                basis error format kontrak {message, code, errors}
 │   │   ├── ApiExceptionRenderer.php        error Laravel (401/403/404/419/422/429/500) → kode kontrak
@@ -141,7 +139,6 @@ saeful-askar/
 │   │   │   │   ├── CartPageController.php
 │   │   │   │   ├── CheckoutPageController.php
 │   │   │   │   ├── AccountPageController.php
-│   │   │   │   ├── ArticlePageController.php
 │   │   │   │   ├── AuthPageController.php      login, daftar, lupa/reset password
 │   │   │   │   └── AdminPageController.php     halaman panel admin
 │   │   │   ├── Api/V1/                     endpoint JSON sesuai docs/api/*.md
@@ -153,10 +150,8 @@ saeful-askar/
 │   │   │   │   ├── RegionController.php        proxy + cache Region Jubelio
 │   │   │   │   ├── ShippingRateController.php  tarif Jubelio Shipment
 │   │   │   │   ├── CheckoutController.php
-│   │   │   │   ├── OrderController.php
-│   │   │   │   └── ArticleController.php
+│   │   │   │   └── OrderController.php
 │   │   │   ├── Admin/
-│   │   │   │   ├── ArticleController.php
 │   │   │   │   ├── OrderController.php
 │   │   │   │   └── SyncController.php          tombol sinkron manual + log
 │   │   │   └── Webhook/
@@ -167,7 +162,7 @@ saeful-askar/
 │   │   │   ├── RequirePageRole.php         guard halaman Blade (dilewati saat VITE_API_MOCK=true)
 │   │   │   └── RejectMalformedJson.php     body JSON rusak → 400 BAD_REQUEST
 │   │   ├── Requests/Api/V1/                StoreAddressRequest, AddCartItemRequest, CheckoutRequest, …
-│   │   └── Resources/Api/V1/               ProductResource, ProductDetailResource, VariantResource, OrderResource, ArticleResource, …
+│   │   └── Resources/Api/V1/               ProductResource, ProductDetailResource, VariantResource, OrderResource, …
 │   ├── Jobs/
 │   │   ├── Jubelio/
 │   │   │   ├── SyncProductGroupJob.php
@@ -179,7 +174,7 @@ saeful-askar/
 │   │       ├── ProcessJubelioWebhookJob.php
 │   │       └── ProcessXenditWebhookJob.php
 │   ├── Models/                             User, Address, Category, Product, ProductVariant, ProductImage, CartItem,
-│   │                                       Order, OrderItem, Payment, OrderStatusHistory, Article, WebhookEvent, SyncLog
+│   │                                       Order, OrderItem, Payment, OrderStatusHistory, WebhookEvent, SyncLog
 │   ├── Policies/
 │   │   ├── AddressPolicy.php
 │   │   └── OrderPolicy.php
@@ -217,7 +212,7 @@ saeful-askar/
 │   └── xendit.php                          secret_key, callback_token, invoice_duration
 │
 ├── database/                               BE
-│   ├── migrations/                         14 tabel sesuai docs/erd.md
+│   ├── migrations/                         13 tabel sesuai docs/erd.md
 │   ├── factories/
 │   └── seeders/
 │       ├── DatabaseSeeder.php
@@ -261,11 +256,8 @@ saeful-askar/
 │       │   ├── account/orders/index.blade.php
 │       │   ├── account/orders/show.blade.php
 │       │   ├── account/addresses.blade.php
-│       │   ├── articles/index.blade.php
-│       │   ├── articles/show.blade.php
 │       │   └── auth/login.blade.php · register.blade.php
 │       └── admin/
-│           ├── articles/index.blade.php · form.blade.php
 │           ├── orders/index.blade.php
 │           └── sync/index.blade.php
 │

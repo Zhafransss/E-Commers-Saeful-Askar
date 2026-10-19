@@ -2,7 +2,7 @@
 
 /*
 | Temporary sample data for the static store pages. Field names follow the
-| API Contract (CAT-01/02/03, CART-01, ART-01/02) so each page can later swap
+| API Contract (CAT-01/02/03, CART-01) so each page can later swap
 | this array for an Alpine fetch without changing its markup.
 | Delete this file once the pages read from /api/v1.
 */
@@ -149,26 +149,6 @@ $cart = [
     'summary' => ['item_count' => 2, 'total_qty' => 2, 'subtotal' => 9200000, 'total_weight' => 36500, 'has_issue' => false],
 ];
 
-$articles = [
-    ['id' => 4, 'slug' => 'cara-merawat-baterai-sepeda-listrik', 'title' => 'Cara Merawat Baterai Sepeda Listrik', 'image_url' => $img('photo-1593764592116-bfb2a97c642a'), 'excerpt' => 'Lima kebiasaan sederhana agar baterai lithium awet hingga 3 tahun.', 'published_at' => '2026-10-10T08:00:00+07:00'],
-    ['id' => 5, 'slug' => 'memilih-sepeda-listrik-untuk-harian', 'title' => 'Memilih Sepeda Listrik untuk Pemakaian Harian', 'image_url' => $img('photo-1529422643029-d4585747aaf2'), 'excerpt' => 'Jarak tempuh, berat badan pengendara, dan medan jalan menentukan motor serta baterai yang tepat.', 'published_at' => '2026-10-06T09:30:00+07:00'],
-    ['id' => 6, 'slug' => 'promo-akhir-tahun-sepeda-listrik', 'title' => 'Promo Akhir Tahun Sepeda Listrik', 'image_url' => $img('photo-1507035895480-2b3156c31fc8'), 'excerpt' => 'Daftar model yang sedang turun harga hingga akhir Desember, lengkap dengan stok terkini.', 'published_at' => '2026-10-01T10:00:00+07:00'],
-    ['id' => 7, 'slug' => 'aturan-sepeda-listrik-di-jalan-raya', 'title' => 'Aturan Sepeda Listrik di Jalan Raya', 'image_url' => $img('photo-1544191696-102dbdaeeaa0'), 'excerpt' => 'Batas kecepatan, usia pengendara, dan jalur yang boleh dilewati menurut peraturan terbaru.', 'published_at' => '2026-09-24T14:00:00+07:00'],
-    ['id' => 8, 'slug' => 'perawatan-rem-cakram', 'title' => 'Perawatan Rem Cakram Sepeda Listrik', 'image_url' => $img('photo-1576435728678-68d0fbf94e91'), 'excerpt' => 'Tanda kampas rem mulai habis dan cara menyetel kaliper sendiri di rumah.', 'published_at' => '2026-09-15T08:00:00+07:00'],
-    ['id' => 9, 'slug' => 'sepeda-lipat-untuk-commuter', 'title' => 'Sepeda Listrik Lipat untuk Commuter KRL', 'image_url' => $img('photo-1505705694340-019e1e335916'), 'excerpt' => 'Ukuran lipat, berat, dan cara membawa sepeda listrik naik kereta tanpa repot.', 'published_at' => '2026-09-08T07:30:00+07:00'],
-];
-
-$articleDetail = $articles[0] + [
-    'body_html' => '<p>Baterai lithium adalah komponen termahal pada sepeda listrik. Dengan kebiasaan yang tepat, umurnya bisa mencapai 3 tahun atau lebih dari 800 siklus isi ulang.</p>'
-        .'<h2>1. Jangan biarkan kosong</h2><p>Isi ulang sebelum indikator turun di bawah 20%. Baterai yang sering habis total lebih cepat kehilangan kapasitas.</p>'
-        .'<h2>2. Pakai charger bawaan</h2><p>Charger lain bisa saja cocok colokannya, tetapi tegangan dan arusnya belum tentu sesuai sehingga sel baterai cepat panas.</p>'
-        .'<h2>3. Hindari panas berlebih</h2><p>Jangan menjemur sepeda di bawah terik matahari terlalu lama dan jangan mengisi daya tepat setelah perjalanan jauh. Tunggu 15–30 menit sampai baterai dingin.</p>'
-        .'<h2>4. Simpan di 50–60%</h2><p>Bila sepeda tidak dipakai lebih dari dua minggu, simpan baterai dalam kondisi setengah penuh di tempat kering.</p>'
-        .'<h2>5. Periksa konektor</h2><p>Bersihkan kontak baterai dari debu dan air secara berkala agar arus mengalir stabil.</p>',
-    'author' => ['name' => 'Admin Saeful Askar'],
-    'updated_at' => '2026-10-11T09:30:00+07:00',
-];
-
 // SAMPLE ONLY: replace with real customer reviews (the old site embedded Google
 // reviews through an Elfsight widget) before going live.
 $testimonials = collect([
@@ -186,4 +166,4 @@ $testimonials = collect([
     'text' => 'Contoh testimoni: '.$row[2],
 ])->all();
 
-return compact('categories', 'products', 'productDetail', 'variantIndex', 'cartLines', 'cart', 'articles', 'articleDetail', 'testimonials');
+return compact('categories', 'products', 'productDetail', 'variantIndex', 'cartLines', 'cart', 'testimonials');

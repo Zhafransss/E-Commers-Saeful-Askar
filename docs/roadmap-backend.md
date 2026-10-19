@@ -16,19 +16,19 @@ Isi teknis setiap fase diringkas dari Acceptance Criteria di API Contract. Bila 
 | 3 | Akun, alamat, keranjang | 3 | AUTH-02–09, REG-01–04, ADDR-01–06, CART-01–06 | 0 (REG: 1, CART: 2) | Besar | Selesai |
 | 4 | Ongkir & checkout | 4 | SHIP-01, ORD-01 | 2, 3 | Besar | Belum mulai |
 | 5 | Pembayaran & siklus pesanan | 4–5 | WH-01, WH-05, ORD-02–05 | 4 | Besar | Belum mulai |
-| 6 | Artikel & panel admin | 5 | ART-01–02, ADM-02–14 | 0 (ADM-09–12: 5, ADM-13–14: 2) | Sedang | Belum mulai |
+| 6 | Panel admin | 5 | ADM-09–14 | ADM-09–12: 5, ADM-13–14: 2 | Sedang | Belum mulai |
 | 7 | Uji terpadu & rilis | 6 | — | 1–6 | Sedang | Belum mulai |
 
-Total: 1 + 6 + 24 + 2 + 6 + 15 = **54 endpoint v1** (49 frontend + 5 webhook). ADM-01, ADM-15, ADM-16, ADM-17 ditunda ke v1.1 dan tidak ada di roadmap ini.
+Total: 1 + 6 + 24 + 2 + 6 + 6 = **45 endpoint v1** (40 frontend + 5 webhook). Fitur artikel (ART-01–02, ADM-02–08) dihapus dari lingkup. ADM-01, ADM-15, ADM-16, ADM-17 ditunda ke v1.1 dan tidak ada di roadmap ini.
 
 ```
 Fase 0 ─► Fase 1 ─► Fase 2 ─┬─► Fase 4 ─► Fase 5 ─┬─► Fase 7
    │                         │                     │
    └──► Fase 3 ──────────────┘                     │
-   └──► Fase 6 (artikel bisa kapan saja; admin order menunggu Fase 5) ──┘
+   └──► Fase 6 (admin order menunggu Fase 5; sinkron manual menunggu Fase 2) ──┘
 ```
 
-Fase 3 bagian auth dan Fase 6 bagian artikel tidak bergantung pada Jubelio. Keduanya bisa dikerjakan lebih dulu bila kredensial Jubelio atau jawaban pertanyaan terbuka PRD §9 belum tersedia.
+Fase 3 bagian auth tidak bergantung pada Jubelio, sehingga bisa dikerjakan lebih dulu bila kredensial Jubelio atau jawaban pertanyaan terbuka PRD §9 belum tersedia.
 
 ## Aturan yang berlaku di setiap fase
 
@@ -55,8 +55,8 @@ Sudah ada di commit `80aca15`:
 - Sanctum stateful (`/api/v1`) + CSRF; webhook di `/webhooks` tanpa session dan CSRF.
 - Format error kontrak (`ApiExceptionRenderer`), paginasi `{data, meta}`, tanggal ISO 8601 +07:00.
 - Middleware `admin`, `page.role`, `RejectMalformedJson`; rate limiter `api`, `auth` (per endpoint), `shipping`, `checkout` di driver `database`.
-- 49 route + 5 webhook dengan controller stub (`501 NOT_IMPLEMENTED`); `ContractRoutesTest` dua arah.
-- 14 migrasi, model, factory, enum; `AdminUserSeeder`, `DemoCatalogSeeder`, `DemoArticleSeeder`.
+- 40 route + 5 webhook dengan controller stub (`501 NOT_IMPLEMENTED`); `ContractRoutesTest` dua arah.
+- 13 migrasi, model, factory, enum; `AdminUserSeeder`, `DemoCatalogSeeder`.
 - Config `jubelio`, `jubelio_shipment` (driver `stub`), `xendit`; kerangka client di `app/Services`.
 - AUTH-01 (`GET /sanctum/csrf-cookie`) sudah berfungsi dari Sanctum.
 
@@ -128,7 +128,7 @@ Endpoint WH-01 – WH-05 sengaja masih `501` sampai handler-nya dibangun (Fase 2
 
 **Keputusan teknis di fase ini.**
 
-- Sanitasi HTML memakai `ezyang/htmlpurifier` (`App\Support\HtmlSanitizer`); daftar tag mengikuti ART-02. Deskripsi asli Jubelio sudah berupa HTML (`<p>`, `<strong>`, `<br>`), jadi tidak perlu konversi teks biasa.
+- Sanitasi HTML memakai `ezyang/htmlpurifier` (`App\Support\HtmlSanitizer`); Deskripsi asli Jubelio sudah berupa HTML (`<p>`, `<strong>`, `<br>`), jadi tidak perlu konversi teks biasa.
 - Bundle tidak ada di `/inventory/items/`; sinkron penuh dan inkremental juga membaca `/inventory/item-bundles/` (bentuk data sama). Stok bundle dibaca lewat INT-JB-06 seperti SKU biasa.
 - Nama, berat, dan penanda bundle per SKU diambil dari INT-JB-05 (`/variations/`), karena `product_skus` di INT-JB-04 tidak memuatnya.
 - Handler WH-02 – WH-04 (`App\Services\Webhooks\Handlers`) memanggil `ProductSyncService` / `StockSyncService` langsung, agar status `webhook_events` mencerminkan hasil sinkron. `SyncProductGroupJob` dan `SyncStockJob` (nama dari kontrak) adalah job tipis di atas service yang sama, untuk sinkron di latar belakang seperti ADM-13.
@@ -257,30 +257,26 @@ Endpoint WH-01 – WH-05 sengaja masih `501` sampai handler-nya dibangun (Fase 2
 
 ---
 
-## Fase 6 — Artikel & panel admin
+## Fase 6 — Panel admin
 
-**Tujuan.** Admin bisa mengelola artikel, memantau order website beserta status sinkron Jubelio, mengirim ulang order yang gagal, dan menjalankan sinkron manual.
+**Tujuan.** Admin bisa memantau order website beserta status sinkron Jubelio, mengirim ulang order yang gagal, dan menjalankan sinkron manual.
 
 **Cakupan.**
 
 | Kelompok | Endpoint | Catatan |
 | --- | --- | --- |
-| Artikel publik | ART-01, ART-02 | Hanya `published` dengan `published_at` ≤ sekarang (draft/terjadwal → 404 `ARTICLE_NOT_FOUND`). `excerpt` 160 karakter dari body tanpa tag, dipotong di batas kata + "…". `image_url` URL lengkap atau `null`. Halaman Blade `articles/show` memakai `title`, `excerpt`, `image_url` untuk meta SEO dan Open Graph |
-| Artikel admin | ADM-02 – ADM-07 | Draft dan terjadwal ikut tampil (`status=scheduled`). Multipart (`_method=PUT`, `remove_image=1/0`); gambar di `storage/app/public/articles/` dengan nama acak, gambar lama dihapus saat diganti. Body disanitasi (library dari Fase 2). Slug otomatis dari judul, bentrok → `-2`, `-3`; slug manual bentrok → `SLUG_TAKEN`. `author_id` = admin pembuat dan tidak berubah. `draft` mengosongkan `published_at`. Hapus = permanen beserta gambarnya |
-| Upload gambar | ADM-08 | `storage/app/public/articles/content/`, nama acak; lebar > 1600 px diperkecil ke 1600 px (ekstensi GD sudah aktif) |
 | Order admin | ADM-09 – ADM-12 | ADM-09 termasuk order yang batal karena gagal dibuat di Jubelio, urut terbaru. ADM-10 memuat `sync_logs` order itu, tanpa kredensial. ADM-11 mencari SO lewat `ref_no` dulu, lalu memilih otomatis `create` / `mark_paid` / `cancel` (`ALREADY_SYNCED` bila aksi yang diminta sudah tercermin di Jubelio). ADM-12 memanggil INT-XD-02 dan menjalankan alur WH-01; aman dipanggil berkali-kali |
 | Sinkron manual | ADM-13, ADM-14 | Satu sinkron per jenis lewat atomic lock (`SYNC_ALREADY_RUNNING`); `full` = kategori → produk → stok, masing-masing satu baris `sync_logs`. ADM-14 urut `started_at` terbaru; `sync-logs:prune` menghapus log > 90 hari |
 
-**Urutan.** Artikel (ART dan ADM-02–08) tidak bergantung pada fase lain, jadi bisa dikerjakan kapan saja sebagai pengisi saat menunggu kredensial atau jawaban dari Jubelio. ADM-13–14 menunggu Fase 2; ADM-09–12 menunggu Fase 5.
+**Urutan.** ADM-13–14 menunggu Fase 2; ADM-09–12 menunggu Fase 5.
 
 **Definisi selesai.**
 
 - [ ] Feature test setiap Acceptance Criteria, termasuk customer biasa yang mendapat `403 FORBIDDEN`.
 - [ ] Order yang SO-nya gagal bisa dikirim ulang dari ADM-11 tanpa membuat SO ganda.
 
-**Blocker.** Persetujuan frontend atas nama kolom artikel `published_at` dan `title` (PRD §9).
 
-**Merge.** Bersama halaman artikel dan halaman admin.
+**Merge.** Bersama halaman admin.
 
 ---
 
@@ -320,4 +316,3 @@ Diambil dari PRD §9 dan `integrations.md`. Kolom kedua menunjukkan fase yang pa
 | Durasi batas bayar Xendit | Fase 4 | Default 2 jam |
 | Metode pembayaran Xendit | Fase 4 | Diatur lewat config |
 | Harga promo Jubelio (`promotion_price`) ikut dipakai atau tidak | Fase 4 | Versi 1 memakai harga INT-JB-04 (INT-JB-07) |
-| Nama kolom artikel `published_at`, `title` | Fase 6 | Kontrak saat ini |

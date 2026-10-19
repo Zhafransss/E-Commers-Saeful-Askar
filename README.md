@@ -47,7 +47,7 @@ npm install
 npm run build
 ```
 
-`--seed` membuat akun admin dan katalog + artikel contoh. Admin lokal: `admin@saefulaskar.test` / `password` (atur `ADMIN_EMAIL` dan `ADMIN_PASSWORD` di `.env` untuk menggantinya; di luar lokal keduanya wajib diisi).
+`--seed` membuat akun admin dan katalog contoh. Admin lokal: `admin@saefulaskar.test` / `password` (atur `ADMIN_EMAIL` dan `ADMIN_PASSWORD` di `.env` untuk menggantinya; di luar lokal keduanya wajib diisi).
 
 ## Menjalankan
 

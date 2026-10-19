@@ -17,8 +17,7 @@ Dokumen ini adalah kontrak antara frontend (Blade + Alpine.js) dan backend (Lara
 | `addresses-regions.md` | Wilayah (Region Jubelio) dan buku alamat | FE + BE |
 | `shipping.md` | Tarif ongkir (Jubelio Shipment) | FE + BE |
 | `checkout-orders.md` | Checkout, pembayaran, riwayat dan detail pesanan | FE + BE |
-| `articles.md` | Artikel publik | FE + BE |
-| `admin.md` | Panel admin: artikel, pesanan, sinkron | FE + BE |
+| `admin.md` | Panel admin: pesanan, sinkron | FE + BE |
 | `webhooks.md` | Webhook masuk dari Xendit dan Jubelio | BE |
 | `integrations.md` | Panggilan keluar ke Jubelio, Jubelio Shipment, Xendit | BE |
 | `dist.yaml` | OpenAPI resmi Jubelio (diunduh dari dokumentasi Jubelio), acuan INT-JB-xx dan signature webhook | BE |
@@ -52,7 +51,6 @@ Setiap endpoint ditulis dengan enam bagian yang sama:
 | --- | --- | --- |
 | `Accept` | `application/json` | Semua request |
 | `Content-Type` | `application/json` | Request dengan body JSON |
-| `Content-Type` | `multipart/form-data` | Upload gambar artikel (admin) |
 | `X-XSRF-TOKEN` | Nilai cookie `XSRF-TOKEN` | Semua request selain GET |
 | `X-Requested-With` | `XMLHttpRequest` | Semua request dari Alpine.js |
 | `Idempotency-Key` | UUID v4 buatan frontend | Hanya `POST /checkout` |
@@ -443,24 +441,9 @@ ID wilayah mengikuti endpoint Region Jubelio (string). Response REG-04 (keluraha
 
 `payment.invoice_url` hanya terisi saat status `pending_payment` dan invoice belum kedaluwarsa. `can_pay` dan `can_cancel` = `true` hanya saat `pending_payment`.
 
-### ArticleSummary dan Article
-
-```json
-{
-  "id": 4,
-  "slug": "cara-merawat-baterai-sepeda-listrik",
-  "title": "Cara Merawat Baterai Sepeda Listrik",
-  "image_url": "https://<domain>/storage/articles/baterai.jpg",
-  "excerpt": "Lima kebiasaan sederhana agar baterai lithium awet hingga 3 tahun.",
-  "published_at": "2026-10-10T08:00:00+07:00"
-}
-```
-
-**Article** = ArticleSummary + `"body_html"` + `"author": { "name": "Admin Saeful Askar" }` + `"updated_at"`. `excerpt` dibuat otomatis dari 160 karakter pertama `body` (tanpa tag HTML).
-
 ## Indeks endpoint
 
-Total **58 endpoint** milik website: 53 dipanggil frontend dan 5 webhook masuk. Empat endpoint admin bertanda **(v1.1)** — ADM-01, ADM-15, ADM-16, ADM-17 — ditunda sesuai PRD §9, sehingga versi 1 berisi **54 endpoint** (49 frontend + 5 webhook). Kontraknya tetap disimpan di `admin.md` sebagai acuan v1.1. Ditambah 18 kelompok panggilan keluar (INT-JB-01 – INT-JB-14, INT-JS-01, INT-XD-01 – INT-XD-03) dan aturan umumnya (INT-HDL) di `integrations.md`.
+Total **49 endpoint** milik website: 44 dipanggil frontend dan 5 webhook masuk. Empat endpoint admin bertanda **(v1.1)** — ADM-01, ADM-15, ADM-16, ADM-17 — ditunda sesuai PRD §9, sehingga versi 1 berisi **45 endpoint** (40 frontend + 5 webhook). Kontraknya tetap disimpan di `admin.md` sebagai acuan v1.1. Fitur artikel (blog) dihapus dari lingkup: ART-01, ART-02, dan ADM-02 – ADM-08 tidak ada lagi, dan kode ADM-09 dan seterusnya tidak dinomori ulang. Ditambah 18 kelompok panggilan keluar (INT-JB-01 – INT-JB-14, INT-JS-01, INT-XD-01 – INT-XD-03) dan aturan umumnya (INT-HDL) di `integrations.md`.
 
 ### Untuk frontend (`/api/v1`, kecuali CSRF)
 
@@ -500,16 +483,7 @@ Total **58 endpoint** milik website: 53 dipanggil frontend dan 5 webhook masuk. 
 | ORD-03 | GET | `/orders/{order_number}` | Customer | checkout-orders.md | F-12 |
 | ORD-04 | GET | `/orders/{order_number}/payment` | Customer | checkout-orders.md | F-09, F-10 |
 | ORD-05 | POST | `/orders/{order_number}/cancel` | Customer | checkout-orders.md | F-19 |
-| ART-01 | GET | `/articles` | Publik | articles.md | F-14 |
-| ART-02 | GET | `/articles/{slug}` | Publik | articles.md | F-14 |
 | ADM-01 (v1.1) | GET | `/admin/dashboard` | Admin | admin.md | F-16, F-17 |
-| ADM-02 | GET | `/admin/articles` | Admin | admin.md | F-15 |
-| ADM-03 | POST | `/admin/articles` | Admin | admin.md | F-15 |
-| ADM-04 | GET | `/admin/articles/{id}` | Admin | admin.md | F-15 |
-| ADM-05 | POST | `/admin/articles/{id}` (`_method=PUT`) | Admin | admin.md | F-15 |
-| ADM-06 | DELETE | `/admin/articles/{id}` | Admin | admin.md | F-15 |
-| ADM-07 | PATCH | `/admin/articles/{id}/status` | Admin | admin.md | F-15 |
-| ADM-08 | POST | `/admin/uploads/images` | Admin | admin.md | F-15 |
 | ADM-09 | GET | `/admin/orders` | Admin | admin.md | F-16 |
 | ADM-10 | GET | `/admin/orders/{order_number}` | Admin | admin.md | F-16 |
 | ADM-11 | POST | `/admin/orders/{order_number}/push-jubelio` | Admin | admin.md | F-16 |
@@ -565,8 +539,6 @@ Total **58 endpoint** milik website: 53 dipanggil frontend dan 5 webhook masuk. 
 | `ORDER_NOT_FOUND` | 404 | ORD-03 – ORD-05, ADM-10 – ADM-12 |
 | `ORDER_NOT_PAYABLE` | 409 | ORD-04 |
 | `ORDER_NOT_CANCELLABLE` | 409 | ORD-05 |
-| `ARTICLE_NOT_FOUND` | 404 | ART-02, ADM-04 – ADM-07 |
-| `SLUG_TAKEN` | 422 | ADM-03, ADM-05 |
 | `ALREADY_SYNCED` | 409 | ADM-11 |
 | `SYNC_ALREADY_RUNNING` | 409 | ADM-13 |
 | `WEBHOOK_EVENT_NOT_FOUND` | 404 | ADM-16 (v1.1) |

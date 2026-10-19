@@ -28,7 +28,7 @@
     --color-ink-line: #2a2a2a;
 }
 
-/* Article and product descriptions arrive as HTML (description_html, body_html). */
+/* Product descriptions arrive as HTML (description_html). */
 .rich-text {
     @apply space-y-4 leading-relaxed text-gray-700;
 }

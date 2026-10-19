@@ -27,7 +27,6 @@
                 </div>
                 <nav class="flex gap-4 overflow-x-auto px-4 pb-4 text-sm md:flex-col md:gap-1">
                     <a href="{{ route('admin.orders.index') }}" class="rounded px-2 py-1 hover:bg-gray-100 @if(request()->routeIs('admin.orders.*')) bg-gray-100 font-medium @endif">Pesanan</a>
-                    <a href="{{ route('admin.articles.index') }}" class="rounded px-2 py-1 hover:bg-gray-100 @if(request()->routeIs('admin.articles.*')) bg-gray-100 font-medium @endif">Artikel</a>
                     <a href="{{ route('admin.sync.index') }}" class="rounded px-2 py-1 hover:bg-gray-100 @if(request()->routeIs('admin.sync.*')) bg-gray-100 font-medium @endif">Sinkron</a>
                     <button type="button" @click="$store.auth.logout()" class="rounded px-2 py-1 text-left hover:bg-gray-100">Keluar</button>
                 </nav>

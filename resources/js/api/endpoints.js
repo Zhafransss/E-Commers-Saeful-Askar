@@ -51,15 +51,7 @@ export const endpoints = {
         payment: (orderNumber) => `/orders/${seg(orderNumber)}/payment`, // ORD-04
         cancel: (orderNumber) => `/orders/${seg(orderNumber)}/cancel`, // ORD-05
     },
-    articles: {
-        index: '/articles', // ART-01
-        show: (slug) => `/articles/${seg(slug)}`, // ART-02
-    },
     admin: {
-        articles: '/admin/articles', // ADM-02 (GET), ADM-03 (POST multipart)
-        article: (id) => `/admin/articles/${seg(id)}`, // ADM-04 (GET), ADM-05 (POST + _method=PUT), ADM-06 (DELETE)
-        articleStatus: (id) => `/admin/articles/${seg(id)}/status`, // ADM-07
-        uploadImage: '/admin/uploads/images', // ADM-08
         orders: '/admin/orders', // ADM-09
         order: (orderNumber) => `/admin/orders/${seg(orderNumber)}`, // ADM-10
         pushJubelio: (orderNumber) => `/admin/orders/${seg(orderNumber)}/push-jubelio`, // ADM-11

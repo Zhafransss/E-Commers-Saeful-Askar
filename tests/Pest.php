@@ -222,7 +222,7 @@ function contractEndpoints(): array
         if ($deferred) {
             continue;
         }
-        // ADM-05 is sent as POST with _method=PUT (method spoofing).
+        // A row marked `_method=PUT` is sent as POST with method spoofing.
         $method = str_contains($note, '_method=PUT') ? 'PUT' : $method;
         $uri = str_starts_with($path, '/sanctum') ? $path : '/api/v1'.$path;
         $endpoints[] = [$code, $method, strtr($uri, $samples)];

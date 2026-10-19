@@ -7,7 +7,7 @@ use HTMLPurifier_Config;
 
 /**
  * Cleans HTML that came from outside before it is stored: product descriptions
- * from Jubelio (INT-JB-04) and, later, article bodies (ART-02, ADM-03).
+ * from Jubelio (INT-JB-04).
  *
  * Only text, heading, list, link, image, and table markup survives: no
  * <script>, <iframe>, style, or on* attributes. Links open with

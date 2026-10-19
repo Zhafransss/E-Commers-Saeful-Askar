@@ -66,28 +66,54 @@
                 ['label' => 'Sparepart', 'text' => 'Baterai, ban, charger, dan suku cadang', 'url' => route('products.index', ['category' => 'sparepart'])],
                 ['label' => 'Jasa Service', 'text' => 'Service di rumah atau di toko', 'url' => route('service')],
             ]],
-            ['label' => 'Tentang Kami', 'url' => route('about'), 'active' => request()->routeIs('about')],
-            ['label' => 'Artikel', 'url' => route('articles.index'), 'active' => request()->routeIs('articles.*')],
             ['label' => 'Testimoni', 'url' => route('testimonials'), 'active' => request()->routeIs('testimonials')],
             ['label' => 'Kontak', 'url' => route('contact'), 'active' => request()->routeIs('contact')],
         ];
+
+        // Pages that open with a full-bleed hero (the home page) set @section('header_overlay', '1'): the content
+        // slides under the translucent bar, as on the previous site. Other pages start below the bar.
+        $headerOverlay = $__env->yieldContent('header_overlay') === '1';
     @endphp
     <body class="@yield('body_class', 'bg-gray-50 text-ink') flex min-h-screen flex-col font-sans antialiased selection:bg-brand selection:text-ink">
         @include('partials.mock-banner')
 
-        <header class="sticky top-0 z-50 border-b border-neutral-800/50 bg-neutral-950/85 text-white backdrop-blur-xl" x-data="{ open: false, product: false }"
-                @keydown.escape.window="open = false; product = false">
-            {{-- Accent line, as on the previous site --}}
-            <div class="h-0.5 bg-gradient-to-r from-brand via-accent to-brand"></div>
+        {{-- Translucent over a hero image on pages that opt in; solid on the others, where a see-through bar would turn grey over the light page. --}}
+        <header @class(['sticky top-0 z-50 border-b border-neutral-800/50 text-white backdrop-blur-xl', 'bg-neutral-950/80' => $headerOverlay, 'bg-neutral-950' => ! $headerOverlay]) x-data="{ open: false, product: false, sub: false }"
+                @keydown.escape.window="open = false; product = false" @resize.window="if (window.innerWidth >= 1024) open = false">
+            <div class="mx-auto max-w-7xl px-4 md:px-12 xl:px-4">
+                <div class="relative flex flex-wrap items-center justify-between gap-6 py-3 md:gap-0 md:py-4">
+                    <div class="relative z-20 flex w-full justify-between lg:w-max">
+                        <a href="{{ $home }}" class="group flex items-center space-x-2" aria-label="Saeful Askar, beranda">
+                            <span class="font-logo text-2xl font-bold text-white">
+                                Saeful <span class="text-brand transition-colors duration-300 group-hover:text-accent">Askar</span>
+                            </span>
+                        </a>
 
-            <div class="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-3 md:px-8 lg:py-4">
-                <a href="{{ $home }}" class="group shrink-0 font-logo text-xl font-bold tracking-wide sm:text-2xl" aria-label="Saeful Askar, beranda">
-                    Saeful <span class="text-brand transition-colors duration-300 group-hover:text-accent">Askar</span>
-                </a>
+                        {{-- Mobile: cart and the two-line menu button --}}
+                        <div class="flex max-h-10 items-center gap-1 lg:hidden">
+                            <a href="{{ route('cart') }}" class="relative grid h-11 w-11 place-items-center rounded-full text-neutral-300 transition hover:text-brand" aria-label="Keranjang">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.3" /><circle cx="18" cy="20" r="1.3" /><path d="M2.5 3h2.6l2.4 12.2a1.5 1.5 0 0 0 1.5 1.2h8.9a1.5 1.5 0 0 0 1.5-1.1L21.5 8H6" /></svg>
+                                <span x-cloak x-show="$store.cart.totalQty > 0" x-text="$store.cart.totalQty"
+                                      class="absolute right-0.5 top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-brand px-1 text-[11px] font-bold text-ink"></span>
+                            </a>
+                            <button type="button" @click="open = ! open" :aria-expanded="open" aria-label="Buka menu" class="relative -mr-6 cursor-pointer p-6">
+                                <span aria-hidden="true" class="m-auto block h-0.5 w-6 origin-center rounded bg-neutral-300 transition duration-300" :class="open && 'translate-y-1 rotate-45'"></span>
+                                <span aria-hidden="true" class="m-auto mt-1.5 block h-0.5 w-6 origin-center rounded bg-neutral-300 transition duration-300" :class="open && '-translate-y-1 -rotate-45'"></span>
+                            </button>
+                        </div>
+                    </div>
 
-                {{-- Desktop menu --}}
-                <nav class="hidden lg:block" aria-label="Menu utama">
-                    <ul class="flex items-center text-sm font-medium tracking-wide text-neutral-300">
+                    {{-- Full-screen blur behind the open mobile menu --}}
+                    <div aria-hidden="true" @click="open = false"
+                         class="fixed inset-0 z-10 h-screen w-screen origin-bottom scale-y-0 bg-neutral-950/90 backdrop-blur-2xl transition duration-500 lg:hidden"
+                         :class="open && 'origin-top scale-y-100'"></div>
+
+                    {{-- Menu: a card under the bar on mobile, inline on desktop --}}
+                    <div class="invisible absolute left-0 top-full z-20 flex max-h-[80vh] w-full origin-top translate-y-1 scale-95 flex-col flex-wrap justify-end gap-6 overflow-y-auto rounded-2xl border border-neutral-800 bg-neutral-900 p-8 opacity-0 shadow-2xl shadow-black/20 transition-all duration-300 lg:visible lg:relative lg:flex lg:max-h-none lg:w-auto lg:translate-y-0 lg:scale-100 lg:flex-row lg:items-center lg:gap-0 lg:overflow-visible lg:border-none lg:bg-transparent lg:p-0 lg:opacity-100 lg:shadow-none"
+                         :class="open && 'visible! translate-y-0 scale-100 opacity-100'">
+                        {{-- Desktop menu --}}
+                        <nav class="hidden lg:block lg:pr-4" aria-label="Menu utama">
+                            <ul class="flex items-center text-sm font-medium tracking-wide text-neutral-300">
                         @foreach ($menu as $item)
                             <li class="relative" @isset($item['children']) @mouseenter="product = true" @mouseleave="product = false" @endisset>
                                 @isset($item['children'])
@@ -131,44 +157,12 @@
                                 @endisset
                             </li>
                         @endforeach
-                    </ul>
-                </nav>
+                            </ul>
+                        </nav>
 
-                <div class="flex items-center gap-2">
-                    <a href="{{ route('cart') }}" class="relative grid h-11 w-11 place-items-center rounded-full text-neutral-300 transition hover:bg-neutral-800/60 hover:text-brand" aria-label="Keranjang">
-                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.3" /><circle cx="18" cy="20" r="1.3" /><path d="M2.5 3h2.6l2.4 12.2a1.5 1.5 0 0 0 1.5 1.2h8.9a1.5 1.5 0 0 0 1.5-1.1L21.5 8H6" /></svg>
-                        <span x-cloak x-show="$store.cart.totalQty > 0" x-text="$store.cart.totalQty"
-                              class="absolute right-0.5 top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-brand px-1 text-[11px] font-bold text-ink"></span>
-                    </a>
-
-                    <div class="hidden sm:block">
-                        <template x-if="! $store.auth.user">
-                            <a href="{{ route('login') }}"
-                               class="inline-flex h-11 items-center justify-center rounded-full bg-brand px-6 text-sm font-semibold text-ink transition hover:scale-[1.02] hover:bg-brand/90 active:scale-[0.98]">
-                                Login
-                            </a>
-                        </template>
-                        <template x-if="$store.auth.user">
-                            <div class="flex items-center gap-1 text-sm font-medium text-neutral-300">
-                                <a href="{{ route('account.orders') }}" class="rounded-full px-3 py-2 transition hover:text-brand">Pesanan</a>
-                                <a x-show="$store.auth.isAdmin" href="{{ route('admin.orders.index') }}" class="rounded-full px-3 py-2 transition hover:text-brand">Admin</a>
-                                <button type="button" @click="$store.auth.logout()"
-                                        class="inline-flex h-11 items-center rounded-full border border-neutral-700 px-5 transition hover:border-neutral-500 hover:bg-neutral-800/50">Keluar</button>
-                            </div>
-                        </template>
-                    </div>
-
-                    <button type="button" class="grid h-11 w-11 place-items-center rounded-full text-neutral-300 transition hover:bg-neutral-800/60 lg:hidden"
-                            @click="open = ! open" :aria-expanded="open" aria-label="Buka menu">
-                        <svg x-show="! open" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 8h16M4 16h16" /></svg>
-                        <svg x-cloak x-show="open" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
-                    </button>
-                </div>
-            </div>
-
-            {{-- Mobile menu --}}
-            <div x-cloak x-show="open" x-transition.opacity class="border-t border-neutral-800 lg:hidden" x-data="{ sub: false }">
-                <ul class="mx-auto max-w-7xl space-y-1 px-4 py-4 font-medium text-neutral-300">
+                        {{-- Mobile menu --}}
+                        <nav class="w-full text-neutral-300 lg:hidden" aria-label="Menu utama">
+                            <ul class="space-y-1 font-medium">
                     @foreach ($menu as $item)
                         <li>
                             @isset($item['children'])
@@ -188,22 +182,39 @@
                             @endisset
                         </li>
                     @endforeach
-                    <li class="pt-3">
-                        <template x-if="! $store.auth.user">
-                            <a href="{{ route('login') }}" class="flex h-12 items-center justify-center rounded-full bg-brand font-semibold text-ink">Login</a>
-                        </template>
-                        <template x-if="$store.auth.user">
-                            <div class="grid grid-cols-2 gap-2">
-                                <a href="{{ route('account.orders') }}" class="flex h-12 items-center justify-center rounded-full border border-neutral-700">Pesanan saya</a>
-                                <button type="button" @click="$store.auth.logout()" class="h-12 rounded-full border border-neutral-700">Keluar</button>
-                            </div>
-                        </template>
-                    </li>
-                </ul>
+                            </ul>
+                        </nav>
+
+                        {{-- Cart and account; the yellow pill is the main action, as on the previous site --}}
+                        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-2">
+                            <a href="{{ route('cart') }}" class="relative hidden h-11 w-11 place-items-center rounded-full text-neutral-300 transition hover:text-brand lg:grid" aria-label="Keranjang">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.3" /><circle cx="18" cy="20" r="1.3" /><path d="M2.5 3h2.6l2.4 12.2a1.5 1.5 0 0 0 1.5 1.2h8.9a1.5 1.5 0 0 0 1.5-1.1L21.5 8H6" /></svg>
+                                <span x-cloak x-show="$store.cart.totalQty > 0" x-text="$store.cart.totalQty"
+                                      class="absolute right-0.5 top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-brand px-1 text-[11px] font-bold text-ink"></span>
+                            </a>
+
+                            <template x-if="! $store.auth.user">
+                                <a href="{{ route('login') }}"
+                                   class="inline-flex h-11 items-center justify-center rounded-full bg-brand px-6 text-sm font-semibold text-ink transition-all duration-200 hover:scale-[1.02] hover:bg-brand/90 active:scale-[0.98]">
+                                    Login
+                                </a>
+                            </template>
+                            <template x-if="$store.auth.user">
+                                <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-1">
+                                    <a href="{{ route('account.orders') }}" class="flex h-11 items-center justify-center rounded-full border border-neutral-700 px-5 text-sm font-semibold text-neutral-200 transition hover:text-brand lg:border-0 lg:px-3">Pesanan</a>
+                                    <a x-show="$store.auth.isAdmin" href="{{ route('admin.orders.index') }}" class="flex h-11 items-center justify-center rounded-full border border-neutral-700 px-5 text-sm font-semibold text-neutral-200 transition hover:text-brand lg:border-0 lg:px-3">Admin</a>
+                                    <button type="button" @click="$store.auth.logout()"
+                                            class="inline-flex h-11 items-center justify-center rounded-full bg-brand px-6 text-sm font-semibold text-ink transition-all duration-200 hover:scale-[1.02] hover:bg-brand/90 active:scale-[0.98]">Keluar</button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
             </div>
         </header>
 
-        <main class="flex-1">
+        {{-- The bar is 77 px tall; pages that opt in start under it (see $headerOverlay). --}}
+        <main @class(['flex-1', '-mt-[77px]' => $headerOverlay])>
             @yield('content')
         </main>
 

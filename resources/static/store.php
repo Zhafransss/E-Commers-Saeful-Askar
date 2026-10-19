@@ -38,9 +38,6 @@ return [
         'service' => $wa('6282227222971', 'Halo min, saya mau tanya soal service sepeda listrik'),
         'wholesale' => $wa('6282227222971', 'Halo min, saya mau beli sparepart grosir'),
     ],
-    // Figures from the previous site's "Tentang Kami" page (home preview and /tentang-kami).
-    'stats' => [['10+', 'Tahun pengalaman'], ['18+', 'Varian produk'], ['1000+', 'Unit terjual']],
-
     // Service options: summary on the home page, full detail on /jasa-service.
     'services' => [
         [

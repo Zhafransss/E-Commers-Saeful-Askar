@@ -29,9 +29,6 @@ Route::get('products/{slug}', [V1\ProductController::class, 'show']);           
 
 Route::get('cart/count', [V1\CartController::class, 'count']);                    // CART-06 (guests get 0)
 
-Route::get('articles', [V1\ArticleController::class, 'index']);                   // ART-01
-Route::get('articles/{slug}', [V1\ArticleController::class, 'show']);             // ART-02
-
 // --- Customer (any logged-in user) ------------------------------------------
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -78,14 +75,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // --- Admin --------------------------------------------------------------
 
     Route::middleware('admin')->prefix('admin')->group(function () {
-        Route::get('articles', [Admin\ArticleController::class, 'index']);                 // ADM-02
-        Route::post('articles', [Admin\ArticleController::class, 'store']);                // ADM-03
-        Route::get('articles/{id}', [Admin\ArticleController::class, 'show']);             // ADM-04
-        Route::put('articles/{id}', [Admin\ArticleController::class, 'update']);           // ADM-05 (POST + _method=PUT)
-        Route::delete('articles/{id}', [Admin\ArticleController::class, 'destroy']);       // ADM-06
-        Route::patch('articles/{id}/status', [Admin\ArticleController::class, 'updateStatus']); // ADM-07
-        Route::post('uploads/images', [Admin\ArticleController::class, 'uploadImage']);    // ADM-08
-
         Route::get('orders', [Admin\OrderController::class, 'index']);                     // ADM-09
         Route::get('orders/{orderNumber}', [Admin\OrderController::class, 'show']);        // ADM-10
         Route::post('orders/{orderNumber}/push-jubelio', [Admin\OrderController::class, 'pushJubelio']);       // ADM-11

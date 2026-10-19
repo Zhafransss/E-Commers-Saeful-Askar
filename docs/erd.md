@@ -2,7 +2,7 @@
 
 15 Oktober 2026 · Status: **Draft untuk direview** · Disusun dari API Contract v1 (`docs/api/*.md`) dan PRD §6
 
-Dokumen ini menjabarkan 14 tabel aplikasi sampai level kolom, sebagai acuan migrasi di `database/migrations/`. Setiap kolom bisa ditelusuri ke field response, request, atau acceptance criteria di API Contract. Bila kontrak berubah, dokumen ini ikut diperbarui di commit yang sama.
+Dokumen ini menjabarkan 13 tabel aplikasi sampai level kolom, sebagai acuan migrasi di `database/migrations/`. Setiap kolom bisa ditelusuri ke field response, request, atau acceptance criteria di API Contract. Bila kontrak berubah, dokumen ini ikut diperbarui di commit yang sama.
 
 ## Konvensi
 
@@ -26,7 +26,6 @@ erDiagram
   users ||--o{ addresses : "punya"
   users ||--o{ cart_items : "punya"
   users ||--o{ orders : "membuat"
-  users ||--o{ articles : "menulis"
   categories ||--o{ categories : "induk"
   categories ||--o{ products : "mengelompokkan"
   products ||--|{ product_variants : "punya"
@@ -112,12 +111,6 @@ erDiagram
     bigint order_id FK
     string status
     string source
-  }
-  articles {
-    bigint id PK
-    bigint author_id FK
-    string slug UK
-    string status
   }
   webhook_events {
     bigint id PK
@@ -403,26 +396,6 @@ Acuan: `status_history` di OrderDetail, ADM-10 (`source`).
 
 Index: (`order_id`, `created_at`).
 
-## Kelompok Konten
-
-### `articles`
-
-Acuan: `articles.md`, ADM-02 – ADM-08.
-
-| Kolom | Tipe | Null | Default | Keterangan |
-| --- | --- | --- | --- | --- |
-| `id` | BIGINT UNSIGNED | — | auto | PK |
-| `author_id` | BIGINT UNSIGNED | Ya | NULL | FK `users.id`, ON DELETE SET NULL. Tidak berubah saat disunting admin lain |
-| `title` | VARCHAR(150) | Tidak | — | |
-| `slug` | VARCHAR(160) | Tidak | — | UNIQUE |
-| `image` | VARCHAR(255) | Ya | NULL | Path di disk `public` (`articles/…`); API mengirim `image_url` lengkap |
-| `body` | LONGTEXT | Tidak | — | HTML yang sudah disanitasi; API mengirim sebagai `body_html` |
-| `status` | VARCHAR(10) | Tidak | `draft` | `draft`, `published`. "Terjadwal" = `published` dengan `published_at` > sekarang |
-| `published_at` | TIMESTAMP | Ya | NULL | Dikosongkan saat `draft` |
-| `created_at`, `updated_at` | TIMESTAMP | Ya | — | |
-
-Index: (`status`, `published_at`). `excerpt` dihitung dari `body` saat response (160 karakter, tanpa tag).
-
 ## Kelompok Integrasi
 
 ### `webhook_events`
@@ -466,7 +439,7 @@ Acuan: ADM-11, ADM-13, ADM-14, INT-HDL.
 
 Index: (`type`, `status`, `started_at`); `reference_id`. Log > 90 hari dihapus job terjadwal (ADM-14).
 
-## Tabel bawaan Laravel (di luar 14 tabel)
+## Tabel bawaan Laravel (di luar 13 tabel)
 
 | Tabel | Dipakai untuk |
 | --- | --- |
