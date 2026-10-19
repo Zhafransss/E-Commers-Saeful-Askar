@@ -10,6 +10,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class CartItem extends Model
 {
+    public const ISSUE_PRODUCT_INACTIVE = 'PRODUCT_INACTIVE';
+
+    public const ISSUE_OUT_OF_STOCK = 'OUT_OF_STOCK';
+
+    public const ISSUE_QTY_EXCEEDS_STOCK = 'QTY_EXCEEDS_STOCK';
+
     protected $fillable = [
         'product_variant_id',
         'qty',
@@ -20,6 +26,23 @@ class CartItem extends Model
         return [
             'qty' => 'integer',
         ];
+    }
+
+    /**
+     * Why this line cannot be checked out as is (cart.md CART-01), or null.
+     * Problem lines stay in the cart so the customer decides what to do.
+     * Expects `variant.product` to be loaded.
+     */
+    public function issue(): ?string
+    {
+        $variant = $this->variant;
+
+        return match (true) {
+            ! $variant->is_active || ! $variant->product->is_active => self::ISSUE_PRODUCT_INACTIVE,
+            $variant->sellableQty() === 0 => self::ISSUE_OUT_OF_STOCK,
+            $this->qty > $variant->sellableQty() => self::ISSUE_QTY_EXCEEDS_STOCK,
+            default => null,
+        };
     }
 
     public function user(): BelongsTo

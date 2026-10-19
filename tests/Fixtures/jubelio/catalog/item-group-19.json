@@ -1,0 +1,38 @@
+{
+  "item_group_id": 19,
+  "item_group_name": "Socket Lihtium M23",
+  "description": "<p><strong>SOCKET LITHIUM</strong></p>\n<p>M23</p>\n<p>Tegangan kerja hingga 72V (DC)</p>",
+  "sell_this": true,
+  "is_active": true,
+  "status": null,
+  "item_category_id": 1000000001,
+  "sell_unit": "Buah",
+  "package_weight": "200.0000",
+  "package_height": null,
+  "package_width": null,
+  "package_length": null,
+  "variations": [],
+  "sell_price": "75000.0000",
+  "last_modified": "2026-10-13T21:42:28.874Z",
+  "brand_name": null,
+  "min": 0,
+  "max": 0,
+  "product_skus": [
+    {
+      "item_id": 21,
+      "item_code": "SD000383N",
+      "barcode": null,
+      "sell_price": "75000.0000",
+      "end_qty": 0,
+      "average_cost": "50000.0000",
+      "amount": null,
+      "variation_values": [],
+      "prices": [{ "store_id": "-102", "channel_id": 1, "sell_price": "70000.0000" }],
+      "images": [
+        { "item_id": 21, "image_id": 401, "cloud_key": "https://cdn.example.com/images/19-socket.png", "thumbnail": "https://cdn.example.com/images/19-socket-thumb.png", "file_name": "19-socket.png", "sequence_number": 0, "channel_info": null }
+      ]
+    }
+  ],
+  "bundles": [],
+  "attributes": []
+}

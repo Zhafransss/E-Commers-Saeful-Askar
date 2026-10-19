@@ -1,0 +1,29 @@
+{
+  "data": [
+    {
+      "store_id": -100,
+      "store_name": "Toko Default",
+      "channel_id": 1,
+      "location_id": null
+    },
+    {
+      "store_id": 99936,
+      "store_name": "Ebike Part",
+      "channel_id": 64,
+      "location_id": null
+    },
+    {
+      "store_id": -101,
+      "store_name": "SIMDISA",
+      "channel_id": 1,
+      "location_id": null
+    },
+    {
+      "store_id": -102,
+      "store_name": "Website",
+      "channel_id": 1,
+      "location_id": null
+    }
+  ],
+  "totalCount": 4
+}

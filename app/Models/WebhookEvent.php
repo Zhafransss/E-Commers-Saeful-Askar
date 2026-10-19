@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\WebhookEventStatus;
 use App\Enums\WebhookProvider;
+use Database\Factories\WebhookEventFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -11,6 +13,9 @@ use Illuminate\Database\Eloquent\Model;
  */
 class WebhookEvent extends Model
 {
+    /** @use HasFactory<WebhookEventFactory> */
+    use HasFactory;
+
     protected $guarded = ['id'];
 
     protected function casts(): array

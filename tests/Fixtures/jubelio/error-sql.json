@@ -1,0 +1,6 @@
+{
+  "statusCode": 500,
+  "error": "Internal Server Error",
+  "message": "duplicate key value violates unique constraint \"salesorder_ref_no_key\"",
+  "code": "23505"
+}

@@ -1,0 +1,29 @@
+{
+  "item_group_id": 25,
+  "item_group_name": "Paket Konversi 72V24Ah + Charger + Socket M23",
+  "description": "<p>Paket konversi lengkap.</p>",
+  "sell_this": true,
+  "is_active": true,
+  "status": null,
+  "item_category_id": 1000000004,
+  "sell_unit": "Buah",
+  "package_weight": "100.0000",
+  "package_height": null,
+  "package_width": null,
+  "package_length": null,
+  "variations": [],
+  "sell_price": "6750000.0000",
+  "last_modified": "2026-10-10T08:00:00.000Z",
+  "brand_name": null,
+  "min": 0,
+  "max": 0,
+  "product_skus": [
+    { "item_id": 29, "item_code": "72V24Ah-10A-M23", "barcode": null, "sell_price": "6750000.0000", "end_qty": 0, "average_cost": null, "amount": null, "variation_values": [], "prices": [], "images": [] }
+  ],
+  "bundles": [
+    { "item_id": 23, "qty": 1, "unit": "Buah", "item_code": "SC000385N", "item_name": "Charger Lithium Phylion", "sell_price": 1250000 },
+    { "item_id": 21, "qty": 1, "unit": "Buah", "item_code": "SD000383N", "item_name": "Socket Lihtium M23", "sell_price": 75000 },
+    { "item_id": 19, "qty": 1, "unit": "Buah", "item_code": "SC000384N", "item_name": "Baterai Lithium Phylion", "sell_price": 4500000 }
+  ],
+  "attributes": []
+}
