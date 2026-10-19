@@ -1,36 +1,26 @@
 @extends('layouts.app')
 
 {{--
-    Static preview: reads the product with this slug from static/catalog.php.
-    Live data: CAT-03 (detail); "Tambah ke keranjang" calls CART-02.
-    $product (synced catalog) is null in mock mode when the slug only exists in the mocks;
-    SEO tags prefer it, so production pages are described by the real Jubelio data.
+    $item is the CAT-03 object and $related a list of CAT-02 objects, both read by
+    ProductPageController from the local catalog, so title, description, images, and
+    structured data are in the HTML. Alpine handles the variant choice; "Tambah ke
+    keranjang" calls CART-02 through Alpine.store('cart').
 --}}
 @php
-    $static = require resource_path('static/catalog.php');
-    $store = require resource_path('static/store.php');
-    $item = $static['productDetail']($slug);
-
-    if ($item) {
-        $firstInStock = collect($item['variants'])->firstWhere('in_stock', true) ?? $item['variants'][0];
-        $related = collect($static['products'])
-            ->where('slug', '!=', $item['slug'])
-            ->sortByDesc(fn ($p) => $p['category']['slug'] === $item['category']['slug'])
-            ->take(4);
-        $isBattery = $item['category']['slug'] === 'baterai';
-        $waAsk = 'https://api.whatsapp.com/send?phone=6282227222971&text='.rawurlencode("Halo min, saya mau tanya produk {$item['name']} di website.");
-    }
+    $firstInStock = collect($item['variants'])->firstWhere('in_stock', true) ?? $item['variants'][0];
+    $isBattery = $item['category']['slug'] === 'baterai';
+    $waAsk = 'https://api.whatsapp.com/send?phone=6282227222971&text='.rawurlencode("Halo min, saya mau tanya produk {$item['name']} di website.");
 
     // SEO: "<name> – <category>" unless the name already says what it is.
-    $seoName = $product?->name ?? $item['name'] ?? 'Detail Produk';
-    $seoCategory = $product?->category?->name ?? $item['category']['name'] ?? null;
+    $seoName = $item['name'];
+    $seoCategory = $item['category']['name'] ?? null;
     $seoTitle = $seoCategory && ! \Illuminate\Support\Str::contains($seoName, $seoCategory, ignoreCase: true) ? "{$seoName} – {$seoCategory}" : $seoName;
-    $seoText = trim(preg_replace('/\s+/', ' ', strip_tags((string) ($product?->description_html ?? $item['description_html'] ?? ''))));
-    $seoImage = $product?->thumbnail_url ?? ($item['images'][0]['url'] ?? null);
+    $seoText = trim(preg_replace('/\s+/', ' ', strip_tags((string) ($item['description_html'] ?? ''))));
+    $seoImage = $item['images'][0]['url'] ?? null;
 
     // Columns that may be NULL in the ERD (brand, dimensions, weight, description) render as "—" or are skipped.
     $grams = fn (?int $g) => $g === null ? '—' : ($g >= 1000 ? rtrim(rtrim(number_format($g / 1000, 1, ',', '.'), '0'), ',').' kg' : "{$g} g");
-    $dimensions = $item ? array_filter($item['package_dimensions'] ?? [], fn ($v) => $v !== null) : [];
+    $dimensions = array_filter($item['package_dimensions'] ?? [], fn ($v) => $v !== null);
 @endphp
 
 @section('title', $seoTitle)
@@ -40,8 +30,7 @@
     @section('og_image', $seoImage)
 @endif
 
-@if ($item)
-    <x-seo-breadcrumbs :items="[
+<x-seo-breadcrumbs :items="[
         ['Home', route('home')],
         ['Produk', route('products.index')],
         [$item['category']['name'], route('products.index', ['category' => $item['category']['slug']])],
@@ -66,16 +55,8 @@
         'weight' => $firstInStock['package_weight'] ? ['@type' => 'QuantitativeValue', 'value' => $firstInStock['package_weight'], 'unitCode' => 'GRM'] : null,
         'offers' => $offer,
     ])" />
-@endif
 
 @section('content')
-    @if (! $item)
-        <section class="mx-auto max-w-xl px-4 py-24 text-center">
-            <h1 class="text-2xl font-bold">Produk tidak ditemukan</h1>
-            <p class="mt-2 text-gray-600">Produk <code class="rounded bg-gray-100 px-1.5">{{ $slug }}</code> tidak ada di data contoh.</p>
-            <a href="{{ route('products.index') }}" class="mt-6 inline-flex rounded-full bg-brand px-6 py-3 font-semibold text-ink">Lihat semua produk</a>
-        </section>
-    @else
     <div class="border-b border-gray-200 bg-white">
         <nav class="mx-auto max-w-7xl px-4 py-3 text-xs text-gray-500 md:px-8" aria-label="Breadcrumb">
             <a href="{{ route('home') }}" class="hover:text-ink">Home</a>
@@ -89,57 +70,14 @@
     </div>
 
     <section class="mx-auto max-w-7xl px-4 py-10 md:px-8"
-             x-data="{
+             x-data="productDetail({
+                productId: @js($item['id']),
                 variants: @js($item['variants']),
                 imageVariants: @js(collect($item['images'])->pluck('variant_id')),
                 selected: @js((object) collect($firstInStock['variation_values'])->pluck('value', 'label')->all()),
-                image: 0,
-                init() {
-                    // CAT-03: an image tagged with variant_id is shown while that variant is selected.
-                    this.$watch('variant', (variant) => this.showVariantImage(variant));
-                    this.showVariantImage(this.variant);
-                    this.syncCart(window.staticCart.load());
-                },
-                /** variant id => qty of this product already in the cart. */
-                syncCart(cart) {
-                    this.inCart = Object.fromEntries(cart.items.filter((line) => line.product.id === {{ $item['id'] }}).map((line) => [line.variant.id, line.qty]));
-                },
-                showVariantImage(variant) {
-                    const index = variant ? this.imageVariants.indexOf(variant.id) : -1;
-                    if (index !== -1) this.image = index;
-                },
-                qty: {{ $item['min_qty'] ?? 1 }},
-                inCart: {},
-                added: null,
-                get variant() {
-                    return this.variants.find((v) => v.variation_values.every((o) => this.selected[o.label] === o.value));
-                },
-                get variantInCart() {
-                    return this.variant ? (this.inCart[this.variant.id] ?? 0) : 0;
-                },
-                // CART-02 rejects qty + qty already in the cart > stock, and the product total > max_qty.
-                get maxQty() {
-                    if (! this.variant) return 0;
-                    const byStock = this.variant.available_qty - this.variantInCart;
-                    const byLimit = {{ $item['max_qty'] ?? 'Infinity' }} - Object.values(this.inCart).reduce((sum, n) => sum + n, 0);
-                    return Math.max(0, Math.min(byStock, byLimit));
-                },
-                get blockedReason() {
-                    if (! this.variant || ! this.variant.in_stock) return 'Stok habis';
-                    if (this.maxQty < 1) return this.variantInCart >= this.variant.available_qty ? 'Semua stok sudah di keranjang' : 'Batas per pesanan tercapai';
-                    return null;
-                },
-                // Static phase: saves to the localStorage cart. Live: api.post(endpoints.cart.items, { variant_id, qty }).
-                addToCart() {
-                    if (this.blockedReason || this.qty > this.maxQty) return;
-                    const cart = window.staticCart.add(this.variant.id, this.qty);
-                    this.syncCart(cart);
-                    this.$store.cart.setFromCart(cart);
-                    this.added = `${this.qty} × ${this.variant.name}`;
-                    this.qty = {{ $item['min_qty'] ?? 1 }};
-                },
-             }"
-             x-effect="if (qty > maxQty) qty = Math.max(1, maxQty)">
+                minQty: @js($item['min_qty'] ?? 1),
+                maxQty: @js($item['max_qty']),
+             })">
         <div class="grid gap-10 lg:grid-cols-2">
             {{-- Gallery --}}
             <div>
@@ -212,6 +150,8 @@
                     </div>
                 </div>
 
+                <p x-cloak x-show="error" x-text="error" role="alert" class="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"></p>
+
                 <div x-cloak x-show="added" x-transition role="status"
                      class="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-brand bg-brand-soft p-4 text-sm">
                     <p><span class="font-semibold">Ditambahkan ke keranjang:</span> <span x-text="added"></span></p>
@@ -219,10 +159,10 @@
                 </div>
 
                 <div class="mt-8 flex flex-col gap-3 sm:flex-row">
-                    <button type="button" @click="addToCart()" :disabled="blockedReason !== null"
+                    <button type="button" @click="addToCart()" :disabled="blockedReason !== null || adding"
                             class="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-brand px-8 py-4 font-semibold text-ink transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500">
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.3" /><circle cx="18" cy="20" r="1.3" /><path d="M2.5 3h2.6l2.4 12.2a1.5 1.5 0 0 0 1.5 1.2h8.9a1.5 1.5 0 0 0 1.5-1.1L21.5 8H6" /></svg>
-                        <span x-text="blockedReason ?? 'Tambah ke keranjang'">Tambah ke keranjang</span>
+                        <span x-text="adding ? 'Menambahkan…' : (blockedReason ?? 'Tambah ke keranjang')">Tambah ke keranjang</span>
                     </button>
                     <a href="{{ $waAsk }}" target="_blank" rel="noopener"
                        class="inline-flex items-center justify-center rounded-full border-2 border-ink px-6 py-4 font-semibold transition hover:bg-ink hover:text-brand">
@@ -284,5 +224,4 @@
             @endforeach
         </div>
     </section>
-    @endif
 @endsection

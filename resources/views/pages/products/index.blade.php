@@ -1,36 +1,15 @@
 @extends('layouts.app')
 
 {{--
-    Static preview: resources/js/components/productList.js filters these cards in the
-    browser. Live data: CAT-01 (categories) and CAT-02 (?q, category, in_stock,
-    price_min, price_max, sort, page), the same query the component keeps in the URL.
+    resources/js/components/productList.js loads CAT-01 (categories) and CAT-02 (?q, category,
+    in_stock, price_min, price_max, sort, page) and keeps that query in the URL. The category
+    copy (title, intro, body) is permanent SEO content from resources/content/categories.php.
 --}}
 @php
-    $static = require resource_path('static/catalog.php');
-
-    // SEO copy per category (permanent content, resources/content/categories.php).
     $content = require resource_path('content/categories.php');
     $slug = (string) request('category', '');
     $current = $content[$slug] ?? $content[''];
-    $categoryName = collect($static['categories'])->firstWhere('slug', $slug)['name'] ?? null;
-
-    $categories = collect($static['categories']);
-    $normalize = fn (string $text) => trim(preg_replace('/[^a-z0-9]+/', ' ', \Illuminate\Support\Str::lower(\Illuminate\Support\Str::ascii($text))));
-
-    // Search text per product: name, category (and its parent), and every variant name/SKU (CAT-02 finds exact SKUs).
-    $products = collect($static['products'])->values()->map(function ($product, $position) use ($static, $categories, $normalize) {
-        $category = $categories->firstWhere('id', $product['category']['id']);
-        $parent = $category && $category['parent_id'] ? $categories->firstWhere('id', $category['parent_id']) : null;
-        $variants = collect($static['productDetail']($product['slug'])['variants'] ?? []);
-
-        return $product + [
-            'position' => $position,
-            'search' => $normalize(implode(' ', [
-                $product['name'], $product['category']['name'], $parent['name'] ?? '',
-                $variants->pluck('sku')->implode(' '), $variants->pluck('name')->implode(' '),
-            ])),
-        ];
-    });
+    $categoryName = $slug !== '' ? \App\Models\Category::where('slug', $slug)->value('name') : null;
 
     $pricePresets = [[null, 2000000, 'Di bawah Rp 2 jt'], [2000000, 6000000, 'Rp 2 – 6 jt'], [6000000, 10000000, 'Rp 6 – 10 jt'], [10000000, null, 'Di atas Rp 10 jt']];
     $suggestions = ['Baterai 48V', 'PCSY', 'Charger', 'Ban'];
@@ -51,7 +30,7 @@
 ])" />
 
 @section('content')
-    <div x-data="productList(@js(['products' => $products, 'categories' => $categories->values(), 'content' => $content]))"
+    <div x-data="productList(@js(['content' => $content]))"
          @keydown.window.slash="if (! ['INPUT', 'TEXTAREA', 'SELECT'].includes($event.target.tagName)) { $event.preventDefault(); $refs.search.focus() }"
          @keydown.escape.window="filtersOpen = false">
 
@@ -106,13 +85,13 @@
                         class="flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition">
                     Semua <span class="text-xs opacity-60" x-text="countFor('')"></span>
                 </a>
-                @foreach ($categories as $category)
-                    <a href="{{ route('products.index', ['category' => $category['slug']]) }}" @click.prevent="category = @js($category['slug'])"
-                            :class="category === @js($category['slug']) ? 'border-ink bg-ink text-brand' : 'border-gray-200 bg-white text-gray-700 hover:border-ink'"
+                <template x-for="item in categories" :key="item.id">
+                    <a :href="`{{ route('products.index') }}?category=${item.slug}`" @click.prevent="category = item.slug"
+                            :class="category === item.slug ? 'border-ink bg-ink text-brand' : 'border-gray-200 bg-white text-gray-700 hover:border-ink'"
                             class="flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition">
-                        {{ $category['name'] }} <span class="text-xs opacity-60" x-text="countFor(@js($category['slug']))"></span>
+                        <span x-text="item.name"></span> <span class="text-xs opacity-60" x-text="item.product_count"></span>
                     </a>
-                @endforeach
+                </template>
             </div>
         </div>
 
@@ -148,16 +127,16 @@
                                         Semua produk <span class="text-xs opacity-60" x-text="countFor('')"></span>
                                     </a>
                                 </li>
-                                @foreach ($categories as $category)
+                                <template x-for="item in categories" :key="item.id">
                                     <li>
-                                        <a href="{{ route('products.index', ['category' => $category['slug']]) }}" @click.prevent="category = @js($category['slug'])"
-                                                :class="category === @js($category['slug']) ? 'bg-ink font-semibold text-brand' : 'text-gray-700 hover:bg-gray-100'"
-                                                @class(['flex w-full items-center justify-between rounded-lg py-2 pr-3 transition', 'pl-6' => $category['parent_id'], 'pl-3' => ! $category['parent_id']])>
-                                            <span>@if ($category['parent_id'])<span class="mr-1 text-gray-300">└</span>@endif{{ $category['name'] }}</span>
-                                            <span class="text-xs opacity-60" x-text="countFor(@js($category['slug']))"></span>
+                                        <a :href="`{{ route('products.index') }}?category=${item.slug}`" @click.prevent="category = item.slug"
+                                                :class="[category === item.slug ? 'bg-ink font-semibold text-brand' : 'text-gray-700 hover:bg-gray-100', item.parent_id ? 'pl-6' : 'pl-3']"
+                                                class="flex w-full items-center justify-between rounded-lg py-2 pr-3 transition">
+                                            <span><span x-show="item.parent_id" class="mr-1 text-gray-300">└</span><span x-text="item.name"></span></span>
+                                            <span class="text-xs opacity-60" x-text="item.product_count"></span>
                                         </a>
                                     </li>
-                                @endforeach
+                                </template>
                             </ul>
                         </section>
 
@@ -208,7 +187,7 @@
                     <div class="flex gap-3 border-t border-gray-200 p-4 lg:hidden">
                         <button type="button" @click="reset()" class="flex-1 rounded-full border border-gray-300 py-3 text-sm font-semibold">Reset</button>
                         <button type="button" @click="filtersOpen = false" class="flex-[2] rounded-full bg-ink py-3 text-sm font-semibold text-brand">
-                            Tampilkan <span x-text="results.length"></span> produk
+                            Tampilkan <span x-text="meta.total"></span> produk
                         </button>
                     </div>
                 </aside>
@@ -217,7 +196,7 @@
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <p class="text-sm text-gray-600" aria-live="polite">
-                            <span class="font-semibold text-ink" x-text="results.length">{{ $products->count() }}</span> produk ditemukan
+                            <span class="font-semibold text-ink" x-text="loaded ? meta.total : '…'">…</span> produk ditemukan
                         </p>
                         <div class="flex items-center gap-2">
                             <button type="button" @click="filtersOpen = true"
@@ -250,17 +229,29 @@
                         <button type="button" @click="reset()" class="px-2 text-sm font-semibold text-gray-500 underline-offset-4 hover:text-ink hover:underline">Hapus semua</button>
                     </div>
 
-                    {{-- Grid: cards are server-rendered; Alpine shows and orders them. --}}
-                    <div class="mt-6 grid grid-cols-2 gap-3 sm:gap-6 xl:grid-cols-3">
-                        @foreach ($products as $product)
-                            <div x-show="rank({{ $product['id'] }}) !== -1" :style="{ order: rank({{ $product['id'] }}) }" class="flex">
-                                <x-product-card :product="$product" class="w-full" />
+                    {{-- Error --}}
+                    <div x-cloak x-show="error" class="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
+                        <p x-text="error"></p>
+                        <button type="button" @click="fetchPage(1)" class="rounded-full border border-red-300 px-4 py-1.5 font-semibold transition hover:bg-red-100">Coba lagi</button>
+                    </div>
+
+                    {{-- Grid: placeholders on the first load, then the CAT-02 cards --}}
+                    <div class="mt-6 grid grid-cols-2 gap-3 sm:gap-6 xl:grid-cols-3" :aria-busy="loading">
+                        <template x-for="n in (loading && ! loaded ? 6 : 0)" :key="n">
+                            <div class="animate-pulse overflow-hidden rounded-2xl border border-gray-200 bg-white" aria-hidden="true">
+                                <div class="aspect-[4/3] bg-gray-200"></div>
+                                <div class="space-y-2 p-4"><div class="h-3 w-1/3 rounded bg-gray-200"></div><div class="h-4 w-4/5 rounded bg-gray-200"></div><div class="h-4 w-1/2 rounded bg-gray-200"></div></div>
                             </div>
-                        @endforeach
+                        </template>
+                        <template x-for="product in results" :key="product.id">
+                            <div class="flex transition-opacity" :class="loading && 'opacity-50'">
+                                <x-product-card-js class="w-full" />
+                            </div>
+                        </template>
                     </div>
 
                     {{-- Empty state --}}
-                    <div x-cloak x-show="results.length === 0" class="mt-6 rounded-3xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
+                    <div x-cloak x-show="loaded && ! loading && ! error && results.length === 0" class="mt-6 rounded-3xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
                         <span class="mx-auto grid h-16 w-16 place-items-center rounded-full bg-brand-soft text-ink">
                             <svg class="h-7 w-7" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.45 4.39l3.08 3.08a.75.75 0 1 1-1.06 1.06l-3.08-3.08A7 7 0 0 1 2 9Z" clip-rule="evenodd" /></svg>
                         </span>
@@ -279,14 +270,14 @@
                     {{-- Load more (CAT-02 page + 1) --}}
                     <div x-cloak x-show="results.length > 0" class="mt-10 flex flex-col items-center gap-3">
                         <p class="text-sm text-gray-500">
-                            Menampilkan <span class="font-semibold text-ink" x-text="Math.min(shown, results.length)"></span> dari <span x-text="results.length"></span> produk
+                            Menampilkan <span class="font-semibold text-ink" x-text="results.length"></span> dari <span x-text="meta.total"></span> produk
                         </p>
                         <div class="h-1 w-48 overflow-hidden rounded-full bg-gray-200">
-                            <div class="h-full rounded-full bg-brand transition-all" :style="{ width: Math.min(100, (shown / results.length) * 100) + '%' }"></div>
+                            <div class="h-full rounded-full bg-brand transition-all" :style="{ width: Math.min(100, (results.length / meta.total) * 100) + '%' }"></div>
                         </div>
-                        <button type="button" x-show="hasMore" @click="loadMore()"
-                                class="mt-2 inline-flex h-12 items-center rounded-full border-2 border-ink px-8 text-sm font-semibold transition hover:bg-ink hover:text-brand">
-                            Muat lebih banyak
+                        <button type="button" x-show="hasMore" @click="loadMore()" :disabled="loadingMore"
+                                class="mt-2 inline-flex h-12 items-center rounded-full border-2 border-ink px-8 text-sm font-semibold transition hover:bg-ink hover:text-brand disabled:cursor-wait disabled:opacity-60">
+                            <span x-text="loadingMore ? 'Memuat…' : 'Muat lebih banyak'">Muat lebih banyak</span>
                         </button>
                     </div>
                 </div>

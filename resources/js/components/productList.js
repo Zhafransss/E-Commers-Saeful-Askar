@@ -1,10 +1,13 @@
+import { api, ApiError } from '../api/client.js';
+import { endpoints } from '../api/endpoints.js';
+
 /**
  * Alpine.data('productList'): the /products catalog (docs/api/catalog.md CAT-01, CAT-02).
  *
- * Static phase: filters, sorts, and pages a list rendered by Blade, entirely in the
- * browser. The state mirrors the CAT-02 query (q, category, in_stock, price_min,
- * price_max, sort, page) and is kept in the URL, so moving to the API later is a
- * matter of sending `query` to endpoints.products.index instead of filtering here.
+ * The state mirrors the CAT-02 query (q, category, in_stock, price_min, price_max, sort,
+ * page) and is kept in the URL. Every filter change starts again at page 1; "Muat lebih
+ * banyak" fetches the next page and appends it. A response that arrives after a newer
+ * request was sent is dropped, so fast typing never shows stale results.
  */
 const SORTS = {
     latest: 'Terbaru',
@@ -13,22 +16,20 @@ const SORTS = {
     name_asc: 'Nama A–Z',
 };
 
-const PER_PAGE = 9;
+const PER_PAGE = 12;
 
-/** Lowercase, accent- and punctuation-insensitive text for matching. */
-const normalize = (text) =>
-    String(text ?? '')
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[̀-ͯ]/g, '')
-        .replace(/[^a-z0-9]+/g, ' ')
-        .trim();
-
-export default ({ products, categories, content }) => ({
-    products,
-    categories,
+export default ({ content }) => ({
     content,
     sorts: SORTS,
+
+    categories: [],
+    products: [],
+    meta: { current_page: 0, last_page: 0, total: 0 },
+    loading: true,
+    loadingMore: false,
+    error: null,
+    // Set after the first response, so "0 produk" is not shown while the first load runs.
+    loaded: false,
 
     q: '',
     category: '',
@@ -36,8 +37,9 @@ export default ({ products, categories, content }) => ({
     priceMin: '',
     priceMax: '',
     sort: 'latest',
-    shown: PER_PAGE,
     filtersOpen: false,
+
+    controller: null,
 
     init() {
         const params = new URLSearchParams(window.location.search);
@@ -48,14 +50,28 @@ export default ({ products, categories, content }) => ({
         this.priceMax = params.get('price_max') ?? '';
         this.sort = SORTS[params.get('sort')] ? params.get('sort') : 'latest';
 
-        // Any filter change restarts paging and is written back to the URL.
+        // Any filter change goes back to page 1 and is written to the URL.
         this.$watch('query', () => {
-            this.shown = PER_PAGE;
             this.syncUrl();
+            this.fetchPage(1);
         });
 
         // Keep the tab title in step with the category copy, as the server renders it.
         this.$watch('category', () => (document.title = `${this.pageContent.title} | Saeful Askar`));
+
+        this.loadCategories();
+        this.fetchPage(1);
+    },
+
+    /** CAT-01 */
+    async loadCategories() {
+        try {
+            const { data } = await api.get(endpoints.categories.index);
+            this.categories = data;
+        } catch (error) {
+            // Filtering by typing still works without the category list.
+            console.warn('[products] categories failed:', error);
+        }
     },
 
     /** CAT-02 query for the current state (empty values omitted). */
@@ -73,6 +89,37 @@ export default ({ products, categories, content }) => ({
         window.history.replaceState(null, '', url);
     },
 
+    /** CAT-02. Page 1 replaces the list, later pages are appended. */
+    async fetchPage(page) {
+        // A price range the server would reject (422) is explained under the inputs instead.
+        if (this.priceInvalid) {
+            this.loading = false;
+            return;
+        }
+
+        this.controller?.abort();
+        const controller = (this.controller = new AbortController());
+        const append = page > 1;
+
+        this.error = null;
+        append ? (this.loadingMore = true) : (this.loading = true);
+
+        try {
+            const { data, meta } = await api.get(endpoints.products.index, {
+                query: { ...this.query, page, per_page: PER_PAGE },
+                signal: controller.signal,
+            });
+            this.products = append ? [...this.products, ...data] : data;
+            this.meta = meta;
+            this.loaded = true;
+        } catch (error) {
+            if (error.name === 'AbortError') return;
+            this.error = error instanceof ApiError ? error.message : 'Produk tidak dapat dimuat. Coba lagi.';
+        } finally {
+            if (this.controller === controller) this.loading = this.loadingMore = false;
+        }
+    },
+
     get currentCategory() {
         return this.categories.find((c) => c.slug === this.category) ?? null;
     },
@@ -82,60 +129,28 @@ export default ({ products, categories, content }) => ({
         return this.content[this.category] ?? this.content[''];
     },
 
-    /** Category slug plus its children: a parent shows its sub-categories' products (CAT-02). */
-    categorySlugs(slug) {
-        const parent = this.categories.find((c) => c.slug === slug);
-        if (!parent) return [slug];
-        return [slug, ...this.categories.filter((c) => c.parent_id === parent.id).map((c) => c.slug)];
+    /** Products matching the filters, in the order the server returned them. */
+    get results() {
+        return this.products;
     },
 
     get priceInvalid() {
         return this.priceMin !== '' && this.priceMax !== '' && Number(this.priceMax) < Number(this.priceMin);
     },
 
-    matches(product, { ignoreCategory = false } = {}) {
-        const terms = normalize(this.q).split(' ').filter(Boolean);
-        if (terms.length && !terms.every((term) => product.search.includes(term))) return false;
-        if (!ignoreCategory && this.category && !this.categorySlugs(this.category).includes(product.category.slug)) return false;
-        if (this.inStock && !product.in_stock) return false;
-        if (!this.priceInvalid) {
-            // A product matches when any variant price falls in the range (CAT-02).
-            if (this.priceMin !== '' && product.price_max < Number(this.priceMin)) return false;
-            if (this.priceMax !== '' && product.price_min > Number(this.priceMax)) return false;
-        }
-        return true;
-    },
-
-    get results() {
-        const list = this.products.filter((product) => this.matches(product));
-        const byName = (a, b) => a.name.localeCompare(b.name, 'id');
-        const sorters = {
-            latest: (a, b) => a.position - b.position,
-            price_asc: (a, b) => a.price_min - b.price_min || byName(a, b),
-            price_desc: (a, b) => b.price_max - a.price_max || byName(a, b),
-            name_asc: byName,
-        };
-        return list.sort(sorters[this.sort]);
-    },
-
-    /** Display position of a product, or -1 when it is filtered out or beyond the loaded pages. */
-    rank(id) {
-        const index = this.results.findIndex((product) => product.id === id);
-        return index < this.shown ? index : -1;
-    },
-
-    /** Count per category for the current search/stock/price, ignoring the category filter itself. */
+    /** Product count per category from CAT-01 (a parent includes its sub-categories). */
     countFor(slug) {
-        const slugs = slug ? this.categorySlugs(slug) : null;
-        return this.products.filter((p) => this.matches(p, { ignoreCategory: true }) && (!slugs || slugs.includes(p.category.slug))).length;
+        if (!this.categories.length) return '';
+        if (slug) return this.categories.find((c) => c.slug === slug)?.product_count ?? 0;
+        return this.categories.filter((c) => c.parent_id === null).reduce((sum, c) => sum + c.product_count, 0);
     },
 
     get hasMore() {
-        return this.results.length > this.shown;
+        return this.meta.current_page < this.meta.last_page;
     },
 
     loadMore() {
-        this.shown += PER_PAGE;
+        if (this.hasMore && !this.loadingMore) this.fetchPage(this.meta.current_page + 1);
     },
 
     /** Removable chips for every active filter. */
@@ -177,5 +192,10 @@ export default ({ products, categories, content }) => ({
 
     isPrice(min, max) {
         return String(this.priceMin) === (min == null ? '' : String(min)) && String(this.priceMax) === (max == null ? '' : String(max));
+    },
+
+    /** Same fallback icon choice as <x-product-card>. */
+    iconFor(product) {
+        return product.category?.slug === 'baterai' ? 'battery' : 'part';
     },
 });

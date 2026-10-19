@@ -53,18 +53,6 @@
 
         @stack('schema')
 
-        {{--
-            Static phase (resources/js/static/cart.js): the initial cart rows (variant id + qty, like cart_items)
-            and the variant lookup prices and stock are read from. Remove both once CART-01 is live.
-        --}}
-        @php
-            $staticCatalog = require resource_path('static/catalog.php');
-        @endphp
-        <script>
-            window.staticCartSeed = @js($staticCatalog['cartLines']);
-            window.staticVariants = @js((object) $staticCatalog['variantIndex']);
-        </script>
-
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     @php

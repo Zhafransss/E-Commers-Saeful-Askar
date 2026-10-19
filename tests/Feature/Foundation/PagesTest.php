@@ -24,10 +24,11 @@ test('unknown product slugs are 404 outside mock mode', function () {
     $this->get('/products/tidak-ada')->assertNotFound();
 });
 
-test('unknown product slugs still render in mock mode', function () {
+test('unknown product slugs are 404 in mock mode too', function () {
+    // The detail page is rendered from the synced catalog (SEO), so mocks cannot supply a product.
     config(['app.api_mock' => true]);
 
-    $this->get('/products/hanya-ada-di-mock')->assertOk();
+    $this->get('/products/hanya-ada-di-mock')->assertNotFound();
 });
 
 test('account pages send guests to login outside mock mode', function () {

@@ -3,12 +3,7 @@
 @section('title', 'Keranjang')
 @section('robots', 'noindex, nofollow')
 
-{{--
-    Static preview: resources/js/components/cartPage.js works on the localStorage cart
-    (resources/js/static/cart.js), seeded with the sample CART-01 object.
-    Live data: CART-01 (show), CART-03 (qty), CART-04 (remove), CART-05 (clear).
---}}
-@php($static = require resource_path('static/catalog.php'))
+{{-- resources/js/components/cartPage.js: CART-01 (show), CART-03 (qty), CART-04 (remove), CART-05 (clear). --}}
 
 @section('content')
     <div x-data="cartPage()">
@@ -16,14 +11,19 @@
             <div class="mx-auto max-w-7xl px-4 py-10 md:px-8">
                 <h1 class="text-3xl font-bold sm:text-4xl">Keranjang <span class="text-brand">belanja</span></h1>
                 <p class="mt-2 text-gray-400">
-                    <span x-text="cart.summary.item_count">{{ $static['cart']['summary']['item_count'] }}</span> produk ·
-                    <span x-text="cart.summary.total_qty">{{ $static['cart']['summary']['total_qty'] }}</span> barang
+                    <span x-text="cart.summary.item_count">0</span> produk ·
+                    <span x-text="cart.summary.total_qty">0</span> barang
                 </p>
             </div>
         </section>
 
         {{-- Empty state --}}
-        <div x-cloak x-show="cart.items.length === 0" class="mx-auto max-w-md px-4 py-24 text-center">
+        {{-- Until the cart arrives, show neither the empty state nor the list. --}}
+        <div x-cloak x-show="! loaded" class="mx-auto max-w-md px-4 py-24 text-center text-gray-500" role="status">Memuat keranjang…</div>
+
+        <p x-cloak x-show="notice && cart.items.length === 0" x-text="notice" role="alert" class="mx-auto mt-8 max-w-xl rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"></p>
+
+        <div x-cloak x-show="loaded && cart.items.length === 0" class="mx-auto max-w-md px-4 py-24 text-center">
             <span class="mx-auto grid h-20 w-20 place-items-center rounded-full bg-brand-soft text-ink">
                 <svg class="h-9 w-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.3" /><circle cx="18" cy="20" r="1.3" /><path d="M2.5 3h2.6l2.4 12.2a1.5 1.5 0 0 0 1.5 1.2h8.9a1.5 1.5 0 0 0 1.5-1.1L21.5 8H6" /></svg>
             </span>
@@ -32,7 +32,7 @@
             <a href="{{ route('products.index') }}" class="mt-8 inline-flex rounded-full bg-brand px-7 py-3.5 font-semibold text-ink transition hover:bg-brand-hover">Mulai belanja</a>
         </div>
 
-        <div x-show="cart.items.length > 0" class="mx-auto max-w-7xl px-4 py-10 md:px-8">
+        <div x-cloak x-show="loaded && cart.items.length > 0" class="mx-auto max-w-7xl px-4 py-10 md:px-8">
             <div class="grid gap-8 lg:grid-cols-[1fr_22rem]">
                 <div class="space-y-4">
                     <div x-show="cart.summary.has_issue" class="flex gap-3 rounded-2xl border border-brand bg-brand-soft p-4 text-sm" role="alert">

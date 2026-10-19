@@ -78,7 +78,7 @@ function buildUrl(path, query) {
     return url.href;
 }
 
-async function send(method, path, { query, body, headers = {} } = {}, retried = false) {
+async function send(method, path, { query, body, headers = {}, signal } = {}, retried = false) {
     const isForm = body instanceof FormData;
     const requestHeaders = {
         Accept: 'application/json',
@@ -99,15 +99,18 @@ async function send(method, path, { query, body, headers = {} } = {}, retried = 
             credentials: 'same-origin',
             headers: requestHeaders,
             body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
+            signal,
         });
-    } catch {
+    } catch (error) {
+        // A request cancelled on purpose (options.signal) is not a connection problem.
+        if (error.name === 'AbortError') throw error;
         throw new ApiError(0, { message: 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.' });
     }
 
     // Expired CSRF token: refresh once and retry transparently.
     if (response.status === 419 && !retried) {
         await ensureCsrfCookie(true);
-        return send(method, path, { query, body, headers }, true);
+        return send(method, path, { query, body, headers, signal }, true);
     }
 
     const payload = response.status === 204 ? null : await response.json().catch(() => null);

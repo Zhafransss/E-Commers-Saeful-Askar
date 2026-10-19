@@ -1,13 +1,12 @@
-import * as staticCart from '../static/cart.js';
+import { ApiError } from '../api/client.js';
 
 /**
- * Alpine.data('cartPage'): the /cart page (docs/api/cart.md).
+ * Alpine.data('cartPage'): the /cart page (docs/api/cart.md CART-01 … CART-05).
  *
- * Static phase: works on the localStorage cart from ../static/cart.js, which applies
- * the backend's rules, so every button already behaves and survives a refresh. When
- * the backend is ready, load the cart from CART-01 and replace the body of
- * update()/remove()/clear() with the API call noted there, assigning the returned
- * Cart to `this.cart`; the markup stays the same.
+ * The cart itself lives in Alpine.store('cart'); this component adds the page state
+ * (loading, notice, clear confirmation) and the quantity rules the buttons mirror, so
+ * "+" is disabled before the server would answer OUT_OF_STOCK or QTY_LIMIT_EXCEEDED.
+ * The server stays the judge: a rejected change shows its message and reloads the cart.
  */
 const ISSUE_MESSAGES = {
     QTY_EXCEEDS_STOCK: 'Jumlah melebihi stok. Kurangi jumlah sebelum checkout.',
@@ -15,13 +14,26 @@ const ISSUE_MESSAGES = {
     PRODUCT_INACTIVE: 'Produk tidak dijual lagi. Hapus item ini untuk melanjutkan.',
 };
 
+const EMPTY_CART = { items: [], summary: { item_count: 0, total_qty: 0, subtotal: 0, total_weight: 0, has_issue: false } };
+
 export default () => ({
-    cart: staticCart.load(),
+    loaded: false,
+    busy: false,
     notice: null,
     confirmingClear: false,
 
-    init() {
-        this.$store.cart.setFromCart(this.cart);
+    async init() {
+        try {
+            await this.$store.cart.load();
+        } catch (error) {
+            this.notice = error instanceof ApiError ? error.message : 'Keranjang tidak dapat dimuat. Coba muat ulang halaman.';
+        } finally {
+            this.loaded = true;
+        }
+    },
+
+    get cart() {
+        return this.$store.cart.cart ?? EMPTY_CART;
     },
 
     issueMessage(item) {
@@ -34,47 +46,45 @@ export default () => ({
     },
 
     canIncrease(item) {
-        if (item.issue === 'PRODUCT_INACTIVE' || item.qty >= item.variant.available_qty) return false;
+        if (this.busy || item.issue === 'PRODUCT_INACTIVE' || item.qty >= item.variant.available_qty) return false;
         return item.product.max_qty === null || this.productQty(item) < item.product.max_qty;
     },
 
     canDecrease(item) {
-        return item.issue !== 'PRODUCT_INACTIVE' && item.qty > (item.product.min_qty ?? 1);
+        return !this.busy && item.issue !== 'PRODUCT_INACTIVE' && item.qty > (item.product.min_qty ?? 1);
     },
 
-    /** CART-03: PATCH endpoints.cart.item(item.id) { qty } */
+    /** CART-03 */
     update(item, qty) {
-        if (qty > item.qty && !this.canIncrease(item)) {
-            this.notice = item.qty >= item.variant.available_qty
-                ? `Stok ${item.variant.name} tersisa ${item.variant.available_qty}.`
-                : `Maksimal ${item.product.max_qty} per pesanan untuk ${item.product.name}.`;
-            return;
-        }
+        if (qty > item.qty && !this.canIncrease(item)) return;
         if (qty < (item.product.min_qty ?? 1)) return;
-
-        item.qty = qty;
-        this.notice = null;
-        this.commit();
+        return this.run(() => this.$store.cart.update(item.id, qty));
     },
 
-    /** CART-04: DELETE endpoints.cart.item(item.id) */
+    /** CART-04 */
     remove(item) {
-        this.cart.items = this.cart.items.filter((other) => other.id !== item.id);
-        this.notice = null;
-        this.commit();
+        return this.run(() => this.$store.cart.remove(item.id));
     },
 
-    /** CART-05: DELETE endpoints.cart.show */
-    clear() {
-        this.cart.items = [];
+    /** CART-05 */
+    async clear() {
         this.confirmingClear = false;
-        this.notice = null;
-        this.commit();
+        await this.run(() => this.$store.cart.clear());
     },
 
-    /** Recalculate, persist, and update the header badge. */
-    commit() {
-        staticCart.save(staticCart.recompute(this.cart));
-        this.$store.cart.setFromCart(this.cart);
+    /** Runs a cart change; a rejected one shows the server's message and re-reads the cart. */
+    async run(change) {
+        if (this.busy) return;
+        this.busy = true;
+        this.notice = null;
+        try {
+            await change();
+        } catch (error) {
+            if (!(error instanceof ApiError)) throw error;
+            this.notice = error.message;
+            await this.$store.cart.load().catch(() => {});
+        } finally {
+            this.busy = false;
+        }
     },
 });

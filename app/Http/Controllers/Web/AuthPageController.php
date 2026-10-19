@@ -11,14 +11,14 @@ use Illuminate\View\View;
  */
 class AuthPageController extends Controller
 {
-    public function login(): View
+    public function login(Request $request): View
     {
-        return view('pages.auth.login');
+        return view('pages.auth.login', ['intended' => $this->intended($request)]);
     }
 
-    public function register(): View
+    public function register(Request $request): View
     {
-        return view('pages.auth.register');
+        return view('pages.auth.register', ['intended' => $this->intended($request)]);
     }
 
     public function forgotPassword(): View
@@ -35,5 +35,23 @@ class AuthPageController extends Controller
             'token' => (string) $request->query('token'),
             'email' => (string) $request->query('email'),
         ]);
+    }
+
+    /**
+     * The page to return to after logging in: `?next=` (set by "add to cart" for a guest) or
+     * the page the guard (RequirePageRole) sent the guest away from. Only pages of this site
+     * are passed on, never an arbitrary redirect.
+     */
+    private function intended(Request $request): ?string
+    {
+        $next = $request->query('next');
+        // A path of this site: "/x", not "//host" or "/\host" (which browsers read as another site).
+        if (is_string($next) && str_starts_with($next, '/') && ! str_starts_with($next, '//') && ! str_contains($next, '\\')) {
+            return url($next);
+        }
+
+        $url = session('url.intended');
+
+        return is_string($url) && str_starts_with($url, url('/')) ? $url : null;
     }
 }

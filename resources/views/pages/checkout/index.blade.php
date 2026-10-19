@@ -4,16 +4,15 @@
 @section('robots', 'noindex, nofollow')
 
 {{--
-    Static preview: resources/js/components/checkoutPage.js. Live data: ADDR-01/02 and
-    REG-01 … REG-04 (alamat), SHIP-01 (kurir & ongkir), ORD-01 (bayar → Xendit invoice).
+    resources/js/components/checkoutPage.js: CART-01, ADDR-01/02 and REG-01 … REG-04 (alamat),
+    SHIP-01 (kurir & ongkir), ORD-01 (bayar → Xendit invoice).
 --}}
 @php
-    $checkout = require resource_path('static/checkout.php');
     $input = 'w-full rounded-xl border bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/40';
 @endphp
 
 @section('content')
-    <div x-data="checkoutPage(@js($checkout))" data-finish-url="{{ route('checkout.finish') }}" class="pb-28 lg:pb-0">
+    <div x-data="checkoutPage()" class="pb-28 lg:pb-0">
         {{-- Header + steps --}}
         <section class="bg-ink text-white">
             <div class="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 md:flex-row md:items-end md:justify-between md:px-8 md:py-10">
@@ -37,14 +36,18 @@
             </div>
         </section>
 
+        <div x-cloak x-show="! loaded" class="mx-auto max-w-md px-4 py-24 text-center text-gray-500" role="status">Memuat checkout…</div>
+
+        <p x-cloak x-show="loadError" x-text="loadError" role="alert" class="mx-auto mt-8 max-w-xl rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"></p>
+
         {{-- Empty cart --}}
-        <div x-cloak x-show="cart.items.length === 0" class="mx-auto max-w-md px-4 py-24 text-center">
+        <div x-cloak x-show="loaded && ! loadError && cart.items.length === 0" class="mx-auto max-w-md px-4 py-24 text-center">
             <h2 class="text-2xl font-bold">Keranjang masih kosong</h2>
             <p class="mt-2 text-gray-600">Tambahkan produk ke keranjang sebelum checkout.</p>
             <a href="{{ route('products.index') }}" class="mt-8 inline-flex rounded-full bg-brand px-7 py-3.5 font-semibold text-ink transition hover:bg-brand-hover">Mulai belanja</a>
         </div>
 
-        <div x-show="cart.items.length > 0" class="mx-auto max-w-7xl px-4 py-8 md:px-8 md:py-10">
+        <div x-cloak x-show="loaded && ! loadError && cart.items.length > 0" class="mx-auto max-w-7xl px-4 py-8 md:px-8 md:py-10">
             <div x-cloak x-show="cart.summary.has_issue" class="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand bg-brand-soft p-4 text-sm" role="alert">
                 <p><span class="font-semibold">Ada item di keranjang yang perlu diperbaiki</span> (stok berubah). Checkout belum bisa dilanjutkan.</p>
                 <a href="{{ route('cart') }}" class="font-semibold underline decoration-2 underline-offset-4">Perbaiki keranjang</a>
@@ -82,6 +85,8 @@
 
                         {{-- New address (ADDR-02) --}}
                         <form x-cloak x-show="formOpen" @submit.prevent="saveAddress()" novalidate class="mt-5 grid gap-4 sm:grid-cols-2">
+                            <p x-cloak x-show="formMessage" x-text="formMessage" role="alert" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 sm:col-span-2"></p>
+
                             @foreach ([
                                 ['recipient_name', 'Nama penerima', 'text', 'Nama lengkap', 'name'],
                                 ['phone', 'Nomor HP', 'tel', '08xxxxxxxxxx', 'tel'],
@@ -102,16 +107,16 @@
                             </label>
 
                             @foreach ([
-                                ['province_id', 'Provinsi', 'regions', null],
+                                ['province_id', 'Provinsi', 'provinces', null],
                                 ['city_id', 'Kota/Kabupaten', 'cities', 'province_id'],
                                 ['district_id', 'Kecamatan', 'districts', 'city_id'],
                                 ['subdistrict_id', 'Kelurahan/Desa', 'subdistricts', 'district_id'],
                             ] as [$field, $label, $options, $parent])
                                 <label class="block">
                                     <span class="mb-1.5 block text-sm font-medium">{{ $label }}</span>
-                                    <select x-model="form.{{ $field }}" @change="pickRegion('{{ $field }}')" @if ($parent) :disabled="! form.{{ $parent }}" @endif
+                                    <select x-model="form.{{ $field }}" @change="pickRegion('{{ $field }}')" @if (! $parent) @focus="loadProvinces()" @endif @if ($parent) :disabled="! form.{{ $parent }}" @endif
                                             :class="formErrors.{{ $field }} ? 'border-red-500' : 'border-gray-300 focus:border-ink'" class="{{ $input }} disabled:bg-gray-100 disabled:text-gray-400">
-                                        <option value="">Pilih {{ strtolower($label) }}</option>
+                                        <option value="" x-text="regionLoading === '{{ $options }}' ? 'Memuat…' : 'Pilih {{ strtolower($label) }}'">Pilih {{ strtolower($label) }}</option>
                                         <template x-for="r in {{ $options }}" :key="r.id">
                                             <option :value="r.id" x-text="r.name" :selected="r.id === form.{{ $field }}"></option>
                                         </template>
@@ -136,7 +141,7 @@
                             </label>
 
                             <div class="flex flex-wrap gap-3 sm:col-span-2">
-                                <button type="submit" class="rounded-full bg-ink px-6 py-3 text-sm font-semibold text-brand transition hover:bg-ink-soft">Simpan & gunakan alamat</button>
+                                <button type="submit" :disabled="saving" class="rounded-full bg-ink px-6 py-3 text-sm font-semibold text-brand transition hover:bg-ink-soft disabled:cursor-wait disabled:opacity-60" x-text="saving ? 'Menyimpan…' : 'Simpan & gunakan alamat'">Simpan & gunakan alamat</button>
                                 <button type="button" x-show="addresses.length" @click="formOpen = false" class="rounded-full border border-gray-300 px-6 py-3 text-sm font-semibold transition hover:border-ink">Batal</button>
                             </div>
                         </form>
@@ -258,7 +263,7 @@
         </div>
 
         {{-- Mobile pay bar --}}
-        <div x-show="cart.items.length > 0" class="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white px-4 pt-3 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] lg:hidden"
+        <div x-cloak x-show="loaded && ! loadError && cart.items.length > 0" class="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white px-4 pt-3 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] lg:hidden"
              style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px))">
             <div class="mx-auto flex max-w-7xl items-center justify-between gap-4">
                 <div>

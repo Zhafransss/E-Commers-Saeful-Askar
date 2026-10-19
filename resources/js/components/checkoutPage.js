@@ -1,58 +1,18 @@
-import * as staticCart from '../static/cart.js';
+import { api, ApiError } from '../api/client.js';
+import { endpoints } from '../api/endpoints.js';
 
 /**
  * Alpine.data('checkoutPage'): the /checkout page (docs/api/checkout-orders.md ORD-01,
- * shipping.md SHIP-01, addresses-regions.md ADDR-01/02 and REG-01 … REG-04).
+ * shipping.md SHIP-01, addresses-regions.md ADDR-01/02 and REG-01 … REG-04, cart.md CART-01).
  *
- * Static phase: the cart comes from the localStorage cart, addresses and regions from
- * resources/static/checkout.php, and shipping rates from sampleRates() below. Each
- * place that will call the API is marked with the endpoint to use.
+ * The cart lives in Alpine.store('cart'). Addresses, regions, shipping rates, and the order
+ * all come from the API; this component only holds the page state. Which prices and totals
+ * count is always the server's: `expected_grand_total` only lets ORD-01 notice that
+ * something changed since the customer looked (PRICE_CHANGED).
  */
-const ORIGIN_CITY_ID = '3216'; // KAB. BEKASI, gudang Tambun Utara
-const JABODETABEK_PROVINCES = ['31', '36']; // DKI Jakarta, Banten (Tangerang)
-const JABODETABEK_CITIES = ['3216', '3275', '3201', '3271', '3276'];
-const RATE_TTL_MS = 30 * 60 * 1000;
-const LAST_ORDER_KEY = 'saefulaskar.last-order';
+const RATE_TTL_FALLBACK_MS = 30 * 60 * 1000;
 
-/**
- * SHIP-01 sample. The real rates come from Jubelio Shipment through the backend;
- * these numbers only make the page behave plausibly (heavier and farther costs more).
- */
-function sampleRates(address, totalWeight) {
-    const kg = Math.max(1, Math.ceil(totalWeight / 1000));
-    const zone = address.city.id === ORIGIN_CITY_ID ? 0
-        : JABODETABEK_CITIES.includes(address.city.id) || JABODETABEK_PROVINCES.includes(address.province.id) ? 1 : 2;
-    const etd = (ranges) => ranges[zone];
-    const services = [];
-
-    if (zone === 0 && kg <= 20) {
-        services.push(['gosend', 'GoSend', 'INSTANT', 'GoSend Instant', 'instant', 25000 + kg * 2500, [0, 0]]);
-    }
-    if (kg <= 30) {
-        services.push(['jne', 'JNE', 'REG', 'JNE Reguler', 'regular', kg * [9000, 12000, 24000][zone], etd([[1, 2], [2, 3], [3, 5]])]);
-        services.push(['jnt', 'J&T Express', 'EZ', 'J&T EZ', 'regular', kg * [8500, 11500, 23000][zone], etd([[1, 2], [2, 3], [3, 6]])]);
-    }
-    const cargoKg = Math.max(10, kg);
-    services.push(['jne', 'JNE', 'JTR', 'JNE Trucking', 'cargo', cargoKg * [5000, 6500, 11000][zone], etd([[2, 3], [3, 5], [5, 8]])]);
-    services.push(['jnt', 'J&T Express', 'CARGO', 'J&T Cargo', 'cargo', cargoKg * [4800, 6200, 10500][zone], etd([[2, 4], [3, 5], [5, 9]])]);
-    services.push(['sap', 'SAP Express', 'CARGO', 'SAP Cargo', 'cargo', cargoKg * [5200, 6800, 11500][zone], etd([[1, 3], [2, 4], [4, 7]])]);
-
-    return services
-        .map(([courier_code, courier_name, service_code, service_name, service_type, cost, [min, max]]) => ({
-            rate_id: `rt_${Math.random().toString(16).slice(2, 10)}`,
-            courier_code,
-            courier_name,
-            service_code,
-            service_name,
-            service_type,
-            cost: Math.round(cost / 500) * 500,
-            insurance_cost: 0,
-            etd_min_days: min,
-            etd_max_days: max,
-            etd_text: max === 0 ? 'Hari ini' : min === max ? `${min} hari` : `${min}–${max} hari`,
-        }))
-        .sort((a, b) => a.cost - b.cost);
-}
+const SERVICE_TYPES = { instant: 'Instan', same_day: 'Same day', regular: 'Reguler', cargo: 'Kargo' };
 
 const emptyForm = () => ({
     label: '',
@@ -67,15 +27,36 @@ const emptyForm = () => ({
     is_default: false,
 });
 
-export default ({ addresses, regions }) => ({
-    cart: staticCart.load(),
-    addresses,
-    regions,
+const EMPTY_CART = { items: [], summary: { item_count: 0, total_qty: 0, subtotal: 0, total_weight: 0, has_issue: false } };
 
-    addressId: (addresses.find((a) => a.is_default) ?? addresses[0])?.id ?? null,
-    formOpen: addresses.length === 0,
+/** RFC 4122 v4. crypto.randomUUID() only exists on HTTPS and localhost. */
+function uuid() {
+    if (crypto.randomUUID) return crypto.randomUUID();
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+export default () => ({
+    loaded: false,
+    loadError: null,
+
+    addresses: [],
+    addressId: null,
+    formOpen: false,
     form: emptyForm(),
     formErrors: {},
+    formMessage: null,
+    saving: false,
+
+    // Region choices, loaded one level at a time (REG-01 … REG-04).
+    provinces: [],
+    cities: [],
+    districts: [],
+    subdistricts: [],
+    regionLoading: null,
 
     rates: [],
     ratesLoading: false,
@@ -86,11 +67,49 @@ export default ({ addresses, regions }) => ({
     note: '',
     paying: false,
     payError: null,
+    // One Idempotency-Key per distinct request, reused if the same request is sent again.
+    payKey: null,
+    payKeyBody: null,
 
-    init() {
-        this.$store.cart.setFromCart(this.cart);
+    async init() {
         this.$watch('addressId', () => this.loadRates());
-        this.loadRates();
+
+        try {
+            const [{ data: addresses }] = await Promise.all([api.get(endpoints.addresses.index), this.$store.cart.load()]);
+            this.addresses = addresses;
+            this.addressId = (addresses.find((a) => a.is_default) ?? addresses[0])?.id ?? null;
+            this.formOpen = addresses.length === 0;
+        } catch (error) {
+            this.loadError = error instanceof ApiError ? error.message : 'Halaman checkout tidak dapat dimuat. Coba muat ulang.';
+        } finally {
+            this.loaded = true;
+        }
+
+        if (this.formOpen) this.loadProvinces();
+    },
+
+    /**
+     * REG-01. Only the address form needs it, so a failure (Jubelio down, cache empty) is
+     * shown in the form and never blocks paying with a saved address.
+     */
+    async loadProvinces() {
+        if (this.provinces.length || this.regionLoading === 'provinces') return;
+
+        this.regionLoading = 'provinces';
+        try {
+            const { data } = await api.get(endpoints.regions.provinces);
+            this.provinces = data;
+            this.formMessage = null;
+        } catch (error) {
+            if (!(error instanceof ApiError)) throw error;
+            this.formMessage = error.message;
+        } finally {
+            this.regionLoading = null;
+        }
+    },
+
+    get cart() {
+        return this.$store.cart.cart ?? EMPTY_CART;
     },
 
     get address() {
@@ -130,29 +149,44 @@ export default ({ addresses, regions }) => ({
         return `${a.address_line}, ${a.subdistrict.name}, ${a.district.name}, ${a.city.name}, ${a.province.name} ${a.post_code}`;
     },
 
-    childrenOf(list, id) {
-        return list.find((r) => r.id === id)?.children ?? [];
-    },
-
-    get cities() {
-        return this.childrenOf(this.regions, this.form.province_id);
-    },
-
-    get districts() {
-        return this.childrenOf(this.cities, this.form.city_id);
-    },
-
-    get subdistricts() {
-        return this.childrenOf(this.districts, this.form.district_id);
-    },
-
-    /** Changing a level clears the levels below it (REG-02 … REG-04 depend on the parent). */
-    pickRegion(level) {
+    /**
+     * Changing a level clears the levels below it and loads the choices of the next one
+     * (REG-02 … REG-04 depend on the parent). The post code is filled from the chosen
+     * kelurahan when Jubelio knows it.
+     */
+    async pickRegion(level) {
         const order = ['province_id', 'city_id', 'district_id', 'subdistrict_id'];
-        order.slice(order.indexOf(level) + 1).forEach((key) => (this.form[key] = ''));
+        const lists = ['cities', 'districts', 'subdistricts'];
+        const below = order.indexOf(level) + 1;
+        order.slice(below).forEach((key) => (this.form[key] = ''));
+        lists.slice(below - 1).forEach((key) => (this[key] = []));
+
         if (level === 'subdistrict_id') {
             const postCode = this.subdistricts.find((s) => s.id === this.form.subdistrict_id)?.post_code;
             if (postCode) this.form.post_code = postCode;
+            return;
+        }
+
+        const parentId = this.form[level];
+        if (!parentId) return;
+
+        const [endpoint, param, list] = {
+            province_id: [endpoints.regions.cities, 'province_id', 'cities'],
+            city_id: [endpoints.regions.districts, 'city_id', 'districts'],
+            district_id: [endpoints.regions.subdistricts, 'district_id', 'subdistricts'],
+        }[level];
+
+        this.regionLoading = list;
+        this.formMessage = null;
+        try {
+            const { data } = await api.get(endpoint, { query: { [param]: parentId } });
+            // The customer may have picked something else while this was loading.
+            if (this.form[level] === parentId) this[list] = data;
+        } catch (error) {
+            if (!(error instanceof ApiError)) throw error;
+            this.formMessage = error.message;
+        } finally {
+            this.regionLoading = null;
         }
     },
 
@@ -160,7 +194,10 @@ export default ({ addresses, regions }) => ({
         this.form = emptyForm();
         this.form.is_default = this.addresses.length === 0;
         this.formErrors = {};
+        this.formMessage = null;
+        this.cities = this.districts = this.subdistricts = [];
         this.formOpen = true;
+        this.loadProvinces();
     },
 
     /** Same rules as ADDR-02, so the user sees errors before the request. */
@@ -180,64 +217,71 @@ export default ({ addresses, regions }) => ({
         return Object.keys(errors).length === 0;
     },
 
-    /** ADDR-02: POST endpoints.addresses.index, then select the returned Address. */
-    saveAddress() {
-        if (!this.validateForm()) return;
+    /** ADDR-02, then select the returned Address. */
+    async saveAddress() {
+        if (this.saving || !this.validateForm()) return;
 
-        const f = this.form;
-        const pick = (list, id) => ({ id, name: list.find((r) => r.id === id).name });
-        const address = {
-            id: Math.max(0, ...this.addresses.map((a) => a.id)) + 1,
-            label: f.label.trim() || null,
-            recipient_name: f.recipient_name.trim(),
-            phone: f.phone.replace(/[\s-]/g, '').replace(/^628/, '08'),
-            address_line: f.address_line.trim(),
-            province: pick(this.regions, f.province_id),
-            city: pick(this.cities, f.city_id),
-            district: pick(this.districts, f.district_id),
-            subdistrict: pick(this.subdistricts, f.subdistrict_id),
-            post_code: f.post_code,
-            is_default: f.is_default || this.addresses.length === 0,
-        };
+        this.saving = true;
+        this.formMessage = null;
+        try {
+            const f = this.form;
+            const { data: address } = await api.post(endpoints.addresses.index, {
+                ...f,
+                label: f.label.trim() || null,
+                recipient_name: f.recipient_name.trim(),
+                phone: f.phone.replace(/[\s-]/g, ''),
+                address_line: f.address_line.trim(),
+            });
 
-        if (address.is_default) this.addresses.forEach((a) => (a.is_default = false));
-        this.addresses.push(address);
-        this.formOpen = false;
-        this.addressId = address.id;
+            if (address.is_default) this.addresses.forEach((a) => (a.is_default = false));
+            this.addresses.push(address);
+            this.formOpen = false;
+            this.addressId = address.id;
+        } catch (error) {
+            if (!(error instanceof ApiError)) throw error;
+            // Field messages from the server show under their inputs; the rest in a banner.
+            this.formErrors = Object.fromEntries(Object.entries(error.errors).map(([field, messages]) => [field, messages[0]]));
+            this.formMessage = error.code === 'VALIDATION_ERROR' ? 'Periksa kembali isian yang ditandai.' : error.message;
+        } finally {
+            this.saving = false;
+        }
     },
 
     // --- Shipping (SHIP-01) -----------------------------------------------------
 
-    /** SHIP-01: POST endpoints.shipping.rates { address_id }. */
-    loadRates() {
+    /** SHIP-01: the package is read from the cart by the server; only the address is sent. */
+    async loadRates() {
         this.rateId = null;
         this.rates = [];
         this.ratesError = null;
         if (!this.address || this.cart.items.length === 0) return;
 
-        this.ratesLoading = true;
         const address = this.address;
-        setTimeout(() => {
+        this.ratesLoading = true;
+        try {
+            const { data } = await api.post(endpoints.shipping.rates, { address_id: address.id });
             if (this.address !== address) return; // A newer request replaced this one.
-            this.rates = sampleRates(address, this.cart.summary.total_weight);
-            this.ratesExpireAt = Date.now() + RATE_TTL_MS;
-            this.ratesLoading = false;
-            if (this.rates.length === 0) this.ratesError = 'Belum ada kurir yang bisa mengirim ke alamat ini. Silakan hubungi toko.';
-        }, 700);
+            this.rates = data.rates;
+            this.ratesExpireAt = data.expires_at ? Date.parse(data.expires_at) : Date.now() + RATE_TTL_FALLBACK_MS;
+        } catch (error) {
+            if (!(error instanceof ApiError)) throw error;
+            if (this.address === address) this.ratesError = error.message;
+        } finally {
+            if (this.address === address) this.ratesLoading = false;
+        }
     },
 
     serviceTypeLabel(type) {
-        return { instant: 'Instan', same_day: 'Same day', regular: 'Reguler', cargo: 'Kargo' }[type] ?? type;
+        return SERVICE_TYPES[type] ?? type;
     },
 
     // --- Pay (ORD-01) -----------------------------------------------------------
 
     /**
-     * ORD-01: api.post(endpoints.checkout, body, { headers: { 'Idempotency-Key': key } }),
-     * then window.location = data.redirect_url (the Xendit invoice). The key is created
-     * once per click and reused if the same request is retried.
+     * ORD-01, then the browser goes to the Xendit invoice. The server empties the cart on
+     * success, so the badge is refreshed before leaving.
      */
-    pay() {
+    async pay() {
         if (this.blockedReason || this.paying) return;
         if (Date.now() > this.ratesExpireAt) {
             this.payError = 'Ongkir sudah kedaluwarsa (lebih dari 30 menit). Pilih kurir lagi.';
@@ -245,56 +289,35 @@ export default ({ addresses, regions }) => ({
             return;
         }
 
-        const key = crypto.randomUUID();
         const body = { address_id: this.addressId, rate_id: this.rateId, note: this.note.trim() || null, expected_grand_total: this.grandTotal };
+        const bodyKey = JSON.stringify(body);
+        if (this.payKeyBody !== bodyKey) {
+            this.payKey = uuid();
+            this.payKeyBody = bodyKey;
+        }
+
         this.paying = true;
         this.payError = null;
-        console.debug('[checkout] ORD-01', { 'Idempotency-Key': key, ...body });
+        try {
+            const { data } = await api.post(endpoints.checkout, body, { headers: { 'Idempotency-Key': this.payKey } });
+            await this.$store.cart.refresh();
+            window.location.href = data.redirect_url;
+        } catch (error) {
+            if (!(error instanceof ApiError)) throw error;
+            this.payError = error.message;
+            await this.recoverFrom(error);
+            this.paying = false;
+        }
+        // On success the page is leaving; `paying` stays true so the button cannot be clicked again.
+    },
 
-        setTimeout(() => {
-            const orderNumber = `WEB-${String(124 + Math.floor(Math.random() * 800)).padStart(6, '0')}`;
-            const order = {
-                order_number: orderNumber,
-                status: 'pending_payment',
-                // Snapshot per order_items row (docs/erd.md); weight_gram is per unit.
-                items: this.cart.items.map((item) => ({
-                    variant_id: item.variant.id,
-                    sku: item.variant.sku,
-                    product_name: item.product.name,
-                    variant_name: item.variant.variation_values.map((v) => v.value).join(', ') || null,
-                    image_url: item.variant.image_url,
-                    unit: staticCart.unitOf(item.variant.id),
-                    price: item.variant.price,
-                    qty: item.qty,
-                    weight_gram: item.variant.package_weight ?? 0,
-                    subtotal: item.subtotal,
-                })),
-                shipping_address: { ...this.address },
-                shipping: { ...this.rate },
-                amounts: {
-                    subtotal: this.cart.summary.subtotal,
-                    shipping_cost: this.shippingCost,
-                    insurance_cost: this.insuranceCost,
-                    discount: 0,
-                    tax: 0,
-                    grand_total: this.grandTotal,
-                },
-                note: body.note,
-                payment_expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-            };
-            try {
-                window.sessionStorage.setItem(LAST_ORDER_KEY, JSON.stringify(order));
-            } catch {
-                // The finish page then shows the order number only.
-            }
-
-            // ORD-01 empties the cart on success (acceptance criterion 9).
-            this.cart.items = [];
-            staticCart.save(staticCart.recompute(this.cart));
-            this.$store.cart.setFromCart(this.cart);
-
-            // Live: the Xendit invoice page, which returns to /checkout/finish?order=…
-            window.location.href = `${this.$root.dataset.finishUrl}?order=${orderNumber}`;
-        }, 1200);
+    /** Re-reads whatever the refused ORD-01 says is out of date. */
+    async recoverFrom(error) {
+        if (error.code === 'CART_HAS_ISSUES' && error.body.cart) {
+            this.$store.cart.setFromCart(error.body.cart);
+        } else if (['OUT_OF_STOCK', 'PRICE_CHANGED'].includes(error.code)) {
+            await this.$store.cart.load().catch(() => {});
+        }
+        if (['RATE_EXPIRED', 'PRICE_CHANGED'].includes(error.code)) await this.loadRates();
     },
 });

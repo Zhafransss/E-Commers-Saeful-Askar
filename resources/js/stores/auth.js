@@ -8,6 +8,8 @@ import { endpoints } from '../api/endpoints.js';
 export default {
     user: null,
     loaded: false,
+    // Settles once AUTH-05 has answered; components that need to know who is logged in await it.
+    ready: null,
 
     get isLoggedIn() {
         return this.user !== null;
@@ -21,7 +23,8 @@ export default {
         window.addEventListener('api:unauthenticated', () => {
             this.user = null;
         });
-        await this.refresh();
+        this.ready = this.refresh();
+        await this.ready;
     },
 
     async refresh() {

@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
-use App\Models\Product;
+use App\Support\Storefront;
 use Illuminate\View\View;
 
 /**
- * Product pages. Data is loaded by Alpine from CAT-02/CAT-03; the detail page
- * also reads the product here for the <title> and meta description (PRD NFR SEO).
+ * Product pages. The list is loaded by Alpine from CAT-01/CAT-02. The detail page is
+ * rendered here from the same data as CAT-03, so title, description, structured data,
+ * and images are in the HTML for search engines (PRD NFR SEO); Alpine only handles
+ * the variant choice and the cart (CART-02).
  */
 class ProductPageController extends Controller
 {
@@ -19,11 +21,13 @@ class ProductPageController extends Controller
 
     public function show(string $slug): View
     {
-        $product = Product::visible()->where('slug', $slug)->first();
+        $item = Storefront::detail($slug);
 
-        // In mock mode the slug may exist only in the frontend mocks.
-        abort_if(! $product && ! config('app.api_mock'), 404);
+        abort_if($item === null, 404);
 
-        return view('pages.products.show', compact('slug', 'product'));
+        return view('pages.products.show', [
+            'item' => $item,
+            'related' => Storefront::summaries(4, $item['category']['id'] ?? null, $item['id']),
+        ]);
     }
 }

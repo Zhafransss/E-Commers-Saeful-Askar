@@ -166,7 +166,8 @@
 
             {{-- Production: the first 8 products from CAT-02 (same card as the product list). --}}
             <div class="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-4">
-                @foreach (array_slice($static['products'], 0, 8) as $product)
+                {{-- Not named $products: static/catalog.php (required above) sets a variable of that name. --}}
+                @foreach ($featured as $product)
                     <x-product-card :product="$product" />
                 @endforeach
             </div>
