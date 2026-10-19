@@ -4,10 +4,10 @@
 | Incoming webhooks (docs/api/webhooks.md), served under /webhooks without
 | session or CSRF. Owner: backend.
 |
-| Token/signature verification (x-callback-token for Xendit, SHA256 signature
-| for Jubelio) belongs to each WH-xx implementation: an invalid request must
-| still be recorded in webhook_events with signature_valid = false before the
-| 401 response, so it cannot be a plain reject-only middleware.
+| Each WH-xx controller hands the request to App\Services\Webhooks\WebhookReceiver,
+| which verifies the token/signature, records the event (also when rejected,
+| with signature_valid = false), and queues it. Event logic goes in a handler
+| registered in config/webhooks.php.
 */
 
 use App\Http\Controllers\Webhook\JubelioWebhookController;

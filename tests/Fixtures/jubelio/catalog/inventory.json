@@ -1,0 +1,10 @@
+{
+  "data": [
+    { "item_id": 19, "item_code": "SC000384N", "item_name": "Baterai Lithium Phylion 72V 24Ah", "item_group_id": 18, "is_bundle": false, "location_stocks": [{ "item_id": 19, "location_id": 0, "location_code": null, "on_hand": 9, "on_order": 0, "reserved": 0, "available": 9 }, { "item_id": 19, "location_id": -1, "location_code": "Pusat", "on_hand": 4, "on_order": 0, "reserved": 1, "available": 3 }], "total_stocks": { "on_hand": 13, "on_order": 0, "reserved": 1, "available": 12 } },
+    { "item_id": 20, "item_code": "SC000381N", "item_name": "Baterai Lithium Phylion 48V 12Ah", "item_group_id": 18, "is_bundle": false, "location_stocks": [{ "item_id": 20, "location_id": -1, "location_code": "Pusat", "on_hand": 2, "on_order": 0, "reserved": 0, "available": 2 }], "total_stocks": { "on_hand": 2, "on_order": 0, "reserved": 0, "available": 2 } },
+    { "item_id": 22, "item_code": "SD000383N-X", "item_name": "Socket Lihtium M23 (lama)", "item_group_id": 30, "is_bundle": false, "location_stocks": [{ "item_id": 22, "location_id": -1, "location_code": "Pusat", "on_hand": 50, "on_order": 0, "reserved": 0, "available": 50 }], "total_stocks": { "on_hand": 50, "on_order": 0, "reserved": 0, "available": 50 } },
+    { "item_id": 21, "item_code": "SD000383N", "item_name": "Socket Lihtium M23", "item_group_id": 19, "is_bundle": false, "location_stocks": [{ "item_id": 21, "location_id": 0, "location_code": null, "on_hand": 6, "on_order": 0, "reserved": 0, "available": 6 }], "total_stocks": { "on_hand": 6, "on_order": 0, "reserved": 0, "available": 6 } },
+    { "item_id": 29, "item_code": "72V24Ah-10A-M23", "item_name": "Paket Konversi 72V24Ah + Charger + Socket M23", "item_group_id": 25, "is_bundle": true, "location_stocks": [{ "item_id": 29, "location_id": -1, "location_code": "Pusat", "on_hand": 0, "on_order": 0, "reserved": 0, "available": -2 }], "total_stocks": { "on_hand": 0, "on_order": 0, "reserved": 0, "available": -2 } }
+  ],
+  "totalCount": 5
+}

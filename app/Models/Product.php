@@ -56,6 +56,25 @@ class Product extends Model
             ->whereHas('variants', fn (Builder $variants) => $variants->where('is_active', true));
     }
 
+    /**
+     * Adds price_min, price_max, total_available_qty (negative stock counted as
+     * 0), and variant_count from active variants, as subqueries (ProductSummary).
+     */
+    public function scopeWithVariantSummary(Builder $query): void
+    {
+        $active = fn (string $aggregate) => ProductVariant::query()
+            ->selectRaw($aggregate)
+            ->whereColumn('product_variants.product_id', 'products.id')
+            ->where('product_variants.is_active', true);
+
+        $query->addSelect([
+            'price_min' => $active('MIN(price)'),
+            'price_max' => $active('MAX(price)'),
+            'total_available_qty' => $active('COALESCE(SUM(GREATEST(available_qty, 0)), 0)'),
+            'variant_count' => $active('COUNT(*)'),
+        ]);
+    }
+
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);

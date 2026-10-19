@@ -1,0 +1,29 @@
+{
+  "data": [
+    {
+      "tax_id": -2,
+      "tax_name": "PPN 11%"
+    },
+    {
+      "tax_id": -1,
+      "tax_name": "PPN 10%"
+    },
+    {
+      "tax_id": -4,
+      "tax_name": "PPN_12%"
+    },
+    {
+      "tax_id": -3,
+      "tax_name": "PPH 23"
+    },
+    {
+      "tax_id": -5,
+      "tax_name": "PPH 22"
+    },
+    {
+      "tax_id": 1,
+      "tax_name": "No Tax"
+    }
+  ],
+  "totalCount": 6
+}

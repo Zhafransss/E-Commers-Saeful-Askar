@@ -1,0 +1,8 @@
+{
+  "data": [
+    { "category_id": 1000000002, "category_name": "Baterai / AKi", "parent_id": 1000000001, "last_modified": "2026-09-01T03:00:00.000Z", "has_children": false },
+    { "category_id": 1000000001, "category_name": "Sparepart", "parent_id": 0, "last_modified": "2026-09-01T03:00:00.000Z", "has_children": true },
+    { "category_id": 1000000003, "category_name": "Roda 2", "parent_id": 0, "last_modified": "2026-09-01T03:00:00.000Z", "has_children": true },
+    { "category_id": 1000000004, "category_name": "Motor Listrik", "parent_id": 1000000003, "last_modified": "2026-09-01T03:00:00.000Z", "has_children": false }
+  ]
+}

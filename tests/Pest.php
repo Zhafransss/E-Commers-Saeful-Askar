@@ -1,7 +1,12 @@
 <?php
 
+use App\Exceptions\IntegrationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Testing\TestResponse;
+use Monolog\Handler\TestHandler;
 use Tests\TestCase;
 
 /*
@@ -18,6 +23,9 @@ pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
 
+// Unit tests get the application (config, storage paths) but no database refresh.
+pest()->extend(TestCase::class)->in('Unit');
+
 /*
 |--------------------------------------------------------------------------
 | Helpers
@@ -33,6 +41,165 @@ function assertApiError(TestResponse $response, int $status, string $code): Test
         ->assertStatus($status)
         ->assertJsonPath('code', $code)
         ->assertJsonStructure(['message', 'code']);
+}
+
+/**
+ * Requests as the Blade pages send them: Sanctum only starts a session (and so
+ * allows login, logout, and session-based auth) for requests coming from a
+ * stateful domain, recognised by the Referer header. withCredentials() sends
+ * cookies with JSON requests, like client.js's `credentials: 'same-origin'`;
+ * without it Laravel's test client drops them.
+ */
+function fromFrontend(): TestCase
+{
+    return test()->withCredentials()->withHeaders([
+        'Referer' => 'http://localhost/',
+        'Accept' => 'application/json',
+        'X-Requested-With' => 'XMLHttpRequest',
+    ]);
+}
+
+/**
+ * Raw content of a fixture in tests/Fixtures, e.g. fixtureContent('jubelio/login.json').
+ * Webhook tests need the exact bytes, since signatures are computed over the raw body.
+ */
+function fixtureContent(string $path): string
+{
+    return file_get_contents(__DIR__.'/Fixtures/'.$path);
+}
+
+/**
+ * Decoded JSON fixture, e.g. Http::fake(['*' => Http::response(fixture('jubelio/stores.json'))]).
+ *
+ * @return array<string, mixed>
+ */
+function fixture(string $path): array
+{
+    return json_decode(fixtureContent($path), true, flags: JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Jubelio webhook signature for the `sign` header, built the way Jubelio's
+ * official example does (docs/api/dist.yaml, "Webhook Signature").
+ */
+function jubelioSignature(string $body, string $secret = 'rahasia-webhook'): string
+{
+    return hash_hmac('sha256', trim($body).$secret, $secret);
+}
+
+/**
+ * Answers Jubelio catalog calls from tests/Fixtures/jubelio/catalog, routed by
+ * path. $overrides replaces or adds paths, e.g. ['/inventory/items/group/18' =>
+ * Http::response([], 404)]. Unknown paths answer 404, like Jubelio does.
+ * Stock search (`/inventory/?q=`) also returns similar SKUs, as the real one does.
+ *
+ * @param  array<string, mixed>  $overrides  path => response or fn (Request) => response
+ */
+function fakeJubelioCatalog(array $overrides = []): void
+{
+    config([
+        'jubelio.base_url' => 'https://api2.jubelio.com',
+        'jubelio.email' => 'owner@saefulaskar.id',
+        'jubelio.password' => 'rahasia-jubelio',
+        'jubelio.store_id' => '-102',
+        'jubelio.location_id' => -1,
+    ]);
+
+    $routes = $overrides + [
+        '/login' => Http::response(fixture('jubelio/login.json')),
+        '/inventory/categories/item-categories/' => Http::response(fixture('jubelio/catalog/categories.json')),
+        '/inventory/items/' => Http::response(fixture('jubelio/catalog/items.json')),
+        '/inventory/item-bundles/' => Http::response(fixture('jubelio/catalog/item-bundles.json')),
+        '/inventory/items/group/18' => Http::response(fixture('jubelio/catalog/item-group-18.json')),
+        '/inventory/items/group/19' => Http::response(fixture('jubelio/catalog/item-group-19.json')),
+        '/inventory/items/group/25' => Http::response(fixture('jubelio/catalog/item-group-25.json')),
+        '/variations/' => Http::response(fixture('jubelio/catalog/variations.json')),
+        '/inventory/' => function (Request $request) {
+            $stock = fixture('jubelio/catalog/inventory.json');
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+            $search = $query['q'] ?? null;
+
+            if ($search !== null) {
+                $stock['data'] = array_values(array_filter($stock['data'], fn (array $row) => str_contains($row['item_code'], $search)));
+                $stock['totalCount'] = count($stock['data']);
+            }
+
+            return Http::response($stock);
+        },
+    ];
+
+    // Http::fake() stubs accumulate and the first match wins, so later calls in
+    // the same test only swap the routes the single registered stub reads.
+    $registered = app()->bound('tests.jubelio-routes');
+    app()->instance('tests.jubelio-routes', $routes);
+
+    if (! $registered) {
+        Http::fake(function (Request $request) {
+            $response = app('tests.jubelio-routes')[parse_url($request->url(), PHP_URL_PATH)] ?? Http::response(['message' => 'Not Found'], 404);
+
+            return $response instanceof Closure ? $response($request) : $response;
+        });
+    }
+}
+
+/**
+ * fakeJubelioCatalog() plus the region lists (INT-JB-08) from
+ * tests/Fixtures/jubelio/regions: Jawa Barat → Kab. Bekasi → Tambun Utara →
+ * Satriajaya/Srijaya. Any other parent gets [], like Jubelio.
+ *
+ * @param  array<string, mixed>  $overrides
+ */
+function fakeJubelioRegions(array $overrides = []): void
+{
+    $byParent = function (string $param, array $files) {
+        return function (Request $request) use ($param, $files) {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+            $file = $files[$query[$param] ?? ''] ?? null;
+
+            return Http::response($file === null ? [] : fixture("jubelio/regions/{$file}"));
+        };
+    };
+
+    fakeJubelioCatalog($overrides + [
+        '/region/provinces' => Http::response(fixture('jubelio/regions/provinces.json')),
+        '/region/cities' => $byParent('province_id', ['32' => 'cities-32.json']),
+        '/region/districts' => $byParent('city_id', ['3216' => 'districts-3216.json']),
+        '/region/subdistricts' => $byParent('district_id', ['321605' => 'subdistricts-321605.json']),
+    ]);
+}
+
+/**
+ * Paths of the Jubelio calls recorded by Http::fake(), e.g. ['/login', '/variations/'].
+ *
+ * @return list<string>
+ */
+function jubelioCalls(): array
+{
+    return Http::recorded()->map(fn (array $pair) => parse_url($pair[0]->url(), PHP_URL_PATH))->values()->all();
+}
+
+/**
+ * Runs a call that must fail with an IntegrationException and returns it for inspection.
+ */
+function catchIntegration(Closure $call): IntegrationException
+{
+    try {
+        $call();
+    } catch (IntegrationException $e) {
+        return $e;
+    }
+
+    throw new RuntimeException('Expected an IntegrationException.');
+}
+
+/**
+ * Records written to the `integrations` log channel. The test first points the
+ * channel at Monolog's TestHandler:
+ * config(['logging.channels.integrations' => ['driver' => 'monolog', 'handler' => TestHandler::class]]).
+ */
+function integrationLog(): TestHandler
+{
+    return Log::channel('integrations')->getLogger()->getHandlers()[0];
 }
 
 /**

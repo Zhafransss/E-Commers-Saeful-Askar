@@ -1,0 +1,9 @@
+{
+  "data": [
+    { "item_group_id": 18, "item_group_name": "Baterai Lithium Phylion", "item_id": 19, "item_code": "SC000384N", "item_name": "Baterai Lithium Phylion 72V 24Ah", "variation_values": [{ "label": "Kapasitas", "value": "72V 24Ah" }], "is_bundle": false, "package_weight": "27500.0000", "is_variant": true, "sell_price": "4500000.0000", "last_modified": "2026-10-13T06:41:03.678Z" },
+    { "item_group_id": 18, "item_group_name": "Baterai Lithium Phylion", "item_id": 20, "item_code": "SC000381N", "item_name": "Baterai Lithium Phylion 48V 12Ah", "variation_values": [{ "label": "Kapasitas", "value": "48V 12Ah" }], "is_bundle": false, "package_weight": "3000.0000", "is_variant": true, "sell_price": "2500000.0000", "last_modified": "2026-10-13T06:41:03.678Z" },
+    { "item_group_id": 19, "item_group_name": "Socket Lihtium M23", "item_id": 21, "item_code": "SD000383N", "item_name": "Socket Lihtium M23", "variation_values": [], "is_bundle": false, "package_weight": "100.0000", "is_variant": false, "sell_price": "75000.0000", "last_modified": "2026-10-13T21:42:28.874Z" },
+    { "item_group_id": 25, "item_group_name": "Paket Konversi 72V24Ah + Charger + Socket M23", "item_id": 29, "item_code": "72V24Ah-10A-M23", "item_name": "Paket Konversi 72V24Ah + Charger + Socket M23", "variation_values": [], "is_bundle": true, "package_weight": null, "is_variant": false, "sell_price": "6750000.0000", "last_modified": "2026-10-10T08:00:00.000Z" }
+  ],
+  "totalCount": 4
+}
