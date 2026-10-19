@@ -5,9 +5,61 @@
 @source '../**/*.blade.php';
 @source '../**/*.js';
 
+/* Wordmark font from the previous saefulaskar.com site. */
+@font-face {
+    font-family: 'Conthrax';
+    src: url('../fonts/conthrax-sb.otf') format('opentype');
+    font-weight: 600 700;
+    font-display: swap;
+}
+
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'Urbanist', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-logo: 'Conthrax', 'Urbanist', ui-sans-serif, sans-serif;
+
+    /* Brand palette from saefulaskar.com: yellow on near-black, orange as second accent. */
+    --color-accent: #ff7e33;
+    --color-brand: #ffcc05;
+    --color-brand-hover: #e6b800;
+    --color-brand-soft: #fff6cc;
+    --color-ink: #0a0a0a;
+    --color-ink-soft: #171717;
+    --color-ink-line: #2a2a2a;
+}
+
+/* Article and product descriptions arrive as HTML (description_html, body_html). */
+.rich-text {
+    @apply space-y-4 leading-relaxed text-gray-700;
+}
+.rich-text h2 {
+    @apply pt-2 text-xl font-bold text-ink;
+}
+.rich-text h3 {
+    @apply pt-2 text-lg font-semibold text-ink;
+}
+.rich-text ul {
+    @apply list-disc space-y-1 pl-5;
+}
+.rich-text a {
+    @apply font-medium text-ink underline decoration-brand decoration-2 underline-offset-2;
+}
+
+/* Moving highlight on the hero's top accent line (as on saefulaskar.com). */
+@keyframes shimmer {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Edge's built-in password reveal button would duplicate x-password-input's own toggle. */
+input::-ms-reveal,
+input::-ms-clear {
+    display: none;
 }
 
 /* Hide Alpine-controlled elements until Alpine has initialised. */

@@ -1,5 +1,6 @@
 import { api } from '../api/client.js';
 import { endpoints } from '../api/endpoints.js';
+import * as staticCart from '../static/cart.js';
 
 /**
  * Alpine.store('cart'): header badge state. Refreshed from CART-06 on page load;
@@ -15,6 +16,12 @@ export default {
     },
 
     async refresh() {
+        // Static phase: the badge follows the local cart (see ../static/cart.js).
+        if (staticCart.enabled()) {
+            this.setFromCart(staticCart.load());
+            return;
+        }
+
         try {
             const { data } = await api.get(endpoints.cart.count);
             this.totalQty = data.total_qty;

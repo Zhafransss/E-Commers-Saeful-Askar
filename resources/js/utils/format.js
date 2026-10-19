@@ -10,9 +10,11 @@ const dateOnly = new Intl.DateTimeFormat('id-ID', { dateStyle: 'long', timeZone:
 /** 6750000 → "Rp 6.750.000" */
 export const formatRupiah = (amount) => rupiah.format(amount ?? 0);
 
-/** 32000 → "32 kg", 950 → "950 g" */
-export const formatWeight = (grams) =>
-    grams >= 1000 ? `${(grams / 1000).toLocaleString('id-ID', { maximumFractionDigits: 1 })} kg` : `${grams ?? 0} g`;
+/** 32000 → "32 kg", 950 → "950 g", null → "—" (package_weight may be NULL in the ERD) */
+export const formatWeight = (grams) => {
+    if (grams === null || grams === undefined) return '—';
+    return grams >= 1000 ? `${(grams / 1000).toLocaleString('id-ID', { maximumFractionDigits: 1 })} kg` : `${grams} g`;
+};
 
 /** "2026-10-14T21:30:00+07:00" → "14 Okt 2026, 21.30" */
 export const formatDateTime = (iso) => (iso ? dateTime.format(new Date(iso)) : '');
