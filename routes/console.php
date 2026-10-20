@@ -32,3 +32,10 @@ Schedule::command('sync-logs:prune')->daily();
 
 // Backup for a Finish Notify that never arrived (WH-01): ask Gapura about orders past their deadline.
 Schedule::command('orders:expire-unpaid')->everyFiveMinutes()->withoutOverlapping();
+
+// Shared hosting (branch `deployment`): no long-running worker is possible, so the minutely cron
+// that runs `schedule:run` also drains the queue. --max-time stays below retry_after (90 s) and
+// typical PHP time limits; withoutOverlapping() keeps two workers from running at once.
+Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')
+    ->everyMinute()
+    ->withoutOverlapping(2);
