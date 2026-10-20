@@ -412,7 +412,7 @@ Risiko terbesar adalah dokumentasi API rates Jubelio Shipment yang belum tersedi
 **Pertanyaan terbuka.**
 
 - [ ] Dokumentasi API rates dan kredensial Jubelio Shipment (termasuk staging).
-- [ ] Durasi batas bayar order Gapura (usulan 1–2 jam; sandbox dibatasi 30 menit).
+- [x] Durasi batas bayar order Gapura: 10 menit (diputuskan 20 Okt 2026; sandbox maksimal 30 menit).
 - [x] Nama header signature webhook Jubelio: `sign`, berisi HMAC-SHA256 (contoh resmi Jubelio di `api/dist.yaml`, bagian Webhook Signature).
 - [x] Toko internal dibuat di Jubelio dengan nama "Website" (`store_id` -102, dari `GET /locations/store/`).
 - [ ] Metode pembayaran Gapura yang diaktifkan di akun (VA, e-wallet, QRIS, kartu) dan biaya per metode; `mcc` toko; public key produksi DANA.

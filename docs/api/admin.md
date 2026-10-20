@@ -643,7 +643,7 @@ Tidak ada.
       "mode": "sandbox",
       "private_key_found": true,
       "dana_public_key_set": false,
-      "payment_duration_seconds": 7200
+      "payment_duration_seconds": 600
     },
     "webhook_urls": {
       "gapura_notify": "https://<domain>/v1.0/debit/notify",

@@ -221,7 +221,7 @@ WH-02 – WH-04 (Jubelio) dan WH-01 (Gapura) sudah aktif penuh: WH-01 memverifik
 | Hal | Dampak ke fase ini | Penanganan sementara |
 | --- | --- | --- |
 | Dokumentasi rates + kredensial Jubelio Shipment | Ongkir asli belum bisa dipakai | Driver `stub`; cukup ganti driver saat dokumen ada |
-| Durasi batas bayar Gapura | `validUpTo` order | `GAPURA_PAYMENT_DURATION=7200` (2 jam) sampai diputuskan |
+| Durasi batas bayar Gapura | `validUpTo` order | `GAPURA_PAYMENT_DURATION=600` (10 menit, diputuskan 20 Okt 2026) |
 | Metode pembayaran Gapura | Metode yang aktif di akun DANA | Diatur di Merchant Portal DANA |
 | ~~`store_id` toko internal~~ | — | Selesai: "Website" `-102` (Fase 1) |
 | SO belum bayar mungkin tidak mengurangi stok tersedia | Oversell dengan Shopee | Diuji di akun asli (INT-JB-06); bila terjadi, tambah reservasi stok (`POST /inventory/reserved/`) |
@@ -321,6 +321,6 @@ Diambil dari PRD §9 dan `integrations.md`. Kolom kedua menunjukkan fase yang pa
 | ~~Toko internal + `store_id`~~ | — | Terjawab: "Website" `-102` |
 | ~~Nama header signature webhook Jubelio~~ | — | Terjawab: `sign`, HMAC-SHA256 (`api/dist.yaml`); dipastikan dengan webhook asli pertama |
 | Dokumentasi rates + kredensial Jubelio Shipment | Fase 4 | Driver `stub` |
-| Durasi batas bayar Gapura | Fase 4 | Default 2 jam |
+| ~~Durasi batas bayar Gapura~~ | Fase 4 | Selesai: 10 menit (`GAPURA_PAYMENT_DURATION=600`) |
 | Metode pembayaran Gapura | Fase 4 | Diatur di Merchant Portal DANA |
 | Harga promo Jubelio (`promotion_price`) ikut dipakai atau tidak | Fase 4 | Versi 1 memakai harga INT-JB-04 (INT-JB-07) |

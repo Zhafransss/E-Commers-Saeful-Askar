@@ -6,7 +6,7 @@ Konfigurasi yang dipakai:
 
 | Kunci | Nilai awal | Keterangan |
 | --- | --- | --- |
-| `GAPURA_PAYMENT_DURATION` | 7200 detik (2 jam) | Batas waktu bayar (`validUpTo`); menunggu keputusan final. Di sandbox dipotong menjadi 30 menit |
+| `GAPURA_PAYMENT_DURATION` | 600 detik (10 menit) | Batas waktu bayar (`validUpTo`). Di sandbox maksimal 30 menit, jadi 10 menit tidak dipotong |
 | `JUBELIO_STORE_ID` | store_id toko internal "Website Saeful Askar" | Diisi setelah toko dibuat di Jubelio |
 | `JUBELIO_LOCATION_ID` | location_id gudang Tambun Utara | Satu gudang |
 | `JUBELIO_TAX_ID` | ID pajak "No Tax" | Toko tidak memakai PPN |

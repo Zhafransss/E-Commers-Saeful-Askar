@@ -36,7 +36,7 @@ return [
 
     // Payment deadline in seconds; 2 hours pending a final business decision.
     // The sandbox refuses anything beyond 30 minutes, so it is capped there.
-    'payment_duration' => (int) env('GAPURA_PAYMENT_DURATION', 7200),
+    'payment_duration' => (int) env('GAPURA_PAYMENT_DURATION', 600),
 
     // DANA's expected timeout is 8 seconds per call.
     'timeout' => (int) env('GAPURA_TIMEOUT', 8),

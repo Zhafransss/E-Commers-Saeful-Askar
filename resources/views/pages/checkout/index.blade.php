@@ -204,7 +204,7 @@
                         </h2>
                         <div class="mt-4 flex gap-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-600">
                             <svg class="h-6 w-6 shrink-0 text-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                            <p>Setelah menekan <span class="font-semibold text-ink">Bayar</span>, Anda diarahkan ke halaman pembayaran aman <span class="font-semibold text-ink">DANA</span> untuk memilih metode bayar. Selesaikan pembayaran dalam <span class="font-semibold text-ink">2 jam</span>; lewat dari itu pesanan dibatalkan otomatis.</p>
+                            <p>Setelah menekan <span class="font-semibold text-ink">Bayar</span>, Anda diarahkan ke halaman pembayaran aman <span class="font-semibold text-ink">DANA</span> untuk memilih metode bayar. Selesaikan pembayaran dalam <span class="font-semibold text-ink">10 menit</span>; lewat dari itu pesanan dibatalkan otomatis.</p>
                         </div>
                     </section>
                 </div>
