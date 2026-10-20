@@ -20,7 +20,7 @@ Website e-commerce Toko Sepeda Listrik Saeful Askar adalah channel penjualan bar
 
 - Katalog produk (cari, filter kategori, detail varian) yang disinkron dari Jubelio.
 - Registrasi, login, dan buku alamat customer.
-- Keranjang, cek ongkir lewat Jubelio Shipment, checkout, dan pembayaran Gapura (DANA).
+- Keranjang, cek ongkir lewat RajaOngkir, checkout, dan pembayaran Gapura (DANA).
 - Riwayat dan pelacakan pesanan (status dan nomor resi dari Jubelio), serta pembatalan pesanan yang belum dibayar.
 - Panel admin sederhana: daftar order dan sinkron manual.
 
@@ -61,7 +61,7 @@ Kebutuhan dibagi per modul; kode di kolom pertama dipakai sebagai acuan di API C
 | F-05 | Akun | Registrasi (nama, email, no. HP, password), login, logout, lupa password | Wajib |
 | F-06 | Akun | Buku alamat dengan wilayah dari endpoint Region Jubelio; satu alamat utama | Wajib |
 | F-07 | Keranjang | Tambah, ubah jumlah, hapus item; jumlah dibatasi stok tersedia dan min/max pembelian | Wajib |
-| F-08 | Ongkir | Tarif kurir dari Jubelio Shipment berdasarkan gudang Tambun Utara, alamat tujuan, dan total berat varian | Wajib |
+| F-08 | Ongkir | Tarif kurir dari RajaOngkir berdasarkan gudang Tambun Utara, alamat tujuan, dan total berat varian | Wajib |
 | F-09 | Checkout | Cek ulang stok, buat sales order belum bayar di Jubelio, buat order Gapura dengan batas waktu | Wajib |
 | F-10 | Pembayaran | Webhook PAID menandai order lunas di website dan Jubelio (set-as-paid) | Wajib |
 | F-11 | Pembayaran | Webhook EXPIRED (atau job cadangan) membatalkan sales order Jubelio dan order website | Wajib |
@@ -88,7 +88,7 @@ Website memakai tiga layanan luar; Jubelio adalah sumber kebenaran untuk katalog
 | --- | --- | --- | --- |
 | Jubelio Omnichannel (`api2.jubelio.com`) | Katalog, stok, contact, sales order, region, status kirim | `POST /login`, `GET /inventory/items/`, `GET /inventory/items/group/{id}`, `GET /variations/`, `GET /inventory/categories/item-categories/`, `POST /contacts/`, `POST /sales/orders/`, `POST /sales/orders/set-as-paid`, `POST /sales/orders/cancel/`, `GET /region/*` | Token 12 jam; 600 request/menit; order masuk ke toko Internal "Website Saeful Askar" (`store_id`), `source` = 1 |
 | Webhook Jubelio | Perubahan dari Jubelio ke website | `update-product`, `update-price`, `update-qty`, `update-salesorder` | Header `sign` = HMAC-SHA256(body + secret, kunci = secret); dicoba ulang hingga 3 kali |
-| Jubelio Shipment | Tarif ongkir saat checkout | API rates (dokumentasi diminta ke Jubelio) | Client ID + Client Secret; ada mode staging |
+| RajaOngkir (Komerce) | Tarif ongkir saat checkout | `GET /destination/domestic-destination`, `POST /calculate/domestic-cost` | Header `key` (API key); paket gratis sekitar 100 pengecekan per hari |
 | Gapura (DANA), `api.saas.dana.id` (sandbox `api.sandbox.dana.id`) | Pembayaran | Create Order (Hosted Checkout), Query Payment, Cancel Order; webhook Finish Notify `POST /v1.0/debit/notify` (`00`/`02` lunas, `05` ditutup) | Tanda tangan RSA SHA-256: request ditandatangani private key kita, webhook diverifikasi dengan public key DANA; SDK resmi `danaid/dana-php` |
 
 **Sinkron katalog.**
@@ -100,7 +100,7 @@ Website memakai tiga layanan luar; Jubelio adalah sumber kebenaran untuk katalog
 
 **Checkout dan pembayaran.**
 
-1. Customer memilih alamat dan kurir; website meminta tarif ke Jubelio Shipment.
+1. Customer memilih alamat dan kurir; website meminta tarif ke RajaOngkir.
 2. Customer menekan Bayar; website mengecek ulang stok ke Jubelio.
 3. Bila customer belum punya contact Jubelio, website membuatnya (`POST /contacts/`) dan menyimpan `jubelio_contact_id`.
 4. Website membuat sales order belum bayar di Jubelio dengan `ref_no` WEB-xxxxxx, `store_id` toko website, `location_id` gudang Tambun, pajak 0, ongkir dan kurir.
@@ -142,7 +142,7 @@ Webhook dari Gapura dan Jubelio dicatat dulu lalu diproses di antrean, sehingga 
 | Autentikasi | Session cookie Laravel (Sanctum stateful) + CSRF |
 | Database | MySQL 8 (lokal: MariaDB 10.4 bawaan XAMPP) |
 | Cache dan antrean | Tanpa Redis: driver `database` Laravel untuk cache (token Jubelio 12 jam, tarif ongkir, region), queue job, dan lock sinkron |
-| Integrasi | Jubelio API, Jubelio Shipment API, Gapura (DANA) Payment Gateway API lewat SDK `danaid/dana-php` |
+| Integrasi | Jubelio API, RajaOngkir API, Gapura (DANA) Payment Gateway API lewat SDK `danaid/dana-php` |
 | Kontrak dan mock | Markdown per modul (`docs/api/*.md`) + mock JSON di frontend |
 | Pengujian | PHPUnit/Pest feature + unit test dengan fixture |
 
@@ -170,11 +170,11 @@ saeful-askar/
 │   │   ├── catalog.md                      kategori & produk
 │   │   ├── cart.md
 │   │   ├── addresses-regions.md
-│   │   ├── shipping.md                     tarif Jubelio Shipment
+│   │   ├── shipping.md                     tarif RajaOngkir
 │   │   ├── checkout-orders.md
 │   │   ├── admin.md                        panel admin: pesanan, sinkron
 │   │   ├── webhooks.md                     webhook masuk Gapura & Jubelio
-│   │   └── integrations.md                 panggilan keluar ke Jubelio, Jubelio Shipment, Gapura
+│   │   └── integrations.md                 panggilan keluar ke Jubelio, RajaOngkir, Gapura
 │   ├── PRD-Website-ECommerce-Saeful-Askar.md   kebutuhan produk (acuan utama)
 │   ├── arsitektur-sistem.md                diagram arsitektur, alur checkout, struktur folder
 │   └── erd.md                              ERD v2: kolom, relasi, index 13 tabel (pemetaan field Jubelio ada di api/integrations.md)
@@ -214,7 +214,7 @@ saeful-askar/
 │   │   │   │   ├── CartController.php
 │   │   │   │   ├── AddressController.php
 │   │   │   │   ├── RegionController.php        proxy + cache Region Jubelio
-│   │   │   │   ├── ShippingRateController.php  tarif Jubelio Shipment
+│   │   │   │   ├── ShippingRateController.php  tarif RajaOngkir
 │   │   │   │   ├── CheckoutController.php
 │   │   │   │   └── OrderController.php
 │   │   │   ├── Admin/
@@ -274,7 +274,7 @@ saeful-askar/
 ├── bootstrap/app.php                       BE · daftar route web, api, webhooks; middleware; CSRF exception untuk webhook
 ├── config/                                 BE
 │   ├── jubelio.php                         base_url, email, password, store_id, location_id, tax_id, webhook_secret
-│   ├── jubelio_shipment.php                client_id, client_secret, origin, environment
+│   ├── shipping.php                         driver, origin, RajaOngkir (API key, kurir)
 │   └── gapura.php                          env, client_id, merchant_id, private_key_path, mcc, notify_url, payment_duration
 │
 ├── database/                               BE
@@ -382,7 +382,7 @@ Backend dan frontend mulai bersamaan setelah API Contract disepakati; frontend m
 1. Fondasi: API Contract v1, migrasi 13 tabel, autentikasi, kerangka layout Blade dan API client.
 2. Katalog: sinkron Jubelio (kategori, produk, varian, gambar, stok, berat), webhook produk dan stok, halaman daftar dan detail produk.
 3. Akun dan keranjang: registrasi, login, buku alamat dengan Region Jubelio, keranjang.
-4. Checkout: tarif Jubelio Shipment, contact dan sales order Jubelio, order Gapura, webhook Finish Notify (lunas dan ditutup), job pembatalan.
+4. Checkout: tarif RajaOngkir, contact dan sales order Jubelio, order Gapura, webhook Finish Notify (lunas dan ditutup), job pembatalan.
 5. Pesanan dan panel admin: riwayat dan pelacakan pesanan, panel admin.
 6. Uji terpadu dan rilis: uji end-to-end dengan akun Jubelio dan Gapura mode sandbox, lalu produksi.
 
@@ -399,11 +399,11 @@ Backend dan frontend mulai bersamaan setelah API Contract disepakati; frontend m
 
 ## 9. Risiko, pertanyaan terbuka, dan di luar lingkup
 
-Risiko terbesar adalah dokumentasi API rates Jubelio Shipment yang belum tersedia; checkout tidak bisa selesai tanpanya.
+Ongkir memakai RajaOngkir (menggantikan Jubelio Shipment sejak 20 Okt 2026); yang tersisa adalah uji dengan API key asli dan kuota paket gratis.
 
 | Risiko | Dampak | Penanganan |
 | --- | --- | --- |
-| Dokumentasi API rates Jubelio Shipment tidak publik | Ongkir di checkout tertunda | Minta dokumentasi + Client ID/Secret ke Jubelio; kontrak `POST /api/v1/shipping/rates` tetap dipakai FE dengan mock |
+| Kuota paket gratis RajaOngkir (sekitar 100 pengecekan per hari) | Ongkir gagal di hari ramai | Cache 30 menit per alamat + berat; naikkan paket bila perlu |
 | Sales order belum bayar mungkin tidak mengurangi stok tersedia | Oversell dengan Shopee | Uji di akun; bila tidak, tambah reservasi stok (`POST /inventory/reserved/`) |
 | ~~Berat per varian mungkin tidak didukung Jubelio~~ | — | Terjawab 15 Okt 2026: didukung, berat varian baterai 3.000–27.500 g |
 | Webhook terlewat atau terlambat | Stok atau status tidak segar | Rekonsiliasi stok 15 menit dan job pembatalan 5 menit |
@@ -411,7 +411,7 @@ Risiko terbesar adalah dokumentasi API rates Jubelio Shipment yang belum tersedi
 
 **Pertanyaan terbuka.**
 
-- [ ] Dokumentasi API rates dan kredensial Jubelio Shipment (termasuk staging).
+- [ ] API key RajaOngkir dan uji satu panggilan nyata.
 - [x] Durasi batas bayar order Gapura: 10 menit (diputuskan 20 Okt 2026; sandbox maksimal 30 menit).
 - [x] Nama header signature webhook Jubelio: `sign`, berisi HMAC-SHA256 (contoh resmi Jubelio di `api/dist.yaml`, bagian Webhook Signature).
 - [x] Toko internal dibuat di Jubelio dengan nama "Website" (`store_id` -102, dari `GET /locations/store/`).

@@ -2,12 +2,15 @@
 
 use App\Exceptions\ApiException;
 use App\Models\Address;
+use App\Models\Address as AddressModel;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
-use App\Services\JubelioShipment\JubelioShipmentClient;
+use App\Services\Shipping\RateProvider;
+use App\Services\Shipping\StubRates;
 use App\Services\Shop\ShippingRateService;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 /*
 | SHIP-01 (docs/api/shipping.md). The driver is `stub`: sample rates in the contract shape.
@@ -107,23 +110,20 @@ test('an unknown rate id is RATE_EXPIRED', function () {
         ->toThrow(ApiException::class, 'kedaluwarsa');
 });
 
-test('the same address and weight within 5 minutes do not ask the provider again', function () {
+test('the same address and weight within the cache time do not ask the provider again', function () {
     cartHas($this->user, $this->bike, 1);
     $calls = 0;
-    $this->app->instance(JubelioShipmentClient::class, new class(config('jubelio_shipment'), function () use (&$calls) {
+    $this->app->instance(RateProvider::class, new class(function () use (&$calls) {
         $calls++;
-    }) extends JubelioShipmentClient
+    }) implements RateProvider
     {
-        public function __construct(array $config, private readonly Closure $onRates)
-        {
-            parent::__construct($config);
-        }
+        public function __construct(private readonly Closure $onRates) {}
 
-        public function rates(array $destination, int $weightGrams): array
+        public function rates(AddressModel $address, int $weightGrams): array
         {
             ($this->onRates)();
 
-            return parent::rates($destination, $weightGrams);
+            return StubRates::quote('3216', ['city_id' => (string) $address->city_id, 'province_id' => (string) $address->province_id], $weightGrams);
         }
     });
 
@@ -198,10 +198,11 @@ test('SHIP-01 needs a login', function () {
     assertApiError($this->postJson('/api/v1/shipping/rates', ['address_id' => 1]), 401, 'UNAUTHENTICATED');
 });
 
-test('a provider that is not built yet answers 502 INTEGRATION_ERROR without a technical message', function () {
+test('a provider that cannot be reached answers 502 INTEGRATION_ERROR without a technical message', function () {
     cartHas($this->user, $this->bike, 1);
-    config(['jubelio_shipment.driver' => 'live']);
-    $this->app->forgetInstance(JubelioShipmentClient::class);
+    config(['shipping.driver' => 'rajaongkir', 'shipping.rajaongkir.api_key' => 'k', 'shipping.rajaongkir.origin_id' => '17473']);
+    $this->app->forgetInstance(RateProvider::class);
+    Http::fake(['*' => Http::response(['meta' => ['message' => 'Internal Server Error', 'code' => 500, 'status' => 'error'], 'data' => null], 500)]);
 
     assertApiError(($this->rates)(), 502, 'INTEGRATION_ERROR')
         ->assertJsonPath('message', 'Layanan sedang tidak bisa dihubungi. Coba lagi beberapa saat.');

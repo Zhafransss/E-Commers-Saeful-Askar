@@ -7,7 +7,10 @@ use App\Services\Jubelio\JubelioClient;
 use App\Services\Jubelio\JubelioTokenManager;
 use App\Services\Jubelio\Mappers\ProductMapper;
 use App\Services\Jubelio\StockSyncService;
-use App\Services\JubelioShipment\JubelioShipmentClient;
+use App\Services\RajaOngkir\RajaOngkirClient;
+use App\Services\RajaOngkir\RajaOngkirRates;
+use App\Services\Shipping\RateProvider;
+use App\Services\Shipping\StubRateProvider;
 use App\Support\HtmlSanitizer;
 use Carbon\CarbonInterface;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -41,7 +44,11 @@ class AppServiceProvider extends ServiceProvider
             $app->make(JubelioClient::class),
             config('jubelio.location_id'),
         ));
-        $this->app->singleton(JubelioShipmentClient::class, fn () => new JubelioShipmentClient(config('jubelio_shipment')));
+        $this->app->singleton(RajaOngkirClient::class, fn () => new RajaOngkirClient(config('shipping.rajaongkir')));
+        $this->app->bind(RateProvider::class, fn ($app) => match (config('shipping.driver')) {
+            'rajaongkir' => $app->make(RajaOngkirRates::class),
+            default => $app->make(StubRateProvider::class),
+        });
         $this->app->singleton(GapuraClient::class, fn () => new GapuraClient(config('gapura')));
     }
 

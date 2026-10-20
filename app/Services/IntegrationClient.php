@@ -22,7 +22,7 @@ abstract class IntegrationClient
 {
     protected int $retries = 0;
 
-    /** Label used in logs and exceptions: jubelio, jubelio_shipment, gapura. */
+    /** Label used in logs and exceptions: jubelio, gapura, rajaongkir. */
     abstract protected function service(): string;
 
     public function withinCustomerRequest(): static

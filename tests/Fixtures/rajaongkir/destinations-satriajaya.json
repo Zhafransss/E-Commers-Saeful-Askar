@@ -1,0 +1,5 @@
+{"meta":{"message":"Success Get Domestic Destination","code":200,"status":"success"},"data":[
+{"id":17473,"label":"SATRIAJAYA, TAMBUN UTARA, BEKASI, JAWA BARAT, 17565","province_name":"JAWA BARAT","city_name":"BEKASI","district_name":"TAMBUN UTARA","subdistrict_name":"SATRIAJAYA","zip_code":"17565"},
+{"id":9001,"label":"SATRIAJAYA, TAMBUN UTARA, KOTA BEKASI, JAWA BARAT, 17565","province_name":"JAWA BARAT","city_name":"KOTA BEKASI","district_name":"TAMBUN UTARA","subdistrict_name":"SATRIAJAYA","zip_code":"17565"},
+{"id":9002,"label":"SRIJAYA, TAMBUN UTARA, BEKASI, JAWA BARAT, 17564","province_name":"JAWA BARAT","city_name":"BEKASI","district_name":"TAMBUN UTARA","subdistrict_name":"SRIJAYA","zip_code":"17564"}
+]}

@@ -1,8 +1,8 @@
 # Ongkos Kirim
 
-Tarif dihitung lewat Jubelio Shipment (INT-JS-01) dari gudang Tambun Utara ke alamat customer, berdasarkan total berat varian di keranjang. Bentuk response di bawah adalah kontrak website sendiri: backend memetakan jawaban Jubelio Shipment ke bentuk ini, sehingga frontend tidak bergantung pada format Jubelio Shipment. Konvensi umum ada di `README.md`.
+Tarif dihitung lewat RajaOngkir (INT-RO-01, INT-RO-02) dari gudang Tambun Utara ke alamat customer, berdasarkan total berat varian di keranjang. Bentuk response di bawah adalah kontrak website sendiri: backend memetakan jawaban Jubelio Shipment ke bentuk ini, sehingga frontend tidak bergantung pada format Jubelio Shipment. Konvensi umum ada di `README.md`.
 
-Gudang asal (dari konfigurasi `config/jubelio_shipment.php`):
+Gudang asal (dari konfigurasi `config/shipping.php`):
 
 > Jl. Raya Pisangan No.1, RT.02/RW.02, Satriajaya, Kec. Tambun Utara, Kabupaten Bekasi, Jawa Barat 17566
 
@@ -92,7 +92,7 @@ Isi paket diambil backend dari keranjang user (tidak dikirim frontend).
 }
 ```
 
-Angka di contoh adalah ilustrasi; nilai nyata berasal dari Jubelio Shipment.
+Angka di contoh adalah ilustrasi; nilai nyata berasal dari RajaOngkir.
 
 ### Response Failed
 
@@ -104,7 +104,7 @@ Angka di contoh adalah ilustrasi; nilai nyata berasal dari Jubelio Shipment.
 | 422 | `NO_SHIPPING_SERVICE` | Tidak ada kurir yang melayani rute/berat ini |
 | 422 | `VALIDATION_ERROR` | `address_id` kosong, `service_types` berisi nilai tak dikenal |
 | 429 | `TOO_MANY_REQUESTS` | Lebih dari 20 request/menit |
-| 502 | `INTEGRATION_ERROR` | Jubelio Shipment gagal/timeout (> 10 detik) |
+| 502 | `INTEGRATION_ERROR` | RajaOngkir gagal/timeout (> 10 detik) atau API key salah |
 
 ```json
 {
@@ -122,10 +122,10 @@ Angka di contoh adalah ilustrasi; nilai nyata berasal dari Jubelio Shipment.
 
 ### Acceptance Criteria
 
-- [ ] Berat paket = jumlah `qty × package_weight` varian di keranjang (gram), dikirim ke Jubelio Shipment bersama dimensi paket bila layanan kargo membutuhkannya.
+- [ ] Berat paket = jumlah `qty × package_weight` varian di keranjang (gram), dikirim ke RajaOngkir dalam gram.
 - [ ] Item keranjang ber-`issue = PRODUCT_INACTIVE` tidak ikut dihitung.
 - [ ] Asal pengiriman selalu gudang Tambun Utara dari konfigurasi, bukan dari input frontend.
 - [ ] Setiap rate disimpan di cache server dengan kunci `rate_id` selama 30 menit, berisi user, alamat, berat, kurir, layanan, dan ongkir, agar checkout tidak bisa memalsukan ongkir.
-- [ ] Response dengan alamat + berat yang sama dalam 5 menit diambil dari cache (tidak memanggil Jubelio Shipment lagi).
-- [ ] Timeout ke Jubelio Shipment 10 detik; gagal → `502 INTEGRATION_ERROR`, tanpa pesan teknis ke customer.
-- [ ] Selama dokumentasi API rates Jubelio Shipment belum diterima, backend memakai stub yang mengembalikan bentuk response ini (frontend tetap bisa bekerja).
+- [ ] Response dengan alamat + berat yang sama dalam 30 menit diambil dari cache (tidak memanggil RajaOngkir lagi), karena paket gratis RajaOngkir dibatasi sekitar 100 pengecekan per hari.
+- [ ] Timeout ke RajaOngkir 10 detik; gagal → `502 INTEGRATION_ERROR`, tanpa pesan teknis ke customer.
+- [ ] `SHIPPING_DRIVER=stub` mengembalikan tarif contoh dengan bentuk response yang sama, agar frontend dan test tetap bisa bekerja tanpa API key.

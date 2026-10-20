@@ -1,0 +1,7 @@
+{"meta":{"message":"Success Calculate Domestic Shipping cost","code":200,"status":"success"},"data":[
+{"name":"Jalur Nugraha Ekakurir (JNE)","code":"jne","service":"REG","description":"Layanan Reguler","cost":45000,"etd":"2-3 day"},
+{"name":"Jalur Nugraha Ekakurir (JNE)","code":"jne","service":"JTR","description":"JNE Trucking","cost":320000,"etd":"3-5 day"},
+{"name":"J&T Express","code":"jnt","service":"EZ","description":"Regular Service","cost":42500,"etd":"1 day"},
+{"name":"SiCepat Ekspres","code":"sicepat","service":"SAMEDAY","description":"Same Day Service","cost":60000,"etd":""},
+{"name":"SAP Express","code":"sap","service":"CARGO","description":"Cargo","cost":0,"etd":"4 day"}
+]}

@@ -6,7 +6,7 @@ use App\Exceptions\ApiException;
 use App\Models\Address;
 use App\Models\CartItem;
 use App\Models\User;
-use App\Services\JubelioShipment\JubelioShipmentClient;
+use App\Services\Shipping\RateProvider;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -20,7 +20,7 @@ use Illuminate\Support\Str;
 class ShippingRateService
 {
     public function __construct(
-        private readonly JubelioShipmentClient $shipment,
+        private readonly RateProvider $shipment,
         private readonly CartService $cart,
     ) {}
 
@@ -53,8 +53,8 @@ class ShippingRateService
         }
 
         usort($raw, fn (array $a, array $b) => $a['cost'] <=> $b['cost']);
-        $expiresAt = now()->addSeconds((int) config('jubelio_shipment.rate_ttl'));
-        $origin = config('jubelio_shipment.origin');
+        $expiresAt = now()->addSeconds((int) config('shipping.rate_ttl'));
+        $origin = config('shipping.origin');
 
         $rates = array_map(function (array $rate) use ($user, $address, $package, $expiresAt): array {
             $rate = ['rate_id' => 'rt_'.Str::lower(Str::random(8))] + $rate;
@@ -140,11 +140,8 @@ class ShippingRateService
     {
         return Cache::remember(
             "shipping:quote:{$address->subdistrict_id}:{$weight}",
-            (int) config('jubelio_shipment.quote_cache_ttl'),
-            fn () => $this->shipment->withinCustomerRequest()->rates(
-                ['city_id' => $address->city_id, 'province_id' => $address->province_id],
-                $weight,
-            ),
+            (int) config('shipping.quote_cache_ttl'),
+            fn () => $this->shipment->rates($address, $weight),
         );
     }
 

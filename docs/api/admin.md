@@ -609,7 +609,7 @@ Tidak ada.
 
 ### User Story
 
-Sebagai admin yang menyiapkan toko, saya ingin melihat apakah Jubelio, Jubelio Shipment, dan Gapura sudah terhubung dan URL webhook mana yang harus didaftarkan, agar setup tidak ada yang terlewat.
+Sebagai admin yang menyiapkan toko, saya ingin melihat apakah Jubelio, RajaOngkir, dan Gapura sudah terhubung dan URL webhook mana yang harus didaftarkan, agar setup tidak ada yang terlewat.
 
 ### Request Body
 
@@ -633,9 +633,9 @@ Tidak ada.
       "tax_id": -1,
       "webhook_secret_set": true
     },
-    "jubelio_shipment": {
+    "rajaongkir": {
       "configured": false,
-      "environment": "staging",
+      "driver": "stub",
       "origin": "Jl. Raya Pisangan No.1, Satriajaya, Tambun Utara, Kab. Bekasi 17566"
     },
     "gapura": {

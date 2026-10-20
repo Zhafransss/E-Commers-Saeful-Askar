@@ -15,11 +15,11 @@ Dokumen ini adalah kontrak antara frontend (Blade + Alpine.js) dan backend (Lara
 | `catalog.md` | Kategori, daftar produk, detail produk | FE + BE |
 | `cart.md` | Keranjang | FE + BE |
 | `addresses-regions.md` | Wilayah (Region Jubelio) dan buku alamat | FE + BE |
-| `shipping.md` | Tarif ongkir (Jubelio Shipment) | FE + BE |
+| `shipping.md` | Tarif ongkir (RajaOngkir) | FE + BE |
 | `checkout-orders.md` | Checkout, pembayaran, riwayat dan detail pesanan | FE + BE |
 | `admin.md` | Panel admin: pesanan, sinkron | FE + BE |
 | `webhooks.md` | Webhook masuk dari Gapura (DANA) dan Jubelio | BE |
-| `integrations.md` | Panggilan keluar ke Jubelio, Jubelio Shipment, Gapura | BE |
+| `integrations.md` | Panggilan keluar ke Jubelio, RajaOngkir, Gapura | BE |
 | `dist.yaml` | OpenAPI resmi Jubelio (diunduh dari dokumentasi Jubelio), acuan INT-JB-xx dan signature webhook | BE |
 
 ## Format setiap endpoint
@@ -131,7 +131,7 @@ Semua error memakai bentuk yang sama:
 | 429 | `TOO_MANY_REQUESTS` | Melebihi batas request |
 | 500 | `SERVER_ERROR` | Error tak terduga di backend |
 | 501 | `NOT_IMPLEMENTED` | **Hanya selama pengembangan:** route sudah terdaftar tapi endpoint belum dibangun backend (response menyertakan `endpoint`, mis. `"CAT-02"`). Tidak boleh ada lagi saat rilis |
-| 502 | `INTEGRATION_ERROR` | Jubelio, Jubelio Shipment, atau Gapura gagal merespons dengan benar |
+| 502 | `INTEGRATION_ERROR` | Jubelio, RajaOngkir, atau Gapura gagal merespons dengan benar |
 | 503 | `SERVICE_UNAVAILABLE` | Mode perawatan |
 
 Kode khusus per endpoint ditulis di file masing-masing. Daftar lengkapnya ada di bagian **Indeks kode error khusus** di bawah.
@@ -509,7 +509,7 @@ Total **49 endpoint** milik website: 44 dipanggil frontend dan 5 webhook masuk. 
 | Kode | Tujuan | Isi | File |
 | --- | --- | --- | --- |
 | INT-JB-01 … INT-JB-14 | Jubelio Omnichannel | Login, kategori, produk, berat, stok, data item, region, contact, sales order, setup | integrations.md |
-| INT-JS-01 | Jubelio Shipment | Tarif ongkir | integrations.md |
+| INT-RO-01, INT-RO-02 | RajaOngkir | Cari ID tujuan, hitung ongkir | integrations.md |
 | INT-GP-01 … INT-GP-03 | Gapura (DANA) | Buat order, cek status, batalkan order (persiapan di INT-GP-00) | integrations.md |
 | INT-HDL | Semua | Aturan umum retry, timeout, logging | integrations.md |
 

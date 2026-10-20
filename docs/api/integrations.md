@@ -1,11 +1,11 @@
-# Integrasi Keluar (Backend → Jubelio, Jubelio Shipment, Gapura)
+# Integrasi Keluar (Backend → Jubelio, RajaOngkir, Gapura)
 
 File ini mendokumentasikan panggilan yang dilakukan **backend** ke layanan luar. Frontend tidak pernah memanggil layanan ini langsung. Semua panggilan hanya boleh lewat kelas client:
 
 | Layanan | Client | Base URL |
 | --- | --- | --- |
 | Jubelio Omnichannel | `App\Services\Jubelio\JubelioClient` | `https://api2.jubelio.com` |
-| Jubelio Shipment | `App\Services\JubelioShipment\JubelioShipmentClient` | Menunggu dokumentasi dari Jubelio |
+| RajaOngkir (Komerce) | `App\Services\RajaOngkir\RajaOngkirClient` | `https://rajaongkir.komerce.id/api/v1` |
 | Gapura (DANA) | `App\Services\Gapura\GapuraClient` (membungkus SDK `danaid/dana-php`) | Sandbox `https://api.sandbox.dana.id`, produksi `https://api.saas.dana.id` |
 
 Field Jubelio di bawah diambil dari spec OpenAPI resmi Jubelio (`dist.yaml`, "Jubelio API Reference"). Tanda **\*** = wajib menurut spec. Field Gapura diambil dari dokumentasi API DANA dan SDK resmi `danaid/dana-php`.
@@ -16,7 +16,7 @@ Field Jubelio di bawah diambil dari spec OpenAPI resmi Jubelio (`dist.yaml`, "Ju
 
 ### Endpoint
 
-Berlaku untuk semua INT-JB, INT-JS, dan INT-GP.
+Berlaku untuk semua INT-JB, INT-RO, dan INT-GP.
 
 ### User Story
 
@@ -34,7 +34,7 @@ HTTP 2xx dari layanan luar → hasil dipetakan ke model/DTO internal.
 
 | Kondisi | Penanganan |
 | --- | --- |
-| Timeout (Jubelio 15 detik, Jubelio Shipment 10 detik, Gapura 8 detik) | Lempar `JubelioApiException` / `IntegrationException`; job di-retry |
+| Timeout (Jubelio 15 detik, RajaOngkir 10 detik, Gapura 8 detik) | Lempar `JubelioApiException` / `IntegrationException`; job di-retry |
 | Jubelio 401 / token kedaluwarsa | Login ulang sekali (INT-JB-01), ulangi request sekali |
 | Jubelio 429 | Tunggu 60 detik, ulangi; job sinkron menahan laju < 600 request/menit |
 | Jubelio 500 dengan `code` SQLSTATE (mis. `23505`) | Simpan pesan apa adanya di `sync_logs.message`; untuk sales order, cek dulu apakah SO dengan `ref_no` sama sudah ada sebelum retry |
@@ -903,57 +903,133 @@ Lihat INT-HDL.
 
 ---
 
-## INT-JS-01 · Tarif ongkir Jubelio Shipment
+## INT-RO-00 · Persiapan RajaOngkir
+
+Ongkir memakai **RajaOngkir (Komerce) API V2**; Jubelio Shipment tidak dipakai lagi (keputusan 20 Okt 2026). Dokumentasi: `https://rajaongkir.com/docs/shipping-cost/getting_started/about`.
+
+| Hal | Isi |
+| --- | --- |
+| Base URL | `https://rajaongkir.komerce.id/api/v1` (`RAJAONGKIR_BASE_URL`) |
+| Otentikasi | Header `key: <API key>` (dari dashboard `https://collaborator.komerce.id/login`, bagian API Key). Body request berformat `application/x-www-form-urlencoded` |
+| Timeout | 10 detik per panggilan; di dalam request customer, kegagalan sementara (5xx, timeout) diulang satu kali |
+| Kuota | Paket gratis (Starter) sekitar 100 pengecekan ongkir per hari. Jawaban di-cache 30 menit per alamat tujuan + berat (`SHIPPING_QUOTE_CACHE_SECONDS`) |
+| Kode kurir | `jne`, `sicepat`, `ide`, `sap`, `ninja`, `jnt`, `tiki`, `wahana`, `pos`, `sentral`, `lion`, `rex`, `spx`. Yang ditawarkan toko diatur di `RAJAONGKIR_COURIERS` |
+
+Konfigurasi di `.env` (`config/shipping.php`):
+
+| Variabel | Isi |
+| --- | --- |
+| `SHIPPING_DRIVER` | `rajaongkir` (tarif asli) atau `stub` (tarif contoh, tanpa API key) |
+| `RAJAONGKIR_API_KEY` | API key |
+| `RAJAONGKIR_BASE_URL` | Default `https://rajaongkir.komerce.id/api/v1` |
+| `RAJAONGKIR_ORIGIN_ID` | ID tujuan RajaOngkir untuk gudang. Kosong = dicari sekali dari alamat gudang di `config/shipping.php` |
+| `RAJAONGKIR_COURIERS` | Kode kurir dipisah koma |
+
+> **Belum diverifikasi dengan API key asli.** Dokumentasi resmi tidak memuat contoh respons bernilai nyata dan tidak konsisten soal beberapa detail (mis. `price` boolean atau `lowest`/`highest`, header `key` atau `Authorization: Bearer`). Implementasi mengikuti contoh `curl` resmi. Setelah ada API key, uji satu panggilan nyata untuk memastikan: nama parameter `search` di INT-RO-01, format `courier` dengan tanda `:`, dan isi `etd`.
+
+---
+
+## INT-RO-01 · Cari ID tujuan
 
 ### Endpoint
 
-Belum diketahui. Dokumentasi API rates Jubelio Shipment tidak publik; diminta ke Jubelio (info@jubelio.com / tim partnership) beserta Client ID, Client Secret, dan akses staging.
+`GET https://rajaongkir.komerce.id/api/v1/destination/domestic-destination?search={kata kunci}&limit=10&offset=0`
 
 ### User Story
 
-Sebagai backend, saya ingin meminta daftar layanan kurir dan ongkir dari gudang Tambun Utara ke alamat customer berdasarkan berat paket, agar SHIP-01 bisa menampilkan pilihan pengiriman yang nyata.
+Sebagai backend, saya ingin mengubah alamat customer (yang memakai ID wilayah Jubelio) menjadi ID tujuan RajaOngkir, karena perhitungan ongkir hanya menerima ID RajaOngkir.
 
-### Request Body
+### Request
 
-Data yang **akan dikirim** (nama field menyesuaikan dokumentasi yang diterima):
-
-| Data | Sumber |
-| --- | --- |
-| Asal: alamat, kecamatan/kelurahan, kode pos 17566 | Konfigurasi gudang Tambun Utara |
-| Tujuan: provinsi, kota, kecamatan, kelurahan (ID dan nama), kode pos | Alamat customer |
-| Berat total (gram) | Jumlah `qty × package_weight` varian |
-| Dimensi paket (cm) | `products.package_*` (untuk layanan kargo) |
-| Nilai barang | Subtotal keranjang (untuk asuransi) |
-
-```json
-{
-  "origin": { "subdistrict_id": "3216052001", "post_code": "17566" },
-  "destination": { "subdistrict_id": "3216052001", "post_code": "17565" },
-  "weight_gram": 32000,
-  "dimensions_cm": { "length": 150, "width": 30, "height": 80 },
-  "item_value": 6750000
-}
-```
-
-Contoh di atas adalah bentuk internal `ShippingRateService`, bukan format Jubelio Shipment.
+| Query | Wajib | Isi |
+| --- | --- | --- |
+| `search` | Ya | Teks bebas, mis. `Satriajaya TAMBUN UTARA` |
+| `limit` | Tidak | Jumlah hasil, kami pakai 10 |
+| `offset` | Tidak | Default 0 |
 
 ### Response Success
 
-Dipetakan ke objek **ShippingRate** (lihat `README.md`): kode dan nama kurir, kode dan nama layanan, jenis layanan, ongkir, asuransi, estimasi hari.
+`200 OK`
+
+```json
+{
+  "meta": { "message": "Success Get Domestic Destination", "code": 200, "status": "success" },
+  "data": [
+    { "id": 17473, "label": "SATRIAJAYA, TAMBUN UTARA, BEKASI, JAWA BARAT, 17565", "province_name": "JAWA BARAT", "city_name": "BEKASI", "district_name": "TAMBUN UTARA", "subdistrict_name": "SATRIAJAYA", "zip_code": "17565" }
+  ]
+}
+```
+
+### Acceptance Criteria
+
+- [ ] Hasil dicocokkan dengan alamat: kelurahan (4 poin), kecamatan (3), kota/kabupaten (2), kode pos (1). Pilihan harus bernilai minimal 5; di bawah itu alamat dianggap tidak dikenal (`422 NO_SHIPPING_SERVICE`), tidak ditebak.
+- [ ] "KAB. BEKASI" dan "KOTA BEKASI" dibedakan (kabupaten dan kota punya ID berbeda).
+- [ ] ID yang ditemukan di-cache 30 hari per alamat (ID tidak berubah), sehingga alamat yang sama hanya dicari sekali.
+- [ ] ID gudang diambil dari `RAJAONGKIR_ORIGIN_ID`, atau dicari dengan cara yang sama dari alamat gudang.
+
+---
+
+## INT-RO-02 · Hitung ongkir domestik
+
+### Endpoint
+
+`POST https://rajaongkir.komerce.id/api/v1/calculate/domestic-cost`
+
+### User Story
+
+Sebagai backend, saya ingin meminta daftar layanan kurir dan ongkir dari gudang Tambun Utara ke alamat customer berdasarkan berat paket, agar SHIP-01 menampilkan pilihan pengiriman yang nyata.
+
+### Request Body
+
+Form-encoded:
+
+| Field | Tipe | Wajib | Isi |
+| --- | --- | --- | --- |
+| `origin` | integer | Ya | ID tujuan RajaOngkir gudang (INT-RO-01) |
+| `destination` | integer | Ya | ID tujuan RajaOngkir alamat customer (INT-RO-01) |
+| `weight` | integer | Ya | Berat total dalam **gram** (jumlah `qty × package_weight` varian) |
+| `courier` | string | Ya | Kode kurir; beberapa kurir digabung dengan `:`, mis. `jne:jnt:sicepat` |
+| `price` | string | Tidak | `lowest` (kami kirim ini) atau `highest` |
+
+### Response Success
+
+`200 OK`
+
+```json
+{
+  "meta": { "message": "Success Calculate Domestic Shipping cost", "code": 200, "status": "success" },
+  "data": [
+    { "name": "Jalur Nugraha Ekakurir (JNE)", "code": "jne", "service": "REG", "description": "Layanan Reguler", "cost": 45000, "etd": "2-3 day" }
+  ]
+}
+```
+
+Dipetakan ke objek **ShippingRate** (lihat `README.md`):
+
+| ShippingRate | Dari RajaOngkir |
+| --- | --- |
+| `courier_code` / `courier_name` | `code` / `name` |
+| `service_code` | `service` |
+| `service_name` | `name` + `service` |
+| `service_type` | Ditebak dari `service` + `description`: `instant` (instant, gosend, grab), `same_day` (same day, sds), `cargo` (cargo, trucking, JTR, dan kurir `sentral`/`rex`), selain itu `regular` |
+| `cost` | `cost` (bulat); layanan berbiaya 0 dibuang |
+| `insurance_cost` | Selalu 0 (tidak ada asuransi di v1) |
+| `etd_min_days` / `etd_max_days` / `etd_text` | Angka dalam `etd` ("2-3 day" → 2 dan 3, teks "2–3 hari"). Tidak terbaca → `null` dan teks "Estimasi belum tersedia" |
 
 ### Response Failed
 
 | Kondisi | Hasil di SHIP-01 |
 | --- | --- |
-| Tidak ada layanan | `422 NO_SHIPPING_SERVICE` |
-| Timeout > 10 detik / 5xx | `502 INTEGRATION_ERROR` |
-| Kredensial salah | `502 INTEGRATION_ERROR` + alert ke log |
+| HTTP 400 "Cost not found" (rute tidak dilayani), atau `data` kosong | `422 NO_SHIPPING_SERVICE` |
+| Alamat tidak ditemukan di RajaOngkir (INT-RO-01) | `422 NO_SHIPPING_SERVICE` |
+| 401 (API key salah), 422 (kode kurir salah), timeout, 5xx | `502 INTEGRATION_ERROR` (tanpa pesan teknis ke customer) + peringatan di log `integrations` |
 
 ### Acceptance Criteria
 
-- [ ] Selama dokumentasi belum ada, `JubelioShipmentClient` memakai stub yang mengembalikan 2–3 layanan contoh agar frontend dan alur checkout bisa diuji.
-- [ ] Setelah dokumentasi diterima, bagian ini diperbarui dengan endpoint, field wajib, dan contoh response asli.
+- [ ] Satu permintaan untuk semua kurir yang ditawarkan, bukan satu per kurir (hemat kuota).
+- [ ] API key tidak pernah muncul di log.
 - [ ] Kode kurir/layanan disimpan di order dan dikirim sebagai `shipper` di INT-JB-10 agar gudang memakai kurir yang sama.
+- [ ] `SHIPPING_DRIVER=stub` mengembalikan tarif contoh dalam bentuk yang sama untuk pengembangan tanpa API key.
 
 ---
 

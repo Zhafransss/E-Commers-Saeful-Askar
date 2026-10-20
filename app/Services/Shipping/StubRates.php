@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\JubelioShipment;
+namespace App\Services\Shipping;
 
 /**
  * Sample courier rates in the SHIP-01 shape, used while JUBELIO_SHIPMENT_DRIVER=stub (the real

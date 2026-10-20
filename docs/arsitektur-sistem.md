@@ -31,7 +31,7 @@ flowchart TB
   subgraph EXT["Layanan eksternal"]
     direction LR
     XD["Gapura (DANA)<br/>order pembayaran"]
-    JS["Jubelio Shipment<br/>tarif ongkir"]
+    JS["RajaOngkir<br/>tarif ongkir"]
     JB["Jubelio Omnichannel<br/>api2.jubelio.com"]
   end
 
@@ -66,7 +66,7 @@ sequenceDiagram
   autonumber
   actor C as Customer
   participant W as Website Laravel
-  participant S as Jubelio Shipment
+  participant S as RajaOngkir
   participant J as Jubelio
   participant X as Gapura (DANA)
   C->>W: Pilih alamat dan kurir
@@ -104,11 +104,11 @@ saeful-askar/
 │   │   ├── catalog.md                      kategori & produk
 │   │   ├── cart.md
 │   │   ├── addresses-regions.md
-│   │   ├── shipping.md                     tarif Jubelio Shipment
+│   │   ├── shipping.md                     tarif RajaOngkir
 │   │   ├── checkout-orders.md
 │   │   ├── admin.md                        panel admin: pesanan, sinkron
 │   │   ├── webhooks.md                     webhook masuk Gapura & Jubelio
-│   │   └── integrations.md                 panggilan keluar ke Jubelio, Jubelio Shipment, Gapura
+│   │   └── integrations.md                 panggilan keluar ke Jubelio, RajaOngkir, Gapura
 │   ├── PRD-Website-ECommerce-Saeful-Askar.md   kebutuhan produk (acuan utama)
 │   ├── arsitektur-sistem.md                diagram arsitektur, alur checkout, struktur folder
 │   └── erd.md                              ERD v2: kolom, relasi, index 13 tabel (pemetaan field Jubelio ada di api/integrations.md)
@@ -148,7 +148,7 @@ saeful-askar/
 │   │   │   │   ├── CartController.php
 │   │   │   │   ├── AddressController.php
 │   │   │   │   ├── RegionController.php        proxy + cache Region Jubelio
-│   │   │   │   ├── ShippingRateController.php  tarif Jubelio Shipment
+│   │   │   │   ├── ShippingRateController.php  tarif RajaOngkir
 │   │   │   │   ├── CheckoutController.php
 │   │   │   │   └── OrderController.php
 │   │   │   ├── Admin/
@@ -209,7 +209,7 @@ saeful-askar/
 ├── bootstrap/app.php                       BE · daftar route web, api, webhooks; middleware; CSRF exception untuk webhook
 ├── config/                                 BE
 │   ├── jubelio.php                         base_url, email, password, store_id, location_id, tax_id, webhook_secret
-│   ├── jubelio_shipment.php                client_id, client_secret, origin, environment
+│   ├── shipping.php                         driver, origin, RajaOngkir (API key, kurir)
 │   └── gapura.php                          env, client_id, merchant_id, private_key_path, mcc, notify_url, payment_duration
 │
 ├── database/                               BE

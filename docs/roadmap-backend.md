@@ -57,7 +57,7 @@ Sudah ada di commit `80aca15`:
 - Middleware `admin`, `page.role`, `RejectMalformedJson`; rate limiter `api`, `auth` (per endpoint), `shipping`, `checkout` di driver `database`.
 - 40 route + 5 webhook dengan controller stub (`501 NOT_IMPLEMENTED`); `ContractRoutesTest` dua arah.
 - 13 migrasi, model, factory, enum; `AdminUserSeeder`, `DemoCatalogSeeder`.
-- Config `jubelio`, `jubelio_shipment` (driver `stub`), `gapura`; kerangka client di `app/Services`.
+- Config `jubelio`, `shipping` (driver `stub` atau `rajaongkir`), `gapura`; kerangka client di `app/Services`.
 - AUTH-01 (`GET /sanctum/csrf-cookie`) sudah berfungsi dari Sanctum.
 
 ---
@@ -91,7 +91,7 @@ Sudah ada di commit `80aca15`:
 | Kebutuhan | Pakai | Catatan |
 | --- | --- | --- |
 | Panggil Jubelio | `JubelioClient::get()` / `post()`, atau tambah method INT-JB-xx di kelas itu | Token, login ulang saat 401, batas laju, dan log sudah otomatis |
-| Panggil Gapura / Jubelio Shipment | Method INT-GP-01 – 03 sudah ada di `GapuraClient` (SDK `danaid/dana-php`); INT-JS-01 ditambah di `JubelioShipmentClient` (memakai `get()`/`post()` protected) | Error 4xx Gapura otomatis tidak di-retry |
+| Panggil Gapura / RajaOngkir | Method INT-GP-01 – 03 sudah ada di `GapuraClient` (SDK `danaid/dana-php`); INT-RO-01 – 02 ada di `RajaOngkirClient` | Error 4xx Gapura otomatis tidak di-retry |
 | Panggilan saat customer menunggu | `$client->withinCustomerRequest()->…` | Retry paling banyak sekali |
 | Pesan 502 khusus endpoint | `catch (IntegrationException $e) { throw $e->withMessage('…'); }` | Teks dari kontrak endpoint |
 | Job yang memanggil layanan luar | `use Queueable, RetriesIntegrationCalls;` + method `failed()` | 6 percobaan, jeda 10 dtk – 15 mnt; 4xx langsung gagal; 429 menunggu 60 dtk |
@@ -191,7 +191,7 @@ WH-02 – WH-04 (Jubelio) dan WH-01 (Gapura) sudah aktif penuh: WH-01 memverifik
 
 ## Fase 4 — Ongkir & checkout
 
-> **Status: selesai (20 Okt 2026).** Ongkir masih driver `stub` (tarif contoh per zona dan berat, `StubRates`); ganti driver bila Jubelio Shipment atau penyedia lain sudah dipastikan. Checkout nyata ke Jubelio dan Gapura sandbox sudah dicoba (order `WEB-000001`–`000003`).
+> **Status: selesai (20 Okt 2026).** Ongkir memakai **RajaOngkir** (Jubelio Shipment tidak dipakai lagi, 20 Okt 2026): klien, pencocok alamat, dan pemetaan tarif sudah ada dan teruji dengan respons palsu; **belum diuji dengan API key asli**. Selama `SHIPPING_DRIVER=stub`, tarif contoh (`StubRates`) dipakai. Checkout nyata ke Jubelio dan Gapura sandbox sudah dicoba (order `WEB-000001`–`000003`).
 > **Penyimpangan dari rencana:** `INT-JB-07` sengaja tidak dipakai; sales order memakai snapshot `order_items` (unit, harga, berat) dan `config('jubelio.tax_id')`. Jubelio asli meminta semua id wilayah kontak (`s_province_id`, `s_city_id`, `s_subdistrict_id`) berupa teks.
 
 **Tujuan.** Customer melihat tarif kurir, lalu menekan Bayar. Website mengecek ulang stok ke Jubelio, membuat sales order belum bayar di toko "Website Saeful Askar", membuat order Gapura, dan mengarahkan customer ke halaman bayar.
@@ -200,7 +200,7 @@ WH-02 – WH-04 (Jubelio) dan WH-01 (Gapura) sudah aktif penuh: WH-01 memverifik
 
 | Kelompok | Isi | Acuan |
 | --- | --- | --- |
-| Ongkir | SHIP-01 lewat INT-JS-01 (driver `stub` mengembalikan 2–3 layanan contoh sampai dokumentasi ada). Berat = Σ `qty × package_weight`, tanpa item `PRODUCT_INACTIVE`. Asal selalu gudang dari config. Tiap rate disimpan di cache dengan `rate_id` selama 30 menit (user, alamat, berat, kurir, layanan, ongkir). Alamat + berat sama dalam 5 menit diambil dari cache. Error: `CART_EMPTY`, `NO_SHIPPING_SERVICE`, `ADDRESS_NOT_FOUND`, `502 INTEGRATION_ERROR` | SHIP-01, INT-JS-01 |
+| Ongkir | SHIP-01 lewat INT-RO-01 + INT-RO-02 (RajaOngkir; driver `stub` mengembalikan layanan contoh). Berat = Σ `qty × package_weight`, tanpa item `PRODUCT_INACTIVE`. Asal selalu gudang dari config. Tiap rate disimpan di cache dengan `rate_id` selama 30 menit (user, alamat, berat, kurir, layanan, ongkir). Alamat + berat sama dalam 5 menit diambil dari cache. Error: `CART_EMPTY`, `NO_SHIPPING_SERVICE`, `ADDRESS_NOT_FOUND`, `502 INTEGRATION_ERROR` | SHIP-01, INT-JS-01 |
 | Pencatat status | Satu service yang mencatat setiap perubahan status ke `order_status_histories` beserta sumbernya. Dipakai ORD-01 dan diperluas di Fase 5 | `api/README.md` |
 | Contact Jubelio | Cari contact berdasarkan email dulu, baru buat bila tidak ada; simpan `jubelio_contact_id` sekali. Sekaligus: job update contact dari AUTH-06 | INT-JB-09 |
 | Sales order | Data item dari INT-JB-07 (di-cache 1 jam per `item_id`). SO dengan `ref_no` = `order_number`, `store_id`, `location_id`, `tax_id` No Tax, ongkir, dan `shipper`. Tidak pernah ada dua SO dengan `ref_no` sama (dicek lewat INT-JB-13, cocok persis) | INT-JB-07, INT-JB-10, INT-JB-13 |
@@ -220,7 +220,7 @@ WH-02 – WH-04 (Jubelio) dan WH-01 (Gapura) sudah aktif penuh: WH-01 memverifik
 
 | Hal | Dampak ke fase ini | Penanganan sementara |
 | --- | --- | --- |
-| Dokumentasi rates + kredensial Jubelio Shipment | Ongkir asli belum bisa dipakai | Driver `stub`; cukup ganti driver saat dokumen ada |
+| API key RajaOngkir | Ongkir asli belum teruji | Driver `stub`; isi `RAJAONGKIR_API_KEY` dan `SHIPPING_DRIVER=rajaongkir`, lalu uji satu panggilan nyata |
 | Durasi batas bayar Gapura | `validUpTo` order | `GAPURA_PAYMENT_DURATION=600` (10 menit, diputuskan 20 Okt 2026) |
 | Metode pembayaran Gapura | Metode yang aktif di akun DANA | Diatur di Merchant Portal DANA |
 | ~~`store_id` toko internal~~ | — | Selesai: "Website" `-102` (Fase 1) |
@@ -320,7 +320,7 @@ Diambil dari PRD §9 dan `integrations.md`. Kolom kedua menunjukkan fase yang pa
 | --- | --- | --- |
 | ~~Toko internal + `store_id`~~ | — | Terjawab: "Website" `-102` |
 | ~~Nama header signature webhook Jubelio~~ | — | Terjawab: `sign`, HMAC-SHA256 (`api/dist.yaml`); dipastikan dengan webhook asli pertama |
-| Dokumentasi rates + kredensial Jubelio Shipment | Fase 4 | Driver `stub` |
+| ~~Dokumentasi rates + kredensial Jubelio Shipment~~ | Fase 4 | Diganti RajaOngkir (20 Okt 2026); menunggu API key untuk uji nyata |
 | ~~Durasi batas bayar Gapura~~ | Fase 4 | Selesai: 10 menit (`GAPURA_PAYMENT_DURATION=600`) |
 | Metode pembayaran Gapura | Fase 4 | Diatur di Merchant Portal DANA |
 | Harga promo Jubelio (`promotion_price`) ikut dipakai atau tidak | Fase 4 | Versi 1 memakai harga INT-JB-04 (INT-JB-07) |
