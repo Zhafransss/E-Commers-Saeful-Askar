@@ -12,7 +12,8 @@ use App\Http\Controllers\Admin;
 use App\Http\Controllers\Api\V1;
 use Illuminate\Support\Facades\Route;
 
-Route::pattern('id', '[0-9]+');
+// At most 18 digits: a longer number overflows PHP's int and would be a 500 instead of a 404.
+Route::pattern('id', '[0-9]{1,18}');
 
 // --- Public -----------------------------------------------------------------
 
@@ -20,8 +21,8 @@ Route::middleware('throttle:auth')->prefix('auth')->group(function () {
     Route::post('register', [V1\AuthController::class, 'register']);              // AUTH-02
     Route::post('login', [V1\AuthController::class, 'login']);                    // AUTH-03
     Route::post('forgot-password', [V1\AuthController::class, 'forgotPassword']); // AUTH-08
+    Route::post('reset-password', [V1\AuthController::class, 'resetPassword']);   // AUTH-09
 });
-Route::post('auth/reset-password', [V1\AuthController::class, 'resetPassword']);  // AUTH-09
 
 Route::get('categories', [V1\CategoryController::class, 'index']);                // CAT-01
 Route::get('products', [V1\ProductController::class, 'index']);                   // CAT-02

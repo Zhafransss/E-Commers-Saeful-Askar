@@ -9,6 +9,8 @@ use Illuminate\Testing\TestResponse;
 use Monolog\Handler\TestHandler;
 use Tests\TestCase;
 
+require_once __DIR__.'/Feature/BlackBox/Helpers.php';
+
 /*
 |--------------------------------------------------------------------------
 | Test Case
