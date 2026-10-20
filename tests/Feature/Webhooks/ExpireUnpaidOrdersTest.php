@@ -11,6 +11,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 
@@ -120,7 +121,7 @@ test('a paid answer with a different amount changes nothing', function () {
 });
 
 test('the job runs every five minutes without overlapping', function () {
-    $event = collect(app(Illuminate\Console\Scheduling\Schedule::class)->events())
+    $event = collect(app(Schedule::class)->events())
         ->first(fn ($event) => str_contains($event->command, 'orders:expire-unpaid'));
 
     expect($event)->not->toBeNull()->and($event->expression)->toBe('*/5 * * * *')->and($event->withoutOverlapping)->toBeTrue();

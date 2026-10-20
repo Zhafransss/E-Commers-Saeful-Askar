@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\IntegrationException;
+use App\Jobs\Jubelio\UpdateJubelioContactJob;
 use App\Models\Address;
 use App\Models\Order;
 use App\Models\User;
@@ -8,6 +9,7 @@ use App\Services\Jubelio\ContactService;
 use App\Services\Jubelio\SalesOrderService;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 
 /*
 | INT-JB-09 – INT-JB-13 (docs/api/integrations.md): contact, unpaid sales order, paid, cancel, and the
@@ -238,4 +240,35 @@ test('paying or cancelling an order that has no sales order is a programming err
 
     expect(fn () => app(SalesOrderService::class)->markPaid($order))->toThrow(LogicException::class)
         ->and(fn () => app(SalesOrderService::class)->cancel($order))->toThrow(LogicException::class);
+});
+
+// --- AUTH-06: a changed profile reaches the Jubelio contact ----------------------------------
+
+test('AUTH-06 queues a contact update when the name or phone of a customer with a contact changes', function () {
+    Queue::fake();
+    $this->user->forceFill(['jubelio_contact_id' => 5512])->save();
+
+    $this->actingAs($this->user)->putJson('/api/v1/auth/profile', ['name' => 'Nama Baru', 'phone' => '081298765432'])->assertOk();
+
+    Queue::assertPushed(UpdateJubelioContactJob::class, fn (UpdateJubelioContactJob $job) => $job->userId === $this->user->id);
+});
+
+test('AUTH-06 queues nothing when the customer has no contact yet, or nothing changed', function () {
+    Queue::fake();
+
+    $this->actingAs($this->user)->putJson('/api/v1/auth/profile', ['name' => 'Nama Baru', 'phone' => '081298765432'])->assertOk();
+
+    $this->user->refresh()->forceFill(['jubelio_contact_id' => 5512])->save();
+    $this->actingAs($this->user)->putJson('/api/v1/auth/profile', ['name' => 'Nama Baru', 'phone' => '081298765432'])->assertOk();
+
+    Queue::assertNothingPushed();
+});
+
+test('the contact job sends the profile as it is when it runs, to the existing contact', function () {
+    $this->user->forceFill(['jubelio_contact_id' => 5512, 'name' => 'Nama Baru', 'phone' => '081298765432'])->save();
+
+    (new UpdateJubelioContactJob($this->user->id))->handle(app(ContactService::class));
+
+    $body = jubelioCallsTo('POST', '/contacts/')[0]->data();
+    expect($body)->toMatchArray(['contact_id' => 5512, 'contact_name' => 'Nama Baru', 'phone' => '081298765432']);
 });

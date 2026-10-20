@@ -12,6 +12,7 @@ use App\Http\Requests\Api\V1\ResetPasswordRequest;
 use App\Http\Requests\Api\V1\UpdatePasswordRequest;
 use App\Http\Requests\Api\V1\UpdateProfileRequest;
 use App\Http\Resources\Api\V1\UserResource;
+use App\Jobs\Jubelio\UpdateJubelioContactJob;
 use App\Models\User;
 use App\Support\PhoneNumber;
 use App\Support\UserSessions;
@@ -87,8 +88,8 @@ class AuthController extends Controller
     }
 
     /**
-     * AUTH-06 · Ubah profil. Updating the Jubelio contact (INT-JB-09) comes with
-     * Fase 4, since jubelio_contact_id is only filled at the first checkout.
+     * AUTH-06 · Ubah profil. A changed name or phone is sent to the Jubelio contact (INT-JB-09) by the queue;
+     * a customer who never checked out has no contact yet, so there is nothing to send.
      */
     public function updateProfile(UpdateProfileRequest $request): JsonResponse
     {
@@ -97,6 +98,10 @@ class AuthController extends Controller
             'name' => $request->validated('name'),
             'phone' => PhoneNumber::normalize($request->validated('phone')),
         ]);
+
+        if ($user->wasChanged(['name', 'phone']) && $user->jubelio_contact_id !== null) {
+            UpdateJubelioContactJob::dispatch($user->id);
+        }
 
         return $this->user($user, 'Profil diperbarui.');
     }

@@ -14,8 +14,8 @@ Isi teknis setiap fase diringkas dari Acceptance Criteria di API Contract. Bila 
 | 1 | Infrastruktur integrasi | 1–2 | — (INT-HDL, INT-JB-01, INT-JB-14) | 0 | Sedang | Selesai |
 | 2 | Katalog & sinkron Jubelio | 2 | CAT-01–03, WH-02–04 | 1 | Besar | Selesai (webhook asli pertama belum diterima) |
 | 3 | Akun, alamat, keranjang | 3 | AUTH-02–09, REG-01–04, ADDR-01–06, CART-01–06 | 0 (REG: 1, CART: 2) | Besar | Selesai |
-| 4 | Ongkir & checkout | 4 | SHIP-01, ORD-01 | 2, 3 | Besar | Belum mulai |
-| 5 | Pembayaran & siklus pesanan | 4–5 | WH-01, WH-05, ORD-02–05 | 4 | Besar | Belum mulai |
+| 4 | Ongkir & checkout | 4 | SHIP-01, ORD-01 | 2, 3 | Besar | Selesai (ongkir masih driver `stub`) |
+| 5 | Pembayaran & siklus pesanan | 4–5 | WH-01, WH-05, ORD-02–05 | 4 | Besar | Selesai kecuali WH-05 (resi/status dikirim, ditunda) |
 | 6 | Panel admin | 5 | ADM-09–14 | ADM-09–12: 5, ADM-13–14: 2 | Sedang | Belum mulai |
 | 7 | Uji terpadu & rilis | 6 | — | 1–6 | Sedang | Belum mulai |
 
@@ -99,7 +99,7 @@ Sudah ada di commit `80aca15`:
 | Endpoint webhook WH-xx | Controller: `return $receiver->jubelio($request, 'update-qty', [aturan validasi]);` atau `$receiver->gapura($request, $gapura)`; logika di kelas `WebhookHandler` yang didaftarkan di `config/webhooks.php` | Lempar `WebhookEventIgnored` untuk `ignored`, `WebhookEventRejected` untuk `failed` tanpa retry |
 | Fixture test | `fixture('jubelio/….json')`, `fixtureContent()` untuk body mentah webhook | `Http::preventStrayRequests()` aktif di semua test |
 
-WH-02 – WH-04 (Jubelio) sudah aktif. WH-01 (Gapura) sudah menerima, memverifikasi, menyimpan, dan membalas `2005600`, tetapi logika bayar/kedaluwarsa (handler di `config/webhooks.php`) baru dibangun di Fase 5; sampai itu event yang masuk berstatus `failed` "tidak ada handler" dan tetap terlihat di `webhook_events`. WH-05 (Jubelio) masih `501` sampai Fase 5, agar Jubelio tetap mengirim ulang event yang belum bisa diproses.
+WH-02 – WH-04 (Jubelio) dan WH-01 (Gapura) sudah aktif penuh: WH-01 memverifikasi tanda tangan, menyimpan, membalas `2005600`, lalu `GapuraPaymentNotified` (terdaftar di `config/webhooks.php`) menandai order lunas atau kedaluwarsa. WH-05 (Jubelio, nomor resi dan status dikirim) **ditunda** dan tetap `501`, sampai diputuskan apakah pengiriman memakai Jubelio Shipment.
 
 **Blocker / pertanyaan terbuka.**
 
@@ -167,7 +167,7 @@ WH-02 – WH-04 (Jubelio) sudah aktif. WH-01 (Gapura) sudah menerima, memverifik
 
 **Urutan di dalam fase.** Auth dulu (tidak butuh Jubelio, dan store `auth` di frontend bergantung pada AUTH-05), lalu keranjang (cukup dengan `DemoCatalogSeeder` bila Fase 2 belum selesai), lalu region dan alamat (butuh client Fase 1).
 
-**Ditunda ke Fase 4.** AUTH-06 mengantrekan update contact Jubelio (INT-JB-09) bila user sudah punya `jubelio_contact_id`. Karena `jubelio_contact_id` baru terisi saat checkout pertama, bagian ini dibangun bersama INT-JB-09 di Fase 4. Di Fase 3, AUTH-06 cukup menyimpan nama dan nomor.
+**Selesai di Fase 4.** AUTH-06 mengantrekan `UpdateJubelioContactJob` (INT-JB-09) bila nama atau nomor berubah dan user sudah punya `jubelio_contact_id`. `jubelio_contact_id` baru terisi saat checkout pertama, jadi bagian ini dibangun bersama INT-JB-09.
 
 **Definisi selesai.**
 
@@ -190,6 +190,9 @@ WH-02 – WH-04 (Jubelio) sudah aktif. WH-01 (Gapura) sudah menerima, memverifik
 ---
 
 ## Fase 4 — Ongkir & checkout
+
+> **Status: selesai (20 Okt 2026).** Ongkir masih driver `stub` (tarif contoh per zona dan berat, `StubRates`); ganti driver bila Jubelio Shipment atau penyedia lain sudah dipastikan. Checkout nyata ke Jubelio dan Gapura sandbox sudah dicoba (order `WEB-000001`–`000003`).
+> **Penyimpangan dari rencana:** `INT-JB-07` sengaja tidak dipakai; sales order memakai snapshot `order_items` (unit, harga, berat) dan `config('jubelio.tax_id')`. Jubelio asli meminta semua id wilayah kontak (`s_province_id`, `s_city_id`, `s_subdistrict_id`) berupa teks.
 
 **Tujuan.** Customer melihat tarif kurir, lalu menekan Bayar. Website mengecek ulang stok ke Jubelio, membuat sales order belum bayar di toko "Website Saeful Askar", membuat order Gapura, dan mengarahkan customer ke halaman bayar.
 
@@ -228,6 +231,9 @@ WH-02 – WH-04 (Jubelio) sudah aktif. WH-01 (Gapura) sudah menerima, memverifik
 ---
 
 ## Fase 5 — Pembayaran & siklus pesanan
+
+> **Status: selesai kecuali WH-05 (20 Okt 2026).** WH-01, `orders:expire-unpaid`, ORD-02–05, `OrderPaymentService`, `OrderCancellationService`, dan email "Pembayaran diterima" / "Pesanan dibatalkan" sudah jalan; pembayaran sandbox (BRI VA) menandai order lunas di website dan Jubelio. **Ditunda:** WH-05 (nomor resi, status dikirim/selesai) dan email "Pesanan dikirim" (template `OrderShippedMail` sudah ada, belum dipanggil).
+> **Catatan sandbox DANA:** batas bayar dipotong jadi 30 menit; metode "DANA" (dompet) butuh akun uji, jadi uji dengan Virtual Account. Pembayaran VA disimulasikan lewat menu uji di dashboard DANA sandbox.
 
 **Tujuan.** Status order selalu mengikuti Gapura dan Jubelio. Order lunas diteruskan ke gudang; order yang kedaluwarsa atau dibatalkan mengembalikan stok; customer bisa melihat riwayat, status, dan nomor resi.
 

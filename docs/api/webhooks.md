@@ -299,6 +299,8 @@ Sebagai sistem, saya ingin memperbarui stok setiap kali stok berubah di Jubelio 
 
 ## WH-05 · Sales order berubah di Jubelio
 
+> **Ditunda (20 Okt 2026).** Endpoint masih membalas `501`. Nomor resi dan status dikirim/selesai menunggu keputusan apakah pengiriman memakai Jubelio Shipment. Pesanan yang sudah lunas berhenti di `paid` sampai ini dikerjakan.
+
 ### Endpoint
 
 `POST /webhooks/jubelio/salesorder` · **Webhook (Jubelio)** · action `update-salesorder`

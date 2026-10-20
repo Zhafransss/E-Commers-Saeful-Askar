@@ -376,6 +376,8 @@ Lihat INT-HDL. Saat checkout (ORD-01) kegagalan dibalas `502 INTEGRATION_ERROR` 
 
 ## INT-JB-07 · Data item untuk sales order
 
+> **Tidak dipakai di v1 (20 Okt 2026).** Sales order dibuat dari snapshot `order_items` (unit, harga, berat) dan `config('jubelio.tax_id')`, jadi panggilan ini tidak diperlukan. Harga promo Jubelio tidak ikut; harga yang dipakai adalah harga INT-JB-04.
+
 ### Endpoint
 
 `GET https://api2.jubelio.com/inventory/items/to-sell/{location_id}?type={type}&page=1&pageSize=200`
@@ -496,7 +498,7 @@ Sebagai backend, saya ingin memastikan setiap customer website punya contact di 
 | `contact_type`\* | Ya | `0` (Customer) |
 | `email` | Tidak | `users.email` |
 | `phone`, `mobile` | Tidak | `users.phone` |
-| `s_address`, `s_province`, `s_province_id`, `s_city`, `s_city_id`, `s_district_id`, `s_subdistrict`, `s_subdistrict_id`, `s_post_code` | Tidak | Alamat pengiriman pesanan saat itu |
+| `s_address`, `s_province`, `s_province_id`, `s_city`, `s_city_id`, `s_district_id`, `s_subdistrict`, `s_subdistrict_id`, `s_post_code` | Tidak | Alamat pengiriman pesanan saat itu. **Diuji di akun asli:** semua id wilayah (`s_province_id`, `s_city_id`, `s_district_id`, `s_subdistrict_id`) harus berupa teks; angka ditolak `HTTP 400` |
 | `payment_term` | Tidak | `-1` (Cash) |
 | `source_detail` | Tidak | `"Website Saeful Askar"` |
 

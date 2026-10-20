@@ -12,6 +12,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 
@@ -103,9 +104,9 @@ test('ORD-04 on an order past its deadline asks DANA, and a payment that arrived
 test('ORD-05 closes the DANA order, cancels the order and the sales order, and tells the customer', function () {
     $order = placed($this->user, 'WEB-000030');
     dana([new Response(200, [], json_encode(['responseCode' => '2005700', 'responseMessage' => 'Successful', 'originalPartnerReferenceNo' => 'WEB-000030', 'originalReferenceNo' => 'R']))]);
-    \Illuminate\Support\Facades\Http::fake([
-        '*/login' => \Illuminate\Support\Facades\Http::response(fixture('jubelio/login.json')),
-        '*/sales/orders/cancel/' => \Illuminate\Support\Facades\Http::response(['status' => 'ok']),
+    Http::fake([
+        '*/login' => Http::response(fixture('jubelio/login.json')),
+        '*/sales/orders/cancel/' => Http::response(['status' => 'ok']),
     ]);
 
     $this->actingAs($this->user)->postJson('/api/v1/orders/WEB-000030/cancel', ['reason' => 'Ingin ganti warna'])->assertOk()
@@ -120,7 +121,7 @@ test('ORD-05 closes the DANA order, cancels the order and the sales order, and t
 test('ORD-05 keeps the cancellation when Jubelio is down and retries through the queue', function () {
     $order = placed($this->user, 'WEB-000031');
     dana([new Response(200, [], json_encode(['responseCode' => '2005700', 'responseMessage' => 'Successful', 'originalPartnerReferenceNo' => 'WEB-000031', 'originalReferenceNo' => 'R']))]);
-    \Illuminate\Support\Facades\Http::fake(['*' => \Illuminate\Support\Facades\Http::response(['message' => 'boom'], 500)]);
+    Http::fake(['*' => Http::response(['message' => 'boom'], 500)]);
 
     $this->actingAs($this->user)->postJson('/api/v1/orders/WEB-000031/cancel')->assertOk();
 
