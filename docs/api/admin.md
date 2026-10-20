@@ -334,6 +334,7 @@ Tidak ada.
 | --- | --- | --- |
 | 401/403 | `UNAUTHENTICATED` / `FORBIDDEN` | Lihat error umum |
 | 404 | `ORDER_NOT_FOUND` | Nomor tidak ada |
+| 409 | `ORDER_HAS_NO_PAYMENT` | Pesanan tidak punya order pembayaran di Gapura (mis. checkout yang gagal sebelum order Gapura dibuat) |
 | 502 | `INTEGRATION_ERROR` | Gapura tidak merespons |
 
 ```json

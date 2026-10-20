@@ -16,7 +16,7 @@ Isi teknis setiap fase diringkas dari Acceptance Criteria di API Contract. Bila 
 | 3 | Akun, alamat, keranjang | 3 | AUTH-02–09, REG-01–04, ADDR-01–06, CART-01–06 | 0 (REG: 1, CART: 2) | Besar | Selesai |
 | 4 | Ongkir & checkout | 4 | SHIP-01, ORD-01 | 2, 3 | Besar | Selesai (ongkir masih driver `stub`) |
 | 5 | Pembayaran & siklus pesanan | 4–5 | WH-01, WH-05, ORD-02–05 | 4 | Besar | Selesai kecuali WH-05 (resi/status dikirim, ditunda) |
-| 6 | Panel admin | 5 | ADM-09–14 | ADM-09–12: 5, ADM-13–14: 2 | Sedang | Belum mulai |
+| 6 | Panel admin | 5 | ADM-09–14 | ADM-09–12: 5, ADM-13–14: 2 | Sedang | API selesai (halaman admin belum) |
 | 7 | Uji terpadu & rilis | 6 | — | 1–6 | Sedang | Belum mulai |
 
 Total: 1 + 6 + 24 + 2 + 6 + 6 = **45 endpoint v1** (40 frontend + 5 webhook). Fitur artikel (ART-01–02, ADM-02–08) dihapus dari lingkup. ADM-01, ADM-15, ADM-16, ADM-17 ditunda ke v1.1 dan tidak ada di roadmap ini.
@@ -264,6 +264,8 @@ WH-02 – WH-04 (Jubelio) dan WH-01 (Gapura) sudah aktif penuh: WH-01 memverifik
 ---
 
 ## Fase 6 — Panel admin
+
+> **Status API: selesai (20 Okt 2026).** ADM-09 – ADM-14, job `PushOrderToJubelioJob` / `RunManualSyncJob`, dan `sync-logs:prune` (harian) sudah jalan dan teruji. Tambahan di luar kontrak awal: `ORDER_HAS_NO_PAYMENT` (409) di ADM-12. ADM-11 `create` menolak order yang dibatalkan atau checkout-nya gagal, dan untuk order yang sudah lunas langsung disusul `mark_paid`. **Belum:** halaman admin di frontend (`/admin/orders`, dll).
 
 **Tujuan.** Admin bisa memantau order website beserta status sinkron Jubelio, mengirim ulang order yang gagal, dan menjalankan sinkron manual.
 

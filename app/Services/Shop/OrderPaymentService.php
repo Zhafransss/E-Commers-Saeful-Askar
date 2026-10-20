@@ -114,12 +114,24 @@ class OrderPaymentService
      */
     public function reconcile(Order $order): ?PaymentOutcome
     {
+        return $this->check($order)['outcome'];
+    }
+
+    /**
+     * Like reconcile(), and also says what DANA answered (`latestTransactionStatus`), for the admin screen.
+     *
+     * @return array{code: string, outcome: PaymentOutcome|null}
+     *
+     * @throws IntegrationException When DANA cannot be asked
+     */
+    public function check(Order $order): array
+    {
         $result = $this->gapura->queryPayment($order->order_number);
 
-        return match ($result->status) {
+        return ['code' => $result->statusCode, 'outcome' => match ($result->status) {
             PaymentStatus::Paid => $this->applyPaid($order, $result->amount ?? 0, $result->paidAt, $result->method, $result->channel),
             PaymentStatus::Expired => $this->applyExpired($order),
             PaymentStatus::Pending => null,
-        };
+        }];
     }
 }

@@ -23,8 +23,7 @@ test('customers get 403 FORBIDDEN on admin endpoints', function () {
 test('admins reach admin endpoints', function () {
     $this->actingAs(User::factory()->admin()->create());
 
-    assertApiError($this->getJson('/api/v1/admin/orders'), 501, 'NOT_IMPLEMENTED')
-        ->assertJsonPath('endpoint', 'ADM-09');
+    $this->getJson('/api/v1/admin/orders')->assertOk()->assertJsonStructure(['data', 'meta']);
 });
 
 test('unknown API paths get 404 NOT_FOUND', function () {

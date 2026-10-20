@@ -8,6 +8,8 @@ import checkoutPage from './components/checkoutPage.js';
 import finishPage from './components/finishPage.js';
 import orderPage from './components/orderPage.js';
 import orderList from './components/orderList.js';
+import adminOrders from './components/adminOrders.js';
+import adminSync from './components/adminSync.js';
 import productDetail from './components/productDetail.js';
 import productList from './components/productList.js';
 import { api } from './api/client.js';
@@ -27,6 +29,8 @@ Alpine.data('checkoutPage', checkoutPage);
 Alpine.data('finishPage', finishPage);
 Alpine.data('orderPage', orderPage);
 Alpine.data('orderList', orderList);
+Alpine.data('adminOrders', adminOrders);
+Alpine.data('adminSync', adminSync);
 Alpine.data('productDetail', productDetail);
 Alpine.data('productList', productList);
 

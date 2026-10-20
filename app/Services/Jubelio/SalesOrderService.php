@@ -24,16 +24,37 @@ class SalesOrderService
     /**
      * @return array{id: int, no: string|null} The sales order's id and number (the number may follow later)
      */
-    public function create(Order $order, SyncTrigger $trigger = SyncTrigger::Checkout): array
+    public function create(Order $order, SyncTrigger $trigger = SyncTrigger::Checkout, ?SyncLog $log = null): array
     {
         $result = [];
-        SyncLog::track(SyncType::OrderPush, $trigger, function () use ($order, &$result): int {
+        $this->logged(SyncType::OrderPush, $trigger, $order, function () use ($order, &$result): int {
             $result = $this->push($order);
 
             return 1;
-        }, $order->id);
+        }, $log);
 
         return $result;
+    }
+
+    /**
+     * Runs the call inside a sync log: the one given (an admin resend creates it up front so the
+     * response can name it), or a new one.
+     */
+    private function logged(SyncType $type, SyncTrigger $trigger, Order $order, \Closure $work, ?SyncLog $log): void
+    {
+        if ($log === null) {
+            SyncLog::track($type, $trigger, $work, $order->id);
+
+            return;
+        }
+
+        try {
+            $log->markSucceeded($work());
+        } catch (\Throwable $e) {
+            $log->markFailed($e);
+
+            throw $e;
+        }
     }
 
     /**
@@ -67,25 +88,25 @@ class SalesOrderService
     /**
      * INT-JB-11. Safe to repeat for an order that is already paid.
      */
-    public function markPaid(Order $order, SyncTrigger $trigger = SyncTrigger::Webhook): void
+    public function markPaid(Order $order, SyncTrigger $trigger = SyncTrigger::Webhook, ?SyncLog $log = null): void
     {
-        SyncLog::track(SyncType::OrderPaid, $trigger, function () use ($order): int {
+        $this->logged(SyncType::OrderPaid, $trigger, $order, function () use ($order): int {
             $this->jubelio->setSalesOrdersPaid([$this->salesOrderId($order)]);
 
             return 1;
-        }, $order->id);
+        }, $log);
     }
 
     /**
      * INT-JB-12.
      */
-    public function cancel(Order $order, SyncTrigger $trigger = SyncTrigger::Webhook): void
+    public function cancel(Order $order, SyncTrigger $trigger = SyncTrigger::Webhook, ?SyncLog $log = null): void
     {
-        SyncLog::track(SyncType::OrderCancel, $trigger, function () use ($order): int {
+        $this->logged(SyncType::OrderCancel, $trigger, $order, function () use ($order): int {
             $this->jubelio->cancelSalesOrders([$this->salesOrderId($order)]);
 
             return 1;
-        }, $order->id);
+        }, $log);
     }
 
     /**
