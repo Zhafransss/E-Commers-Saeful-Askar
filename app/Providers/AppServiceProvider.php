@@ -78,7 +78,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Counted per endpoint: failing login 5 times must not also block forgot-password.
         RateLimiter::for('auth', fn (Request $request) => Limit::perMinute(5)
-            ->by($request->path().'|'.mb_strtolower((string) $request->input('email')).'|'.$request->ip()));
+            ->by($request->path().'|'.mb_strtolower(is_string($email = $request->input('email')) ? $email : '').'|'.$request->ip()));
 
         RateLimiter::for('shipping', fn (Request $request) => Limit::perMinute(20)->by($byUserOrIp($request)));
 

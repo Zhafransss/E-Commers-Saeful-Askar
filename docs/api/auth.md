@@ -520,6 +520,7 @@ Sebagai customer yang membuka tautan reset, saya ingin menetapkan password baru,
 | --- | --- | --- |
 | 422 | `INVALID_RESET_TOKEN` | Token salah, sudah dipakai, atau lebih dari 60 menit |
 | 422 | `VALIDATION_ERROR` | Password tidak memenuhi aturan |
+| 429 | `TOO_MANY_REQUESTS` | Lebih dari 5 percobaan/menit (sama seperti AUTH-02/03/08) |
 
 ```json
 {
