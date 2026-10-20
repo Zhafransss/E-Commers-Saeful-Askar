@@ -1,82 +1,89 @@
-# Webhook Masuk (Xendit dan Jubelio)
+# Webhook Masuk (Gapura dan Jubelio)
 
-Webhook dipanggil server Xendit/Jubelio, bukan oleh frontend. Semua webhook mengikuti pola yang sama:
+Webhook dipanggil server Gapura (DANA) dan Jubelio, bukan oleh frontend. Semua webhook mengikuti pola yang sama:
 
-1. Verifikasi token/signature. Gagal → `401`, event tetap dicatat dengan `signature_valid = false`.
+1. Verifikasi signature. Gagal → `401`, event tetap dicatat dengan `signature_valid = false`.
 2. Simpan ke `webhook_events` dengan `idempotency_key` unik. Key yang sudah pernah diproses → balas `200` tanpa memproses lagi.
 3. Balas `200` secepatnya (target < 1 detik).
-4. Proses di queue (`ProcessXenditWebhookJob` / `ProcessJubelioWebhookJob`), lalu ubah status event menjadi `processed`, `ignored`, atau `failed`.
+4. Proses di queue (`ProcessGapuraWebhookJob` / `ProcessJubelioWebhookJob`), lalu ubah status event menjadi `processed`, `ignored`, atau `failed`.
 
-Route webhook dikecualikan dari CSRF dan tidak memakai session. Base URL ada di `README.md`.
+Route webhook dikecualikan dari CSRF dan tidak memakai session. Base URL ada di `README.md`. Webhook Jubelio berada di bawah `/webhooks`; webhook Gapura (WH-01) berada di `/v1.0/debit/notify` karena DANA hanya mau memanggil path itu.
 
 | Pengirim | Percobaan ulang bila bukan 200 | Verifikasi |
 | --- | --- | --- |
-| Xendit | Dikirim ulang otomatis oleh Xendit | Header `x-callback-token` = callback token di dashboard Xendit |
+| Gapura (DANA) | Dikirim ulang oleh DANA hingga 7 hari bila tidak dibalas `2005600` | Header `X-SIGNATURE` = tanda tangan RSA SHA-256 DANA, diverifikasi dengan public key DANA |
 | Jubelio | Hingga 3 kali | Header `sign` = HMAC-SHA256 dari (body + secret key), dengan secret key sebagai kunci |
 
 ---
 
-## WH-01 · Status invoice Xendit
+## WH-01 · Hasil pembayaran dari Gapura (Finish Notify)
 
 ### Endpoint
 
-`POST /webhooks/xendit/invoice` · **Webhook (Xendit)**
+`POST /v1.0/debit/notify` · **Webhook (Gapura / DANA)**
+
+Path ini ditetapkan DANA (format ASPI) dan dipakai DANA untuk menandatangani request, jadi route-nya berada di root, bukan di bawah `/webhooks`. URL lengkapnya dikirim ke DANA saat Create Order (`urlParams` bertipe `NOTIFICATION`, INT-GP-01) dan juga diisi di Merchant Portal DANA.
 
 | Header | Wajib | Keterangan |
 | --- | --- | --- |
-| `x-callback-token` | Ya | Harus sama dengan `XENDIT_CALLBACK_TOKEN` |
+| `X-SIGNATURE` | Ya | Tanda tangan RSA SHA-256 dari DANA (Base64), diverifikasi dengan **public key DANA** |
+| `X-TIMESTAMP` | Ya | Waktu kirim, `YYYY-MM-DDTHH:mm:ss+07:00` |
+| `X-PARTNER-ID`, `X-EXTERNAL-ID`, `CHANNEL-ID` | Ya | Identitas pesan dari DANA |
 | `Content-Type` | Ya | `application/json` |
 
-Didaftarkan di dashboard Xendit: Settings → Callbacks → Invoices paid / expired.
+String yang ditandatangani: `POST:/v1.0/debit/notify:<hex sha256 dari body yang di-minify, huruf kecil>:<X-TIMESTAMP>`. Verifikasi dilakukan SDK resmi (`Dana\Webhook\v1\WebhookParser`) lewat `GapuraClient::parseNotification()`. Di sandbox SDK memakai public key DANA bawaannya; di produksi memakai file dari `GAPURA_DANA_PUBLIC_KEY_PATH`.
 
 ### User Story
 
-Sebagai sistem, saya ingin tahu begitu invoice Xendit dibayar atau kedaluwarsa, agar pesanan langsung ditandai lunas dan diteruskan ke gudang, atau dibatalkan dan stoknya dikembalikan.
+Sebagai sistem, saya ingin tahu begitu pembayaran di DANA selesai atau order DANA ditutup karena kedaluwarsa, agar pesanan langsung ditandai lunas dan diteruskan ke gudang, atau dibatalkan dan stoknya dikembalikan.
 
 ### Request Body
 
-Dikirim Xendit. Field yang dipakai:
+Dikirim DANA. Field yang dipakai:
 
 | Field | Tipe | Keterangan |
 | --- | --- | --- |
-| `id` | string | ID invoice Xendit = `payments.xendit_invoice_id` |
-| `external_id` | string | = `order_number` (mis. `WEB-000123`) |
-| `status` | string | `PAID`, `SETTLED`, atau `EXPIRED` |
-| `amount` | number | Total tagihan |
-| `paid_amount` | number | Jumlah yang dibayar (saat `PAID`/`SETTLED`) |
-| `paid_at` | string | Waktu bayar (ISO 8601, UTC) |
-| `payment_method` | string | mis. `BANK_TRANSFER`, `EWALLET`, `QR_CODE`, `CREDIT_CARD` |
-| `payment_channel` | string | mis. `BCA`, `OVO`, `QRIS` |
-| `updated` | string | Waktu perubahan terakhir |
+| `originalPartnerReferenceNo` | string | = `order_number` (mis. `WEB-000123`) = `payments.partner_reference_no` |
+| `originalReferenceNo` | string | ID order di DANA = `payments.gapura_reference_no` |
+| `merchantId` | string | Harus sama dengan `GAPURA_MERCHANT_ID` |
+| `amount` | object | `{ "value": "6935000.00", "currency": "IDR" }` — total tagihan |
+| `latestTransactionStatus` | string | `00` lunas, `02` sedang diproses (pembayaran berhasil), `05` order ditutup (kedaluwarsa atau dibatalkan) |
+| `transactionStatusDesc` | string | mis. `success` |
+| `createdTime`, `finishedTime` | string | `YYYY-MM-DDTHH:mm:ss+07:00` |
+| `additionalInfo.paymentInfo.paidTime` | string | Waktu bayar (saat `00`/`02`) |
+| `additionalInfo.paymentInfo.payOptionInfos[]` | array | `payMethod` (mis. `VIRTUAL_ACCOUNT`, `NETWORK_PAY`, `CREDIT_CARD`) dan `payOption` (mis. `VIRTUAL_ACCOUNT_BCA`, `NETWORK_PAY_PG_OVO`) |
+| `additionalInfo.extendInfo` | string (JSON) | Saat `05`: `{"closedReason":"…"}` |
 
 ```json
 {
-  "id": "6527a1b2c3d4e5f6a7b8c9d0",
-  "external_id": "WEB-000123",
-  "user_id": "5f1a2b3c4d5e6f7a8b9c0d1e",
-  "status": "PAID",
-  "merchant_name": "Saeful Askar",
-  "amount": 6935000,
-  "paid_amount": 6935000,
-  "payer_email": "budi@example.com",
-  "description": "Pesanan WEB-000123 - Toko Sepeda Listrik Saeful Askar",
-  "currency": "IDR",
-  "payment_method": "BANK_TRANSFER",
-  "payment_channel": "BCA",
-  "payment_destination": "8808999912345678",
-  "paid_at": "2026-10-14T14:42:10.000Z",
-  "created": "2026-10-14T14:30:00.000Z",
-  "updated": "2026-10-14T14:42:11.000Z"
+  "originalPartnerReferenceNo": "WEB-000123",
+  "originalReferenceNo": "20261020111212800110166000000000001",
+  "merchantId": "216620000000000000000",
+  "amount": { "value": "6935000.00", "currency": "IDR" },
+  "latestTransactionStatus": "00",
+  "transactionStatusDesc": "success",
+  "createdTime": "2026-10-20T10:30:00+07:00",
+  "finishedTime": "2026-10-20T10:42:11+07:00",
+  "additionalInfo": {
+    "paymentInfo": {
+      "cashierRequestId": "64c4fdc544a7edff9c1e51aebc80f2eb",
+      "paidTime": "2026-10-20T10:42:10+07:00",
+      "payOptionInfos": [
+        { "payMethod": "VIRTUAL_ACCOUNT", "payOption": "VIRTUAL_ACCOUNT_BCA", "payAmount": { "value": "6935000.00", "currency": "IDR" } }
+      ]
+    }
+  }
 }
 ```
 
 ### Response Success
 
-`200 OK` (juga untuk event duplikat dan event yang diabaikan, agar Xendit berhenti mengirim ulang).
+`200 OK` (juga untuk event duplikat dan event yang diabaikan). Bentuk balasan ditentukan DANA; bila tidak menerima `2005600`, DANA mengirim ulang hingga 7 hari.
 
 ```json
 {
-  "received": true
+  "responseCode": "2005600",
+  "responseMessage": "Successful"
 }
 ```
 
@@ -84,33 +91,34 @@ Dikirim Xendit. Field yang dipakai:
 
 | HTTP | `code` | Kapan |
 | --- | --- | --- |
-| 401 | `INVALID_CALLBACK_TOKEN` | Header tidak ada atau tidak cocok |
-| 422 | `VALIDATION_ERROR` | `id`, `external_id`, atau `status` tidak ada |
-| 500 | `SERVER_ERROR` | Gagal menyimpan event (Xendit akan mengirim ulang) |
+| 401 | `INVALID_SIGNATURE` | `X-SIGNATURE` atau `X-TIMESTAMP` tidak ada, atau tanda tangan tidak cocok dengan body |
+| 422 | `VALIDATION_ERROR` | `originalPartnerReferenceNo`, `originalReferenceNo`, atau `latestTransactionStatus` tidak ada |
+| 500 | `SERVER_ERROR` | Gagal menyimpan event (DANA akan mengirim ulang) |
 
 ```json
 {
-  "message": "Callback token tidak valid.",
-  "code": "INVALID_CALLBACK_TOKEN"
+  "message": "Signature webhook tidak valid.",
+  "code": "INVALID_SIGNATURE"
 }
 ```
 
 ### Acceptance Criteria
 
-- [ ] `idempotency_key` = `xendit:{id}:{status}`; callback yang sama dua kali hanya diproses sekali.
-- [ ] `PAID` atau `SETTLED` pada order `pending_payment`:
-    - [ ] `payments.status = PAID`, `paid_at`, `payment_method`, `payment_channel` tersimpan.
-    - [ ] Order → `paid`, `paid_at`, riwayat status (`source = xendit`).
+- [ ] `idempotency_key` = `gapura:{originalPartnerReferenceNo}:{latestTransactionStatus}`; notifikasi yang sama dua kali hanya diproses sekali.
+- [ ] `00` atau `02` pada order `pending_payment`:
+    - [ ] `payments.status = PAID`, `paid_amount`, `paid_at`, `payment_method` (`payMethod`), `payment_channel` (`payOption`) tersimpan.
+    - [ ] Order → `paid`, `paid_at`, riwayat status (`source = gapura`).
     - [ ] Job `MarkSalesOrderPaidJob` memanggil INT-JB-11; gagal → retry 5 kali dengan jeda bertahap, lalu `jubelio_sync_status = failed`.
     - [ ] Email "Pembayaran diterima" dikirim ke customer.
-- [ ] `EXPIRED` pada order `pending_payment`:
+- [ ] `05` pada order `pending_payment`:
     - [ ] `payments.status = EXPIRED`, order → `expired`, `cancel_reason = "Batas waktu pembayaran habis"`.
     - [ ] Job `CancelSalesOrderJob` memanggil INT-JB-12 agar stok kembali.
     - [ ] Email "Pesanan dibatalkan" dikirim ke customer.
-- [ ] `paid_amount` ≠ `amount` → order tidak diubah, event `failed` dan dicatat di log dengan level `warning` untuk dicek admin (daftar di ADM-15 menyusul di v1.1).
-- [ ] `PAID` untuk order yang sudah `expired`/`cancelled` → order tidak diubah, event `failed` dengan pesan "Dibayar setelah dibatalkan — perlu refund/proses manual".
-- [ ] `external_id` tidak dikenal → event `ignored`, balas 200.
-- [ ] Job cadangan `ExpireUnpaidOrders` (tiap 5 menit) menjalankan alur `EXPIRED` untuk order yang lewat `payment_expires_at` setelah memastikan status invoice di Xendit (INT-XD-02).
+- [ ] `05` untuk order yang sudah `cancelled` (dibatalkan customer lewat ORD-05) → diabaikan dengan aman, balas `2005600`.
+- [ ] `amount.value` ≠ `payments.amount` (atau `merchantId` bukan milik kita) → order tidak diubah, event `failed` dan dicatat di log dengan level `warning` untuk dicek admin (daftar di ADM-15 menyusul di v1.1).
+- [ ] `00`/`02` untuk order yang sudah `expired`/`cancelled` → order tidak diubah, event `failed` dengan pesan "Dibayar setelah dibatalkan — perlu refund/proses manual".
+- [ ] `originalPartnerReferenceNo` tidak dikenal → event `ignored`, balas `2005600`.
+- [ ] Job cadangan `ExpireUnpaidOrders` (tiap 5 menit) menjalankan alur `05` untuk order yang lewat `payment_expires_at` setelah memastikan status di DANA (INT-GP-02).
 
 ---
 

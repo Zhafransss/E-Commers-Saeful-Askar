@@ -125,7 +125,7 @@
                     <a href="{{ route('checkout') }}" x-cloak x-show="! cart.summary.has_issue"
                        class="mt-6 block w-full rounded-full bg-brand py-3.5 text-center font-semibold text-ink transition hover:bg-brand-hover">Checkout</a>
 
-                    <p class="mt-4 text-center text-xs text-gray-500">Pembayaran aman via Xendit</p>
+                    <p class="mt-4 text-center text-xs text-gray-500">Pembayaran aman via DANA</p>
                 </aside>
             </div>
         </div>

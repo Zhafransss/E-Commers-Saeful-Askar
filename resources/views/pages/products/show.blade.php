@@ -196,7 +196,7 @@
                     <h3 class="font-semibold text-brand">Belanja dengan tenang</h3>
                     <ul class="mt-4 space-y-3 text-sm text-gray-300">
                         <li class="flex gap-2"><span class="text-brand">✓</span> Stok sinkron dengan gudang</li>
-                        <li class="flex gap-2"><span class="text-brand">✓</span> Pembayaran aman via Xendit</li>
+                        <li class="flex gap-2"><span class="text-brand">✓</span> Pembayaran aman via DANA</li>
                         <li class="flex gap-2"><span class="text-brand">✓</span> Nomor resi tampil di halaman pesanan</li>
                         <li class="flex gap-2"><span class="text-brand">✓</span> After-sales service di toko kami</li>
                     </ul>

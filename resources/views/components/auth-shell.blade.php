@@ -13,7 +13,7 @@
                     <p class="text-sm font-semibold uppercase tracking-widest text-brand">Toko Sepeda Listrik Bekasi</p>
                     <h2 class="mt-3 text-3xl font-bold leading-tight">Belanja sepeda listrik &amp; sparepart, langsung dari gudang.</h2>
                     <ul class="mt-8 space-y-3 text-sm text-neutral-300">
-                        @foreach (['Harga dan stok sesuai gudang', 'Pembayaran aman via Xendit', 'Lacak pesanan dan nomor resi', 'Service di rumah atau di toko'] as $point)
+                        @foreach (['Harga dan stok sesuai gudang', 'Pembayaran aman via DANA', 'Lacak pesanan dan nomor resi', 'Service di rumah atau di toko'] as $point)
                             <li class="flex items-center gap-3">
                                 <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand text-ink">
                                     <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 1.4-1.4L8 12.6l7.3-7.3a1 1 0 0 1 1.4 0Z" clip-rule="evenodd" /></svg>

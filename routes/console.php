@@ -7,7 +7,7 @@
 |
 | Still to register when their commands exist:
 |
-|   Schedule::command('orders:expire-unpaid')->everyFiveMinutes()->withoutOverlapping();  // backup for missed EXPIRED (WH-01), Fase 5
+|   (orders:expire-unpaid is registered below.)
 |   Schedule::command('sync-logs:prune')->daily();                                        // drop sync_logs older than 90 days (ADM-14), Fase 6
 |
 | withoutOverlapping() uses atomic locks in the `database` cache store (no Redis).
@@ -27,3 +27,6 @@ Schedule::command('jubelio:sync-categories')->dailyAt('02:00')->withoutOverlappi
 Schedule::command('jubelio:sync-products --full')->dailyAt('02:30')->withoutOverlapping();
 Schedule::command('jubelio:sync-products')->everyThirtyMinutes()->withoutOverlapping();
 Schedule::command('jubelio:reconcile-stock')->everyFifteenMinutes()->withoutOverlapping();
+
+// Backup for a Finish Notify that never arrived (WH-01): ask Gapura about orders past their deadline.
+Schedule::command('orders:expire-unpaid')->everyFiveMinutes()->withoutOverlapping();

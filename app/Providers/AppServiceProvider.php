@@ -2,12 +2,12 @@
 
 namespace App\Providers;
 
+use App\Services\Gapura\GapuraClient;
 use App\Services\Jubelio\JubelioClient;
 use App\Services\Jubelio\JubelioTokenManager;
 use App\Services\Jubelio\Mappers\ProductMapper;
 use App\Services\Jubelio\StockSyncService;
 use App\Services\JubelioShipment\JubelioShipmentClient;
-use App\Services\Xendit\XenditClient;
 use App\Support\HtmlSanitizer;
 use Carbon\CarbonInterface;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -42,7 +42,7 @@ class AppServiceProvider extends ServiceProvider
             config('jubelio.location_id'),
         ));
         $this->app->singleton(JubelioShipmentClient::class, fn () => new JubelioShipmentClient(config('jubelio_shipment')));
-        $this->app->singleton(XenditClient::class, fn () => new XenditClient(config('xendit')));
+        $this->app->singleton(GapuraClient::class, fn () => new GapuraClient(config('gapura')));
     }
 
     /**

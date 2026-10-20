@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a53e0d6d1a396476a9c9e19d96528470",
+    "content-hash": "b27db6385908b4deb76879e9de6eaa54",
     "packages": [
         {
             "name": "brick/math",
@@ -139,6 +139,75 @@
                 }
             ],
             "time": "2026-09-06T14:11:38+00:00"
+        },
+        {
+            "name": "danaid/dana-php",
+            "version": "v2.2.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/dana-id/dana-php.git",
+                "reference": "d18b9b4d3b5cec9dae2816e22467741000074c21"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/dana-id/dana-php/zipball/d18b9b4d3b5cec9dae2816e22467741000074c21",
+                "reference": "d18b9b4d3b5cec9dae2816e22467741000074c21",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "ext-json": "*",
+                "ext-mbstring": "*",
+                "guzzlehttp/guzzle": "^7.3",
+                "guzzlehttp/psr7": "^1.7 || ^2.0",
+                "php": "^7.4 || ^8.0",
+                "ramsey/uuid": "^4.0",
+                "vlucas/phpdotenv": "^5.5"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "^3.5",
+                "php-webdriver/webdriver": "^1.15",
+                "phpunit/phpunit": "^8.0 || ^9.0 || ^13.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Dana\\": "lib/"
+                },
+                "classmap": [
+                    "lib/",
+                    "lib/PaymentGateway/v1/Enum/Enum.php",
+                    "lib/Widget/v1/Enum/Enum.php",
+                    "lib/MerchantManagement/v1/Enum/Enum.php",
+                    "lib/Disbursement/v1/Enum/Enum.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "unlicense"
+            ],
+            "authors": [
+                {
+                    "name": "DANA Package Manager",
+                    "homepage": "https://github.com/dana-id/dana-php"
+                }
+            ],
+            "description": "API for doing operations in DANA Payment Gateway (Gapura), Widget, Merchant Management, and Disbursement",
+            "homepage": "https://github.com/dana-id/dana-php",
+            "keywords": [
+                "api",
+                "openapi",
+                "openapi-generator",
+                "openapitools",
+                "php",
+                "rest",
+                "sdk"
+            ],
+            "support": {
+                "issues": "https://github.com/dana-id/dana-php/issues",
+                "source": "https://github.com/dana-id/dana-php/tree/v2.2.3"
+            },
+            "time": "2026-08-04T17:41:24+00:00"
         },
         {
             "name": "dflydev/dot-access-data",
@@ -9399,5 +9468,5 @@
         "php": "^8.2"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.6.0"
 }

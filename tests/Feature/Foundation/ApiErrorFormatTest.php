@@ -90,11 +90,12 @@ test('webhooks run without the web group, so no session or CSRF check', function
 
     expect($middleware)->not->toContain('web')
         ->and($middleware)->not->toContain('api');
-})->with(['webhooks.xendit.invoice', 'webhooks.jubelio.product', 'webhooks.jubelio.price', 'webhooks.jubelio.stock', 'webhooks.jubelio.salesorder']);
+})->with(['webhooks.gapura.notify', 'webhooks.jubelio.product', 'webhooks.jubelio.price', 'webhooks.jubelio.stock', 'webhooks.jubelio.salesorder']);
 
 test('webhooks answer JSON without setting cookies', function () {
-    $response = $this->postJson('/webhooks/xendit/invoice', []);
+    // WH-01 is live: an unsigned notification is refused (and recorded), not answered 501.
+    $response = $this->postJson('/v1.0/debit/notify', []);
 
-    assertApiError($response, 501, 'NOT_IMPLEMENTED');
+    assertApiError($response, 401, 'INVALID_SIGNATURE');
     expect($response->headers->getCookies())->toBeEmpty();
 });

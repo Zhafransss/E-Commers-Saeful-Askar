@@ -20,9 +20,9 @@ use Illuminate\Support\Sleep;
  */
 abstract class IntegrationClient
 {
-    private int $retries = 0;
+    protected int $retries = 0;
 
-    /** Label used in logs and exceptions: jubelio, jubelio_shipment, xendit. */
+    /** Label used in logs and exceptions: jubelio, jubelio_shipment, gapura. */
     abstract protected function service(): string;
 
     public function withinCustomerRequest(): static
@@ -120,7 +120,7 @@ abstract class IntegrationClient
      *
      * @param  array<string, mixed>  $extra
      */
-    private function log(string $level, string $method, string $path, ?int $status, int $startedAt, array $extra = []): void
+    protected function log(string $level, string $method, string $path, ?int $status, int $startedAt, array $extra = []): void
     {
         $durationMs = (int) round((hrtime(true) - $startedAt) / 1_000_000);
 

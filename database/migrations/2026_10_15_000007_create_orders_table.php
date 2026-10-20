@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('orders', function (Blueprint $table): void {
             $table->id();
-            // WEB-000123, derived from id right after insert; sent as Jubelio ref_no and Xendit external_id.
+            // WEB-000123, derived from id right after insert; sent as Jubelio ref_no and Gapura partnerReferenceNo.
             $table->string('order_number', 20)->nullable()->unique();
             $table->foreignId('user_id')->constrained()->restrictOnDelete();
             // Reference only; the shipping_* columns are the snapshot used everywhere.
@@ -53,7 +53,7 @@ return new class extends Migration
             $table->timestamp('paid_at')->nullable();
             $table->timestamp('cancelled_at')->nullable();
             $table->string('cancel_reason')->nullable();
-            // Checkout failed at the Jubelio/Xendit step: hidden from ORD-02, still visible to admins.
+            // Checkout failed at the Jubelio/Gapura step: hidden from ORD-02, still visible to admins.
             $table->boolean('is_checkout_failed')->default(false);
             // Paid order later cancelled in Jubelio: admin must refund manually.
             $table->boolean('requires_refund')->default(false);

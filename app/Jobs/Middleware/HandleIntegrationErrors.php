@@ -6,8 +6,8 @@ use App\Exceptions\IntegrationException;
 use Closure;
 
 /**
- * Applies INT-HDL to a queued job that calls Jubelio, Jubelio Shipment, or Xendit:
- * - not retryable (Xendit 4xx, wrong Jubelio credentials) → fail now, no retry;
+ * Applies INT-HDL to a queued job that calls Jubelio, Jubelio Shipment, or Gapura:
+ * - not retryable (Gapura 4xx, wrong Jubelio credentials) → fail now, no retry;
  * - Jubelio 429 → try again after the wait it asked for (60 seconds);
  * - anything else → rethrow, so the queue retries with the job's backoff.
  */

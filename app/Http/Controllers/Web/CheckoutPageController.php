@@ -14,7 +14,7 @@ class CheckoutPageController extends Controller
     }
 
     /**
-     * Return page from Xendit: /checkout/finish?order=WEB-000123[&failed=1] (INT-XD-01).
+     * Return page from DANA (Gapura): /checkout/finish?order=WEB-000123 (INT-GP-01, urlParams PAY_RETURN).
      * The page polls ORD-03 until the order leaves pending_payment.
      */
     public function finish(Request $request): View

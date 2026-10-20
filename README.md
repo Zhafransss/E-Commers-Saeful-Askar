@@ -1,6 +1,6 @@
 # E-Commers Saeful Askar
 
-Website e-commerce Toko Sepeda Listrik Saeful Askar, terhubung ke Jubelio (katalog, stok, order) dan Xendit (pembayaran).
+Website e-commerce Toko Sepeda Listrik Saeful Askar, terhubung ke Jubelio (katalog, stok, order) dan Gapura / DANA (pembayaran).
 
 ## Tech Stack
 
@@ -80,7 +80,7 @@ Buka http://localhost:8000.
 1. Semua route v1 sudah terdaftar (`routes/api.php`, `routes/webhooks.php`). Endpoint yang belum dibangun membalas `501 NOT_IMPLEMENTED` beserta kode endpointnya. Ganti `throw new NotImplementedException(...)` di controller dengan implementasi sesuai `docs/api/*.md`.
 2. Setiap Resource meng-extend `App\Http\Resources\ApiResource` (bukan `JsonResource`), sehingga `XResource::collection($paginator)` otomatis berbentuk `{ data, meta: { current_page, per_page, total, last_page } }` seperti kontrak. Tanggal otomatis diformat ISO 8601 `+07:00`.
 3. Error domain dilempar sebagai `App\Exceptions\ApiException` (atau turunannya) dengan `code` dari kontrak; error Laravel (auth, validasi, 404, 429, …) sudah otomatis diubah ke format kontrak.
-4. Panggilan ke Jubelio, Jubelio Shipment, dan Xendit hanya lewat `app/Services/*/…Client.php`. Test memakai `Http::fake()` + fixture di `tests/Fixtures/`.
+4. Panggilan ke Jubelio, Jubelio Shipment, dan Gapura hanya lewat `app/Services/*/…Client.php`. Test memakai `Http::fake()` + fixture di `tests/Fixtures/`; Gapura memakai SDK DANA, jadi testnya memakai Guzzle mock handler.
 5. Setiap endpoint wajib punya feature test; helper `assertApiError($response, 409, 'OUT_OF_STOCK')` tersedia di `tests/Pest.php`.
 
 ### Saat kontrak API berubah

@@ -13,14 +13,14 @@ Website e-commerce Toko Sepeda Listrik Saeful Askar adalah channel penjualan bar
 - Konsumen bisa mencari, melihat, dan membeli produk langsung dari website toko.
 - Data produk, harga, dan stok di website sama persis dengan Jubelio.
 - Semua order website masuk otomatis ke Jubelio sebagai toko "Website Saeful Askar", terpisah dari Shopee.
-- Pembayaran online lewat Xendit dengan batas waktu bayar; order yang tidak dibayar dibatalkan otomatis dan stok kembali.
+- Pembayaran online lewat Gapura (DANA) dengan batas waktu bayar; order yang tidak dibayar dibatalkan otomatis dan stok kembali.
 - Backend dan frontend dikerjakan paralel berdasarkan API Contract yang disepakati di awal.
 
 **Ruang lingkup versi 1.**
 
 - Katalog produk (cari, filter kategori, detail varian) yang disinkron dari Jubelio.
 - Registrasi, login, dan buku alamat customer.
-- Keranjang, cek ongkir lewat Jubelio Shipment, checkout, dan pembayaran Xendit.
+- Keranjang, cek ongkir lewat Jubelio Shipment, checkout, dan pembayaran Gapura (DANA).
 - Riwayat dan pelacakan pesanan (status dan nomor resi dari Jubelio), serta pembatalan pesanan yang belum dibayar.
 - Panel admin sederhana: daftar order dan sinkron manual.
 
@@ -42,7 +42,7 @@ Ada dua peran di website: customer yang membeli dan admin toko yang mengelola ko
 3. Sebagai pengunjung, saya diminta login atau daftar saat menambahkan produk ke keranjang.
 4. Sebagai customer, saya bisa menyimpan beberapa alamat dan memilih wilayah dari daftar provinsi, kota, kecamatan, kelurahan.
 5. Sebagai customer, saya bisa melihat pilihan kurir beserta ongkir dan perkiraan waktu sebelum membayar.
-6. Sebagai customer, saya diarahkan ke halaman bayar Xendit dan tahu batas waktu pembayaran.
+6. Sebagai customer, saya diarahkan ke halaman bayar DANA dan tahu batas waktu pembayaran.
 7. Sebagai customer, saya melihat status pesanan dan nomor resi setelah barang dikirim.
 8. Sebagai customer, saya diberi tahu bila pesanan dibatalkan karena batas bayar habis.
 9. Sebagai customer, saya bisa membatalkan pesanan yang belum saya bayar, agar tagihan ditutup dan stok kembali untuk pembeli lain.
@@ -62,7 +62,7 @@ Kebutuhan dibagi per modul; kode di kolom pertama dipakai sebagai acuan di API C
 | F-06 | Akun | Buku alamat dengan wilayah dari endpoint Region Jubelio; satu alamat utama | Wajib |
 | F-07 | Keranjang | Tambah, ubah jumlah, hapus item; jumlah dibatasi stok tersedia dan min/max pembelian | Wajib |
 | F-08 | Ongkir | Tarif kurir dari Jubelio Shipment berdasarkan gudang Tambun Utara, alamat tujuan, dan total berat varian | Wajib |
-| F-09 | Checkout | Cek ulang stok, buat sales order belum bayar di Jubelio, buat invoice Xendit dengan batas waktu | Wajib |
+| F-09 | Checkout | Cek ulang stok, buat sales order belum bayar di Jubelio, buat order Gapura dengan batas waktu | Wajib |
 | F-10 | Pembayaran | Webhook PAID menandai order lunas di website dan Jubelio (set-as-paid) | Wajib |
 | F-11 | Pembayaran | Webhook EXPIRED (atau job cadangan) membatalkan sales order Jubelio dan order website | Wajib |
 | F-12 | Pesanan | Riwayat pesanan, detail, status, nomor resi, dan riwayat status | Wajib |
@@ -70,7 +70,7 @@ Kebutuhan dibagi per modul; kode di kolom pertama dipakai sebagai acuan di API C
 | F-16 | Admin | Daftar order website dengan status pembayaran dan status sinkron Jubelio; kirim ulang order gagal | Wajib |
 | F-17 | Admin | Tombol sinkron katalog manual dan log sinkron | Sebaiknya |
 | F-18 | Notifikasi | Email konfirmasi order, pembayaran diterima, dan pembatalan | Sebaiknya |
-| F-19 | Pesanan | Customer membatalkan pesanan yang belum dibayar: invoice Xendit ditutup, sales order Jubelio dibatalkan, stok kembali (ORD-05) | Wajib |
+| F-19 | Pesanan | Customer membatalkan pesanan yang belum dibayar: order Gapura dibatalkan, sales order Jubelio dibatalkan, stok kembali (ORD-05) | Wajib |
 
 **Aturan bisnis.**
 
@@ -89,7 +89,7 @@ Website memakai tiga layanan luar; Jubelio adalah sumber kebenaran untuk katalog
 | Jubelio Omnichannel (`api2.jubelio.com`) | Katalog, stok, contact, sales order, region, status kirim | `POST /login`, `GET /inventory/items/`, `GET /inventory/items/group/{id}`, `GET /variations/`, `GET /inventory/categories/item-categories/`, `POST /contacts/`, `POST /sales/orders/`, `POST /sales/orders/set-as-paid`, `POST /sales/orders/cancel/`, `GET /region/*` | Token 12 jam; 600 request/menit; order masuk ke toko Internal "Website Saeful Askar" (`store_id`), `source` = 1 |
 | Webhook Jubelio | Perubahan dari Jubelio ke website | `update-product`, `update-price`, `update-qty`, `update-salesorder` | Header `sign` = HMAC-SHA256(body + secret, kunci = secret); dicoba ulang hingga 3 kali |
 | Jubelio Shipment | Tarif ongkir saat checkout | API rates (dokumentasi diminta ke Jubelio) | Client ID + Client Secret; ada mode staging |
-| Xendit | Pembayaran | Buat invoice dengan durasi; webhook invoice PAID dan EXPIRED | Verifikasi callback token |
+| Gapura (DANA), `api.saas.dana.id` (sandbox `api.sandbox.dana.id`) | Pembayaran | Create Order (Hosted Checkout), Query Payment, Cancel Order; webhook Finish Notify `POST /v1.0/debit/notify` (`00`/`02` lunas, `05` ditutup) | Tanda tangan RSA SHA-256: request ditandatangani private key kita, webhook diverifikasi dengan public key DANA; SDK resmi `danaid/dana-php` |
 
 **Sinkron katalog.**
 
@@ -104,9 +104,9 @@ Website memakai tiga layanan luar; Jubelio adalah sumber kebenaran untuk katalog
 2. Customer menekan Bayar; website mengecek ulang stok ke Jubelio.
 3. Bila customer belum punya contact Jubelio, website membuatnya (`POST /contacts/`) dan menyimpan `jubelio_contact_id`.
 4. Website membuat sales order belum bayar di Jubelio dengan `ref_no` WEB-xxxxxx, `store_id` toko website, `location_id` gudang Tambun, pajak 0, ongkir dan kurir.
-5. Website membuat invoice Xendit dengan batas waktu bayar dan mengarahkan customer ke halaman bayar.
-6. Dibayar: webhook PAID → order website `paid` → `set-as-paid` di Jubelio → gudang memproses.
-7. Kedaluwarsa: webhook EXPIRED (atau job cadangan tiap 5 menit) → `cancel` sales order Jubelio → stok kembali → order website `expired`.
+5. Website membuat order Gapura dengan batas waktu bayar dan mengarahkan customer ke halaman bayar DANA (`webRedirectUrl`).
+6. Dibayar: Finish Notify `00`/`02` → order website `paid` → `set-as-paid` di Jubelio → gudang memproses.
+7. Kedaluwarsa: Finish Notify `05` (atau job cadangan tiap 5 menit) → `cancel` sales order Jubelio → stok kembali → order website `expired`.
 8. Webhook `update-salesorder` (hanya `store_id` website) memperbarui status dan nomor resi.
 
 **Status order website.** `pending_payment` → `paid` → `processing` → `shipped` → `completed`; cabang `expired` (batas bayar habis) dan `cancelled` (dibatalkan customer sebelum bayar, atau dibatalkan di Jubelio).
@@ -133,7 +133,7 @@ Satu aplikasi Laravel monolit: halaman Blade memanggil REST API `/api/v1`, dan s
 
 Diagram arsitektur dan alur checkout (Mermaid) ada di [`arsitektur-sistem.md`](arsitektur-sistem.md).
 
-Webhook dari Xendit dan Jubelio dicatat dulu lalu diproses di antrean, sehingga event yang dikirim ulang tidak diproses dua kali.
+Webhook dari Gapura dan Jubelio dicatat dulu lalu diproses di antrean, sehingga event yang dikirim ulang tidak diproses dua kali.
 
 | Lapisan | Teknologi |
 | --- | --- |
@@ -142,7 +142,7 @@ Webhook dari Xendit dan Jubelio dicatat dulu lalu diproses di antrean, sehingga 
 | Autentikasi | Session cookie Laravel (Sanctum stateful) + CSRF |
 | Database | MySQL 8 (lokal: MariaDB 10.4 bawaan XAMPP) |
 | Cache dan antrean | Tanpa Redis: driver `database` Laravel untuk cache (token Jubelio 12 jam, tarif ongkir, region), queue job, dan lock sinkron |
-| Integrasi | Jubelio API, Jubelio Shipment API, Xendit Invoice API |
+| Integrasi | Jubelio API, Jubelio Shipment API, Gapura (DANA) Payment Gateway API lewat SDK `danaid/dana-php` |
 | Kontrak dan mock | Markdown per modul (`docs/api/*.md`) + mock JSON di frontend |
 | Pengujian | PHPUnit/Pest feature + unit test dengan fixture |
 
@@ -173,8 +173,8 @@ saeful-askar/
 │   │   ├── shipping.md                     tarif Jubelio Shipment
 │   │   ├── checkout-orders.md
 │   │   ├── admin.md                        panel admin: pesanan, sinkron
-│   │   ├── webhooks.md                     webhook masuk Xendit & Jubelio
-│   │   └── integrations.md                 panggilan keluar ke Jubelio, Jubelio Shipment, Xendit
+│   │   ├── webhooks.md                     webhook masuk Gapura & Jubelio
+│   │   └── integrations.md                 panggilan keluar ke Jubelio, Jubelio Shipment, Gapura
 │   ├── PRD-Website-ECommerce-Saeful-Askar.md   kebutuhan produk (acuan utama)
 │   ├── arsitektur-sistem.md                diagram arsitektur, alur checkout, struktur folder
 │   └── erd.md                              ERD v2: kolom, relasi, index 13 tabel (pemetaan field Jubelio ada di api/integrations.md)
@@ -221,7 +221,7 @@ saeful-askar/
 │   │   │   │   ├── OrderController.php
 │   │   │   │   └── SyncController.php          tombol sinkron manual + log
 │   │   │   └── Webhook/
-│   │   │       ├── XenditWebhookController.php
+│   │   │       ├── GapuraWebhookController.php
 │   │   │       └── JubelioWebhookController.php
 │   │   ├── Middleware/
 │   │   │   ├── EnsureUserIsAdmin.php
@@ -238,7 +238,7 @@ saeful-askar/
 │   │   │   └── CancelSalesOrderJob.php
 │   │   └── Webhooks/
 │   │       ├── ProcessJubelioWebhookJob.php
-│   │       └── ProcessXenditWebhookJob.php
+│   │       └── ProcessGapuraWebhookJob.php
 │   ├── Models/                             User, Address, Category, Product, ProductVariant, ProductImage, CartItem,
 │   │                                       Order, OrderItem, Payment, OrderStatusHistory, WebhookEvent, SyncLog
 │   ├── Policies/
@@ -260,14 +260,14 @@ saeful-askar/
 │   │   ├── JubelioShipment/
 │   │   │   ├── JubelioShipmentClient.php
 │   │   │   └── ShippingRateService.php
-│   │   ├── Xendit/
-│   │   │   ├── XenditClient.php
-│   │   │   └── InvoiceService.php
+│   │   ├── Gapura/
+│   │   │   ├── GapuraClient.php            satu-satunya pemanggil DANA, membungkus SDK danaid/dana-php
+│   │   │   └── GapuraStatus.php            kode status DANA → PaymentStatus
 │   │   ├── Webhooks/
 │   │   │   └── WebhookReceiver.php         verifikasi token/signature → webhook_events → queue
 │   │   └── Shop/
 │   │       ├── CartService.php
-│   │       ├── CheckoutService.php         orkestrasi stok → SO → invoice dalam satu alur
+│   │       ├── CheckoutService.php         orkestrasi stok → SO → order Gapura dalam satu alur
 │   │       └── OrderNumberGenerator.php    WEB-000123
 │   └── Providers/AppServiceProvider.php
 │
@@ -275,7 +275,7 @@ saeful-askar/
 ├── config/                                 BE
 │   ├── jubelio.php                         base_url, email, password, store_id, location_id, tax_id, webhook_secret
 │   ├── jubelio_shipment.php                client_id, client_secret, origin, environment
-│   └── xendit.php                          secret_key, callback_token, invoice_duration
+│   └── gapura.php                          env, client_id, merchant_id, private_key_path, mcc, notify_url, payment_duration
 │
 ├── database/                               BE
 │   ├── migrations/                         13 tabel sesuai docs/erd.md
@@ -318,7 +318,7 @@ saeful-askar/
 │       │   ├── products/show.blade.php
 │       │   ├── cart.blade.php
 │       │   ├── checkout/index.blade.php
-│       │   ├── checkout/finish.blade.php   halaman kembali dari Xendit
+│       │   ├── checkout/finish.blade.php   halaman kembali dari DANA
 │       │   ├── account/orders/index.blade.php
 │       │   ├── account/orders/show.blade.php
 │       │   ├── account/addresses.blade.php
@@ -330,7 +330,8 @@ saeful-askar/
 ├── routes/                                 BERSAMA · web.php milik FE, api.php & webhooks.php milik BE
 │   ├── web.php                             halaman Blade
 │   ├── api.php                             prefix /api/v1
-│   ├── webhooks.php                        /webhooks/xendit, /webhooks/jubelio
+│   ├── webhooks.php                        /webhooks/jubelio
+│   ├── gapura.php                          /v1.0/debit/notify (WH-01)
 │   └── console.php                         jadwal sinkron & pembatalan
 │
 ├── tests/                                  BE (wajib)
@@ -341,7 +342,7 @@ saeful-askar/
 │   ├── Unit/Services/Jubelio/              mapper & payload builder
 │   └── Fixtures/
 │       ├── jubelio/                        contoh response & webhook dari spec
-│       └── xendit/
+│       └── gapura/
 │
 ├── lang/id/                                BERSAMA · pesan validasi & auth Bahasa Indonesia
 ├── scripts/generate-api-mocks.mjs          BERSAMA · docs/api → resources/js/api/mocks/contract.json
@@ -361,7 +362,7 @@ Backend dan frontend mulai bersamaan setelah API Contract disepakati; frontend m
 
 - Semua endpoint sudah disiapkan sejak awal di folder `docs/api/` (API Contract v1, satu file Markdown per modul: `README.md` untuk konvensi dan indeks, lalu `auth.md`, `catalog.md`, `cart.md`, `addresses-regions.md`, `shipping.md`, `checkout-orders.md`, `admin.md`, `webhooks.md`, `integrations.md`) sebelum pengerjaan dimulai; bila kontrak perlu diubah di tengah jalan, perubahan disepakati berdua dan di-commit terpisah.
 - Setiap endpoint di file modul memuat Endpoint, User Story, Request Body, Response Success, Response Failed, dan Acceptance Criteria. Frontend menyalin contoh response ke `resources/js/api/mocks/` dan menyalakannya dengan `VITE_API_MOCK=true`; setelah backend siap cukup mematikan mock.
-- Backend menulis feature test yang memastikan response sesuai struktur JSON di dokumen kontrak, dengan fixture Jubelio dan Xendit agar tes tidak memanggil API asli.
+- Backend menulis feature test yang memastikan response sesuai struktur JSON di dokumen kontrak, dengan fixture Jubelio dan Gapura agar tes tidak memanggil API asli.
 - `DemoCatalogSeeder` mengisi katalog contoh agar halaman bisa diuji sebelum Jubelio tersambung.
 
 **Alur branch Git.**
@@ -381,17 +382,17 @@ Backend dan frontend mulai bersamaan setelah API Contract disepakati; frontend m
 1. Fondasi: API Contract v1, migrasi 13 tabel, autentikasi, kerangka layout Blade dan API client.
 2. Katalog: sinkron Jubelio (kategori, produk, varian, gambar, stok, berat), webhook produk dan stok, halaman daftar dan detail produk.
 3. Akun dan keranjang: registrasi, login, buku alamat dengan Region Jubelio, keranjang.
-4. Checkout: tarif Jubelio Shipment, contact dan sales order Jubelio, invoice Xendit, webhook PAID dan EXPIRED, job pembatalan.
+4. Checkout: tarif Jubelio Shipment, contact dan sales order Jubelio, order Gapura, webhook Finish Notify (lunas dan ditutup), job pembatalan.
 5. Pesanan dan panel admin: riwayat dan pelacakan pesanan, panel admin.
-6. Uji terpadu dan rilis: uji end-to-end dengan akun Jubelio dan Xendit mode test, lalu produksi.
+6. Uji terpadu dan rilis: uji end-to-end dengan akun Jubelio dan Gapura mode sandbox, lalu produksi.
 
 **Kriteria rilis.**
 
 - [ ] Seluruh produk aktif di Jubelio tampil di website dengan harga, stok, gambar, dan berat yang sama.
 - [ ] Perubahan stok di Jubelio (termasuk dari order Shopee) tampil di website dalam 15 menit.
 - [ ] Order test website muncul di Jubelio pada toko "Website Saeful Askar" dengan item, alamat, kurir, dan ongkir yang benar.
-- [ ] Pembayaran test Xendit menandai order lunas di website dan Jubelio.
-- [ ] Invoice yang kedaluwarsa membatalkan sales order Jubelio dan stok kembali.
+- [ ] Pembayaran uji Gapura (sandbox) menandai order lunas di website dan Jubelio.
+- [ ] Order Gapura yang kedaluwarsa membatalkan sales order Jubelio dan stok kembali.
 - [ ] Nomor resi dari Jubelio tampil di halaman pesanan customer.
 - [ ] Webhook yang dikirim ulang tidak membuat order atau perubahan ganda.
 - [ ] Semua feature test lulus.
@@ -411,9 +412,9 @@ Risiko terbesar adalah dokumentasi API rates Jubelio Shipment yang belum tersedi
 **Pertanyaan terbuka.**
 
 - [ ] Dokumentasi API rates dan kredensial Jubelio Shipment (termasuk staging).
-- [ ] Durasi batas bayar invoice Xendit (usulan 1–2 jam).
+- [ ] Durasi batas bayar order Gapura (usulan 1–2 jam; sandbox dibatasi 30 menit).
 - [x] Nama header signature webhook Jubelio: `sign`, berisi HMAC-SHA256 (contoh resmi Jubelio di `api/dist.yaml`, bagian Webhook Signature).
 - [x] Toko internal dibuat di Jubelio dengan nama "Website" (`store_id` -102, dari `GET /locations/store/`).
-- [ ] Metode pembayaran Xendit yang diaktifkan (VA, e-wallet, QRIS, kartu).
+- [ ] Metode pembayaran Gapura yang diaktifkan di akun (VA, e-wallet, QRIS, kartu) dan biaya per metode; `mcc` toko; public key produksi DANA.
 
 **Di luar lingkup versi 1.** Checkout tanpa login, voucher dan promo website, COD, multi-gudang, ulasan produk, wishlist, aplikasi mobile, chat penjual, dan pengelolaan produk atau stok dari website. Endpoint admin berikut juga ditunda ke versi 1.1: ADM-01 (dashboard ringkasan), ADM-15 (daftar webhook masuk), ADM-16 (proses ulang webhook), dan ADM-17 (status konfigurasi integrasi); pemeriksaan order dan pemulihan tetap memakai ADM-09 – ADM-12, rekonsiliasi stok terjadwal, dan perintah `php artisan jubelio:setup`.

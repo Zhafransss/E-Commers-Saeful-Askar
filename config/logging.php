@@ -65,7 +65,7 @@ return [
             'replace_placeholders' => true,
         ],
 
-        // One line per outgoing call to Jubelio, Jubelio Shipment, and Xendit (INT-HDL).
+        // One line per outgoing call to Jubelio, Jubelio Shipment, and Gapura (INT-HDL).
         'integrations' => [
             'driver' => 'daily',
             'path' => storage_path('logs/integrations.log'),

@@ -22,7 +22,7 @@ test('every API and webhook route is documented in the contract', function () {
     $documented = collect(contractEndpoints())->map(fn ($endpoint) => $shape($endpoint[1], $endpoint[2]));
 
     $routed = collect(Route::getRoutes()->getRoutes())
-        ->filter(fn ($route) => str_starts_with($route->uri(), 'api/') || str_starts_with($route->uri(), 'webhooks/'))
+        ->filter(fn ($route) => str_starts_with($route->uri(), 'api/') || str_starts_with($route->uri(), 'webhooks/') || str_starts_with($route->uri(), 'v1.0/'))
         ->flatMap(fn ($route) => collect($route->methods())->reject(fn ($m) => $m === 'HEAD')->map(fn ($m) => $shape($m, $route->uri())));
 
     expect($routed->diff($documented)->values()->all())->toBe([]);

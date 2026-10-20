@@ -1,0 +1,10 @@
+{
+  "responseCode": "2005500",
+  "responseMessage": "Successful",
+  "originalPartnerReferenceNo": "WEB-000124",
+  "originalReferenceNo": "20261020111212800110166000000000002",
+  "serviceCode": "54",
+  "latestTransactionStatus": "01",
+  "transactionStatusDesc": "initiated",
+  "amount": { "value": "350000.00", "currency": "IDR" }
+}

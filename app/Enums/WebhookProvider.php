@@ -4,6 +4,6 @@ namespace App\Enums;
 
 enum WebhookProvider: string
 {
-    case Xendit = 'xendit';
+    case Gapura = 'gapura';
     case Jubelio = 'jubelio';
 }

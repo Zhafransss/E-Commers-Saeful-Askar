@@ -57,7 +57,7 @@ Sudah ada di commit `80aca15`:
 - Middleware `admin`, `page.role`, `RejectMalformedJson`; rate limiter `api`, `auth` (per endpoint), `shipping`, `checkout` di driver `database`.
 - 40 route + 5 webhook dengan controller stub (`501 NOT_IMPLEMENTED`); `ContractRoutesTest` dua arah.
 - 13 migrasi, model, factory, enum; `AdminUserSeeder`, `DemoCatalogSeeder`.
-- Config `jubelio`, `jubelio_shipment` (driver `stub`), `xendit`; kerangka client di `app/Services`.
+- Config `jubelio`, `jubelio_shipment` (driver `stub`), `gapura`; kerangka client di `app/Services`.
 - AUTH-01 (`GET /sanctum/csrf-cookie`) sudah berfungsi dari Sanctum.
 
 ---
@@ -70,15 +70,15 @@ Sudah ada di commit `80aca15`:
 
 | Komponen | Isi | Acuan |
 | --- | --- | --- |
-| Aturan umum panggilan keluar | Timeout (Jubelio 15 dtk, Shipment 10 dtk, Xendit 15 dtk); `JubelioApiException` / `IntegrationException`; pemetaan ke `502 INTEGRATION_ERROR`; log method, path, status, dan durasi tanpa data pribadi atau kredensial | INT-HDL |
-| Retry | Di queue: 5 percobaan, jeda 10 dtk, 30 dtk, 2 mnt, 5 mnt, 15 mnt. Di dalam request customer (checkout, ongkir, region): paling banyak sekali. Xendit 4xx tidak di-retry | INT-HDL |
+| Aturan umum panggilan keluar | Timeout (Jubelio 15 dtk, Shipment 10 dtk, Gapura 8 dtk); `JubelioApiException` / `IntegrationException`; pemetaan ke `502 INTEGRATION_ERROR`; log method, path, status, dan durasi tanpa data pribadi atau kredensial | INT-HDL |
+| Retry | Di queue: 5 percobaan, jeda 10 dtk, 30 dtk, 2 mnt, 5 mnt, 15 mnt. Di dalam request customer (checkout, ongkir, region): paling banyak sekali. Gapura 4xx tidak di-retry; 429 dan 5xx di-retry dengan data yang sama | INT-HDL |
 | Token Jubelio | `JubelioTokenManager`: token di cache `database` dengan TTL **11 jam 30 menit**; lock agar hanya satu proses yang login; header `authorization: <token>`; bila 401, login ulang sekali lalu ulangi request | INT-JB-01, INT-HDL |
 | Penahan laju | Job sinkron dijaga di bawah 600 request/menit; bila 429, tunggu 60 dtk | INT-HDL |
 | Pencatat sinkron | Service penulis `sync_logs` (mulai, selesai, gagal, jumlah item, `reference_id`, pesan error Jubelio apa adanya) | ERD `sync_logs`, ADM-10 |
-| Penerima webhook | Pola `webhooks.md`: verifikasi → simpan ke `webhook_events` (`idempotency_key` unik; key yang sudah ada → `200` tanpa diproses lagi) → balas `200` (< 1 dtk) → proses di `ProcessXenditWebhookJob` / `ProcessJubelioWebhookJob` → status event `processed` / `ignored` / `failed` | `webhooks.md` |
-| Verifikasi webhook | Jubelio: header `sign` = `hash_hmac('sha256', trim(raw_body) . secret, secret)` dibandingkan dengan `hash_equals` (contoh resmi di `api/dist.yaml`; nama header tetap bisa diubah lewat config). Xendit: header `x-callback-token`. Gagal → `401 INVALID_SIGNATURE` / `INVALID_CALLBACK_TOKEN`, tetapi event tetap dicatat dengan `signature_valid = false` | WH-01 – WH-05 |
+| Penerima webhook | Pola `webhooks.md`: verifikasi → simpan ke `webhook_events` (`idempotency_key` unik; key yang sudah ada → `200` tanpa diproses lagi) → balas `200` (< 1 dtk) → proses di `ProcessGapuraWebhookJob` / `ProcessJubelioWebhookJob` → status event `processed` / `ignored` / `failed` | `webhooks.md` |
+| Verifikasi webhook | Jubelio: header `sign` = `hash_hmac('sha256', trim(raw_body) . secret, secret)` dibandingkan dengan `hash_equals` (contoh resmi di `api/dist.yaml`; nama header tetap bisa diubah lewat config). Gapura: `X-SIGNATURE` RSA SHA-256 diverifikasi SDK dengan public key DANA terhadap path `/v1.0/debit/notify`. Gagal → `401 INVALID_SIGNATURE`, tetapi event tetap dicatat dengan `signature_valid = false` | WH-01 – WH-05 |
 | Setup awal | `php artisan jubelio:setup`: menampilkan `store_id`, `location_id`, `tax_id`; menampilkan nama toko dan gudang dari ID yang terpasang di `.env`; (opsional) mendaftarkan URL webhook | INT-JB-14 |
-| Fixture | Contoh response Jubelio dan Xendit di `tests/Fixtures/jubelio`, `tests/Fixtures/xendit` | INT-HDL |
+| Fixture | Contoh response Jubelio dan Gapura di `tests/Fixtures/jubelio`, `tests/Fixtures/gapura`; `GapuraClient` dites dengan Guzzle mock handler dan pasangan kunci RSA sementara (`gapuraKeys()`) | INT-HDL |
 
 **Definisi selesai.**
 
@@ -91,15 +91,15 @@ Sudah ada di commit `80aca15`:
 | Kebutuhan | Pakai | Catatan |
 | --- | --- | --- |
 | Panggil Jubelio | `JubelioClient::get()` / `post()`, atau tambah method INT-JB-xx di kelas itu | Token, login ulang saat 401, batas laju, dan log sudah otomatis |
-| Panggil Xendit / Jubelio Shipment | Tambah method INT-XD-xx / INT-JS-01 di `XenditClient` / `JubelioShipmentClient` (memakai `get()`/`post()` protected) | Error 4xx Xendit otomatis tidak di-retry |
+| Panggil Gapura / Jubelio Shipment | Method INT-GP-01 – 03 sudah ada di `GapuraClient` (SDK `danaid/dana-php`); INT-JS-01 ditambah di `JubelioShipmentClient` (memakai `get()`/`post()` protected) | Error 4xx Gapura otomatis tidak di-retry |
 | Panggilan saat customer menunggu | `$client->withinCustomerRequest()->…` | Retry paling banyak sekali |
 | Pesan 502 khusus endpoint | `catch (IntegrationException $e) { throw $e->withMessage('…'); }` | Teks dari kontrak endpoint |
 | Job yang memanggil layanan luar | `use Queueable, RetriesIntegrationCalls;` + method `failed()` | 6 percobaan, jeda 10 dtk – 15 mnt; 4xx langsung gagal; 429 menunggu 60 dtk |
 | Catat sinkron / push order | `SyncLog::track(SyncType::…, SyncTrigger::…, fn ($log) => $jumlahItem, referenceId: $order->id)` | Pesan error Jubelio tersimpan apa adanya |
-| Endpoint webhook WH-xx | Controller: `return $receiver->jubelio($request, 'update-qty', [aturan validasi]);` atau `$receiver->xendit($request)`; logika di kelas `WebhookHandler` yang didaftarkan di `config/webhooks.php` | Lempar `WebhookEventIgnored` untuk `ignored`, `WebhookEventRejected` untuk `failed` tanpa retry |
+| Endpoint webhook WH-xx | Controller: `return $receiver->jubelio($request, 'update-qty', [aturan validasi]);` atau `$receiver->gapura($request, $gapura)`; logika di kelas `WebhookHandler` yang didaftarkan di `config/webhooks.php` | Lempar `WebhookEventIgnored` untuk `ignored`, `WebhookEventRejected` untuk `failed` tanpa retry |
 | Fixture test | `fixture('jubelio/….json')`, `fixtureContent()` untuk body mentah webhook | `Http::preventStrayRequests()` aktif di semua test |
 
-Endpoint WH-01 – WH-05 sengaja masih `501` sampai handler-nya dibangun (Fase 2 dan 5), agar Jubelio/Xendit tetap mengirim ulang event yang belum bisa diproses.
+WH-02 – WH-04 (Jubelio) sudah aktif. WH-01 (Gapura) sudah menerima, memverifikasi, menyimpan, dan membalas `2005600`, tetapi logika bayar/kedaluwarsa (handler di `config/webhooks.php`) baru dibangun di Fase 5; sampai itu event yang masuk berstatus `failed` "tidak ada handler" dan tetap terlihat di `webhook_events`. WH-05 (Jubelio) masih `501` sampai Fase 5, agar Jubelio tetap mengirim ulang event yang belum bisa diproses.
 
 **Blocker / pertanyaan terbuka.**
 
@@ -191,7 +191,7 @@ Endpoint WH-01 – WH-05 sengaja masih `501` sampai handler-nya dibangun (Fase 2
 
 ## Fase 4 — Ongkir & checkout
 
-**Tujuan.** Customer melihat tarif kurir, lalu menekan Bayar. Website mengecek ulang stok ke Jubelio, membuat sales order belum bayar di toko "Website Saeful Askar", membuat invoice Xendit, dan mengarahkan customer ke halaman bayar.
+**Tujuan.** Customer melihat tarif kurir, lalu menekan Bayar. Website mengecek ulang stok ke Jubelio, membuat sales order belum bayar di toko "Website Saeful Askar", membuat order Gapura, dan mengarahkan customer ke halaman bayar.
 
 **Cakupan.**
 
@@ -201,16 +201,16 @@ Endpoint WH-01 – WH-05 sengaja masih `501` sampai handler-nya dibangun (Fase 2
 | Pencatat status | Satu service yang mencatat setiap perubahan status ke `order_status_histories` beserta sumbernya. Dipakai ORD-01 dan diperluas di Fase 5 | `api/README.md` |
 | Contact Jubelio | Cari contact berdasarkan email dulu, baru buat bila tidak ada; simpan `jubelio_contact_id` sekali. Sekaligus: job update contact dari AUTH-06 | INT-JB-09 |
 | Sales order | Data item dari INT-JB-07 (di-cache 1 jam per `item_id`). SO dengan `ref_no` = `order_number`, `store_id`, `location_id`, `tax_id` No Tax, ongkir, dan `shipper`. Tidak pernah ada dua SO dengan `ref_no` sama (dicek lewat INT-JB-13, cocok persis) | INT-JB-07, INT-JB-10, INT-JB-13 |
-| Invoice | `external_id = order_number`, `amount = grand_total`, durasi `XENDIT_INVOICE_DURATION`, nomor HP format E.164, jumlah `items` = `amount`; `expiry_date` disimpan +07:00 | INT-XD-01 |
-| Checkout | ORD-01 lewat `CheckoutService`, 9 langkah sesuai kontrak: validasi (`CART_EMPTY`, `CART_HAS_ISSUES`, `PROFILE_INCOMPLETE`, `ADDRESS_NOT_FOUND`) → rate dari cache (`RATE_EXPIRED`) → hitung ulang total (`PRICE_CHANGED`) → cek stok langsung ke Jubelio (`OUT_OF_STOCK`) → contact → simpan order dalam satu transaksi (`jubelio_sync_status = pending`) → SO → invoice → kosongkan keranjang, balas 201 | ORD-01 |
-| Gagal di tengah checkout | SO gagal → order `cancelled` ("Gagal membuat pesanan di Jubelio"), keranjang **tidak** dikosongkan, balas 502. Invoice gagal → batalkan SO (INT-JB-12), order `cancelled`, keranjang tidak dikosongkan, balas 502 | ORD-01, INT-JB-12 |
+| Order Gapura | `partnerReferenceNo = order_number`, `amount = grand_total` (string dua desimal), `validUpTo` dari `GAPURA_PAYMENT_DURATION` (sandbox maks 30 menit dan Rp10.000.000), `urlParams` NOTIFICATION dan PAY_RETURN; `referenceNo`, `webRedirectUrl`, dan `validUpTo` disimpan ke `payments` | INT-GP-01 |
+| Checkout | ORD-01 lewat `CheckoutService`, 9 langkah sesuai kontrak: validasi (`CART_EMPTY`, `CART_HAS_ISSUES`, `PROFILE_INCOMPLETE`, `ADDRESS_NOT_FOUND`) → rate dari cache (`RATE_EXPIRED`) → hitung ulang total (`PRICE_CHANGED`) → cek stok langsung ke Jubelio (`OUT_OF_STOCK`) → contact → simpan order dalam satu transaksi (`jubelio_sync_status = pending`) → SO → order Gapura → kosongkan keranjang, balas 201 | ORD-01 |
+| Gagal di tengah checkout | SO gagal → order `cancelled` ("Gagal membuat pesanan di Jubelio"), keranjang **tidak** dikosongkan, balas 502. Order Gapura gagal → batalkan SO (INT-JB-12), order `cancelled`, keranjang tidak dikosongkan, balas 502 | ORD-01, INT-JB-12 |
 | Request ganda | `Idempotency-Key`: request kedua setelah sukses mengembalikan response 201 yang sama persis (disimpan 24 jam). Key yang sama saat request pertama masih diproses → `409 DUPLICATE_REQUEST`. Dua klik Bayar bersamaan tidak pernah menghasilkan dua SO | ORD-01 |
 
 **Definisi selesai.**
 
 - [ ] Test ORD-01 untuk setiap kode error dan setiap langkah gagal di kontrak.
-- [ ] Test dua request bersamaan dan dua request dengan `Idempotency-Key` sama: hanya satu order, satu SO, satu invoice.
-- [ ] `grand_total` order = `amount` invoice Xendit = `grand_total` sales order Jubelio; `order_number` berurutan dan unik.
+- [ ] Test dua request bersamaan dan dua request dengan `Idempotency-Key` sama: hanya satu order, satu SO, satu order Gapura.
+- [ ] `grand_total` order = `amount` order Gapura = `grand_total` sales order Jubelio; `order_number` berurutan dan unik.
 - [ ] Satu checkout uji ke akun Jubelio asli: SO muncul di toko "Website Saeful Askar" dengan status belum bayar, item, alamat, kurir, ongkir, dan `ref_no` yang benar.
 
 **Blocker / risiko.**
@@ -218,8 +218,8 @@ Endpoint WH-01 – WH-05 sengaja masih `501` sampai handler-nya dibangun (Fase 2
 | Hal | Dampak ke fase ini | Penanganan sementara |
 | --- | --- | --- |
 | Dokumentasi rates + kredensial Jubelio Shipment | Ongkir asli belum bisa dipakai | Driver `stub`; cukup ganti driver saat dokumen ada |
-| Durasi batas bayar Xendit | Nilai default invoice | `XENDIT_INVOICE_DURATION=7200` (2 jam) sampai diputuskan |
-| Metode pembayaran Xendit | Isi `payment_methods` invoice | Diatur lewat config |
+| Durasi batas bayar Gapura | `validUpTo` order | `GAPURA_PAYMENT_DURATION=7200` (2 jam) sampai diputuskan |
+| Metode pembayaran Gapura | Metode yang aktif di akun DANA | Diatur di Merchant Portal DANA |
 | ~~`store_id` toko internal~~ | — | Selesai: "Website" `-102` (Fase 1) |
 | SO belum bayar mungkin tidak mengurangi stok tersedia | Oversell dengan Shopee | Diuji di akun asli (INT-JB-06); bila terjadi, tambah reservasi stok (`POST /inventory/reserved/`) |
 
@@ -229,20 +229,20 @@ Endpoint WH-01 – WH-05 sengaja masih `501` sampai handler-nya dibangun (Fase 2
 
 ## Fase 5 — Pembayaran & siklus pesanan
 
-**Tujuan.** Status order selalu mengikuti Xendit dan Jubelio. Order lunas diteruskan ke gudang; order yang kedaluwarsa atau dibatalkan mengembalikan stok; customer bisa melihat riwayat, status, dan nomor resi.
+**Tujuan.** Status order selalu mengikuti Gapura dan Jubelio. Order lunas diteruskan ke gudang; order yang kedaluwarsa atau dibatalkan mengembalikan stok; customer bisa melihat riwayat, status, dan nomor resi.
 
 **Cakupan.**
 
 | Kelompok | Isi | Acuan |
 | --- | --- | --- |
 | Transisi status | Service Fase 4 diperluas agar menolak transisi yang tidak sah (README "Transisi yang sah"); status Jubelio hanya bergerak maju | `api/README.md`, WH-05 |
-| Alur bayar | `PAID`/`SETTLED` pada `pending_payment`: simpan data pembayaran, order → `paid` (`source = xendit`), `MarkSalesOrderPaidJob` → INT-JB-11 (retry 5 kali, lalu `jubelio_sync_status = failed`), email "Pembayaran diterima". `paid_amount` ≠ `amount` → order tidak diubah, event `failed` + log `warning`. Dibayar setelah `expired`/`cancelled` → order tidak diubah, event `failed` "perlu refund/proses manual" | WH-01, INT-JB-11 |
-| Alur kedaluwarsa | `EXPIRED` pada `pending_payment`: order → `expired` ("Batas waktu pembayaran habis"), `CancelSalesOrderJob` → INT-JB-12, email "Pesanan dibatalkan". Idempotency key `xendit:{id}:{status}`; `external_id` tak dikenal → `ignored` | WH-01, INT-JB-12 |
-| Job cadangan | `ExpireUnpaidOrders` (`orders:expire-unpaid`, tiap 5 menit): untuk order yang lewat `payment_expires_at`, pastikan status invoice ke Xendit (INT-XD-02) lalu jalankan alur yang sesuai | WH-01, INT-XD-02 |
+| Alur bayar | `00`/`02` pada `pending_payment`: simpan data pembayaran, order → `paid` (`source = gapura`), `MarkSalesOrderPaidJob` → INT-JB-11 (retry 5 kali, lalu `jubelio_sync_status = failed`), email "Pembayaran diterima". `amount` ≠ `payments.amount` → order tidak diubah, event `failed` + log `warning`. Dibayar setelah `expired`/`cancelled` → order tidak diubah, event `failed` "perlu refund/proses manual" | WH-01, INT-JB-11 |
+| Alur kedaluwarsa | `05` pada `pending_payment`: order → `expired` ("Batas waktu pembayaran habis"), `CancelSalesOrderJob` → INT-JB-12, email "Pesanan dibatalkan". Idempotency key `gapura:{order_number}:{status}`; `originalPartnerReferenceNo` tak dikenal → `ignored` | WH-01, INT-JB-12 |
+| Job cadangan | `ExpireUnpaidOrders` (`orders:expire-unpaid`, tiap 5 menit): untuk order yang lewat `payment_expires_at`, pastikan status ke DANA (INT-GP-02) lalu jalankan alur yang sesuai | WH-01, INT-GP-02 |
 | Webhook sales order | Hanya toko website (lainnya `ignored`); order dicari lewat `salesorder_id`, cadangan `ref_no` (tidak ketemu → `failed`); `last_modified` lebih lama → `ignored`. Pemetaan `is_canceled` / `completed` / `shipped` / `processing` sesuai tabel kontrak; simpan `tracking_no`, kurir, `salesorder_no`; email "Pesanan dikirim" saat pertama kali `shipped` | WH-05 |
-| Riwayat pesanan | ORD-02: filter `status` (dipisah koma), paginasi default 10; order yang batal karena gagal dibuat di Jubelio tidak ditampilkan. ORD-03: OrderDetail lewat `OrderPolicy` (milik user lain → 404 `ORDER_NOT_FOUND`); `invoice_url` hanya saat `pending_payment` dan belum lewat batas | ORD-02, ORD-03 |
-| Lanjut bayar | ORD-04: mengembalikan invoice yang ada, tidak membuat baru. Bila batas lewat, cek ke Xendit (INT-XD-02) lalu jalankan alur kedaluwarsa atau alur bayar dan balas 409 (`ORDER_NOT_PAYABLE`) | ORD-04 |
-| Pembatalan customer | ORD-05: kedaluwarsakan invoice (INT-XD-03) **sebelum** membatalkan SO (INT-JB-12) → `cancelled`. Invoice sudah dibayar → tidak dibatalkan, jalankan alur bayar, balas 409. Pembatalan Jubelio gagal → order tetap `cancelled`, `jubelio_sync_status = failed`, dicatat di `sync_logs`, customer tetap dapat 200. Selain `pending_payment` → `ORDER_NOT_CANCELLABLE`. Callback `EXPIRED` yang datang kemudian diabaikan dengan aman | ORD-05, INT-XD-03 |
+| Riwayat pesanan | ORD-02: filter `status` (dipisah koma), paginasi default 10; order yang batal karena gagal dibuat di Jubelio tidak ditampilkan. ORD-03: OrderDetail lewat `OrderPolicy` (milik user lain → 404 `ORDER_NOT_FOUND`); `checkout_url` hanya saat `pending_payment` dan belum lewat batas | ORD-02, ORD-03 |
+| Lanjut bayar | ORD-04: mengembalikan halaman bayar yang ada, tidak membuat order baru. Bila batas lewat, cek ke DANA (INT-GP-02) lalu jalankan alur kedaluwarsa atau alur bayar dan balas 409 (`ORDER_NOT_PAYABLE`) | ORD-04 |
+| Pembatalan customer | ORD-05: batalkan order Gapura (INT-GP-03) **sebelum** membatalkan SO (INT-JB-12) → `cancelled`. Order sudah dibayar → tidak dibatalkan, jalankan alur bayar, balas 409. Pembatalan Jubelio gagal → order tetap `cancelled`, `jubelio_sync_status = failed`, dicatat di `sync_logs`, customer tetap dapat 200. Selain `pending_payment` → `ORDER_NOT_CANCELLABLE`. Notifikasi `05` yang datang kemudian diabaikan dengan aman | ORD-05, INT-XD-03 |
 
 **Catatan email.** Kontrak mewajibkan tiga email di fase ini (pembayaran diterima, pesanan dibatalkan, pesanan dikirim), semuanya lewat queue. Email "konfirmasi order" saat checkout ada di PRD F-18 (Sebaiknya) tetapi belum ada di kontrak, jadi tidak termasuk definisi selesai.
 
@@ -250,8 +250,8 @@ Endpoint WH-01 – WH-05 sengaja masih `501` sampai handler-nya dibangun (Fase 2
 
 - [ ] Test webhook PAID, EXPIRED, update-salesorder, dan idempotensi memakai fixture (PRD §5 "Pengujian").
 - [ ] Test urutan event yang tidak wajar: dibayar setelah dibatalkan, jumlah bayar berbeda, event Jubelio yang lebih lama, event yang akan memundurkan status. Semuanya tidak mengubah order, dan webhook tetap dibalas `200`.
-- [ ] Test ORD-04 dan ORD-05 saat webhook terlambat (Xendit sudah `PAID` atau `EXPIRED`).
-- [ ] Pembayaran uji Xendit (mode test) menandai order lunas di website dan Jubelio; invoice yang kedaluwarsa membatalkan SO dan stok kembali.
+- [ ] Test ORD-04 dan ORD-05 saat webhook terlambat (DANA sudah `PAID` atau `EXPIRED`).
+- [ ] Pembayaran uji Gapura (sandbox) menandai order lunas di website dan Jubelio; order Gapura yang kedaluwarsa membatalkan SO dan stok kembali.
 
 **Merge.** Bersama halaman riwayat, detail pesanan, dan lanjut bayar.
 
@@ -265,7 +265,7 @@ Endpoint WH-01 – WH-05 sengaja masih `501` sampai handler-nya dibangun (Fase 2
 
 | Kelompok | Endpoint | Catatan |
 | --- | --- | --- |
-| Order admin | ADM-09 – ADM-12 | ADM-09 termasuk order yang batal karena gagal dibuat di Jubelio, urut terbaru. ADM-10 memuat `sync_logs` order itu, tanpa kredensial. ADM-11 mencari SO lewat `ref_no` dulu, lalu memilih otomatis `create` / `mark_paid` / `cancel` (`ALREADY_SYNCED` bila aksi yang diminta sudah tercermin di Jubelio). ADM-12 memanggil INT-XD-02 dan menjalankan alur WH-01; aman dipanggil berkali-kali |
+| Order admin | ADM-09 – ADM-12 | ADM-09 termasuk order yang batal karena gagal dibuat di Jubelio, urut terbaru. ADM-10 memuat `sync_logs` order itu, tanpa kredensial. ADM-11 mencari SO lewat `ref_no` dulu, lalu memilih otomatis `create` / `mark_paid` / `cancel` (`ALREADY_SYNCED` bila aksi yang diminta sudah tercermin di Jubelio). ADM-12 memanggil INT-GP-02 dan menjalankan alur WH-01; aman dipanggil berkali-kali |
 | Sinkron manual | ADM-13, ADM-14 | Satu sinkron per jenis lewat atomic lock (`SYNC_ALREADY_RUNNING`); `full` = kategori → produk → stok, masing-masing satu baris `sync_logs`. ADM-14 urut `started_at` terbaru; `sync-logs:prune` menghapus log > 90 hari |
 
 **Urutan.** ADM-13–14 menunggu Fase 2; ADM-09–12 menunggu Fase 5.
@@ -282,22 +282,22 @@ Endpoint WH-01 – WH-05 sengaja masih `501` sampai handler-nya dibangun (Fase 2
 
 ## Fase 7 — Uji terpadu & rilis
 
-**Tujuan.** Memastikan kriteria rilis PRD §8 terpenuhi dengan akun Jubelio dan Xendit mode test, lalu menyiapkan produksi.
+**Tujuan.** Memastikan kriteria rilis PRD §8 terpenuhi dengan akun Jubelio dan Gapura mode sandbox, lalu menyiapkan produksi.
 
 **Cakupan.**
 
 - Test penjaga: tidak ada lagi `NotImplementedException` di controller v1 (kode `501` tidak boleh ada saat rilis).
 - Uji end-to-end dengan akun asli (mode test): katalog, checkout, bayar, kedaluwarsa, batal, resi. Nilai pemetaan WH-05 dipastikan dengan contoh webhook asli.
 - Ukur kinerja API katalog (< 500 ms) dengan data asli; tambah index atau eager loading bila perlu.
-- Produksi: OPcache aktif dan `php artisan optimize` (config/route/view cache) — tanpa keduanya, memuat Laravel saja makan ±240 ms per request di lokal Windows (diukur 15 Okt 2026), cron `php artisan schedule:run` tiap menit, queue worker yang selalu hidup, `APP_DEBUG=false`, cookie session `Secure` (AUTH-01), Xendit mode live (`xnd_production_…`), kredensial hanya di `.env`, `ADMIN_EMAIL`/`ADMIN_PASSWORD` diisi, URL webhook didaftarkan ke domain produksi (`jubelio:setup`), backup database.
+- Produksi: OPcache aktif dan `php artisan optimize` (config/route/view cache) — tanpa keduanya, memuat Laravel saja makan ±240 ms per request di lokal Windows (diukur 15 Okt 2026), cron `php artisan schedule:run` tiap menit, queue worker yang selalu hidup, `APP_DEBUG=false`, cookie session `Secure` (AUTH-01), Gapura mode `production` (kunci produksi, public key produksi DANA, `GAPURA_NOTIFY_URL` ke domain produksi), kredensial hanya di `.env`, `ADMIN_EMAIL`/`ADMIN_PASSWORD` diisi, URL webhook didaftarkan ke domain produksi (`jubelio:setup`), backup database.
 
 **Definisi selesai = kriteria rilis PRD §8.**
 
 - [ ] Seluruh produk aktif di Jubelio tampil di website dengan harga, stok, gambar, dan berat yang sama.
 - [ ] Perubahan stok di Jubelio (termasuk dari order Shopee) tampil di website dalam 15 menit.
 - [ ] Order test muncul di Jubelio pada toko "Website Saeful Askar" dengan item, alamat, kurir, dan ongkir yang benar.
-- [ ] Pembayaran test Xendit menandai order lunas di website dan Jubelio.
-- [ ] Invoice yang kedaluwarsa membatalkan sales order Jubelio dan stok kembali.
+- [ ] Pembayaran uji Gapura menandai order lunas di website dan Jubelio.
+- [ ] Order Gapura yang kedaluwarsa membatalkan sales order Jubelio dan stok kembali.
 - [ ] Nomor resi dari Jubelio tampil di halaman pesanan customer.
 - [ ] Webhook yang dikirim ulang tidak membuat order atau perubahan ganda.
 - [ ] Semua feature test lulus.
@@ -313,6 +313,6 @@ Diambil dari PRD §9 dan `integrations.md`. Kolom kedua menunjukkan fase yang pa
 | ~~Toko internal + `store_id`~~ | — | Terjawab: "Website" `-102` |
 | ~~Nama header signature webhook Jubelio~~ | — | Terjawab: `sign`, HMAC-SHA256 (`api/dist.yaml`); dipastikan dengan webhook asli pertama |
 | Dokumentasi rates + kredensial Jubelio Shipment | Fase 4 | Driver `stub` |
-| Durasi batas bayar Xendit | Fase 4 | Default 2 jam |
-| Metode pembayaran Xendit | Fase 4 | Diatur lewat config |
+| Durasi batas bayar Gapura | Fase 4 | Default 2 jam |
+| Metode pembayaran Gapura | Fase 4 | Diatur di Merchant Portal DANA |
 | Harga promo Jubelio (`promotion_price`) ikut dipakai atau tidak | Fase 4 | Versi 1 memakai harga INT-JB-04 (INT-JB-07) |

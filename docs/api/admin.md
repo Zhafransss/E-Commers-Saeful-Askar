@@ -156,7 +156,7 @@ Tidak ada.
 
 ### User Story
 
-Sebagai admin, saya ingin melihat rincian pesanan lengkap dengan data customer, invoice Xendit, sales order Jubelio, dan riwayat integrasinya, agar bisa menelusuri masalah.
+Sebagai admin, saya ingin melihat rincian pesanan lengkap dengan data customer, order Gapura, sales order Jubelio, dan riwayat integrasinya, agar bisa menelusuri masalah.
 
 ### Request Body
 
@@ -188,7 +188,7 @@ Tidak ada.
     },
     "shipping": { "courier_code": "sicepat", "courier_name": "SiCepat", "service_code": "REG", "service_name": "SiCepat Reguler", "tracking_no": null, "etd_text": "1–2 hari" },
     "amounts": { "subtotal": 3400000, "shipping_cost": 185000, "insurance_cost": 0, "discount": 0, "tax": 0, "grand_total": 3585000 },
-    "payment": { "status": "PENDING", "invoice_url": "https://checkout.xendit.co/web/6527a1b2c3d4e5f6a7b8c9d1", "payment_method": null, "payment_channel": null, "expires_at": "2026-10-14T23:35:00+07:00", "paid_at": null },
+    "payment": { "status": "PENDING", "checkout_url": "https://m.dana.id/d/portal/cashier?ticket=2026101421351280011016600000002", "payment_method": null, "payment_channel": null, "expires_at": "2026-10-14T23:35:00+07:00", "paid_at": null },
     "note": null,
     "status_history": [
       { "status": "pending_payment", "label": "Menunggu pembayaran", "at": "2026-10-14T21:35:00+07:00", "source": "system" }
@@ -198,8 +198,8 @@ Tidak ada.
       "jubelio_salesorder_no": null,
       "jubelio_sync_status": "failed",
       "jubelio_last_error": "SQLSTATE 23505",
-      "xendit_invoice_id": "6527a1b2c3d4e5f6a7b8c9d1",
-      "xendit_external_id": "WEB-000124",
+      "gapura_reference_no": "20261014213512800110166000000000002",
+      "partner_reference_no": "WEB-000124",
       "sync_logs": [
         { "id": 301, "type": "order_push", "status": "failed", "message": "SQLSTATE 23505", "started_at": "2026-10-14T21:35:01+07:00", "finished_at": "2026-10-14T21:35:03+07:00" }
       ]
@@ -305,7 +305,7 @@ Sebagai admin, saya ingin mengirim ulang pesanan yang gagal masuk atau gagal dib
 
 ### User Story
 
-Sebagai admin yang menerima laporan "sudah bayar tapi status belum berubah", saya ingin mengecek status invoice langsung ke Xendit, agar pesanan segera diproses bila memang sudah dibayar.
+Sebagai admin yang menerima laporan "sudah bayar tapi status belum berubah", saya ingin mengecek status pembayaran langsung ke DANA (Gapura), agar pesanan segera diproses bila memang sudah dibayar.
 
 ### Request Body
 
@@ -319,7 +319,7 @@ Tidak ada.
 {
   "data": {
     "order_number": "WEB-000124",
-    "xendit_status": "PAID",
+    "gapura_status": "00",
     "order_status_before": "pending_payment",
     "order_status_after": "paid",
     "changed": true
@@ -334,18 +334,18 @@ Tidak ada.
 | --- | --- | --- |
 | 401/403 | `UNAUTHENTICATED` / `FORBIDDEN` | Lihat error umum |
 | 404 | `ORDER_NOT_FOUND` | Nomor tidak ada |
-| 502 | `INTEGRATION_ERROR` | Xendit tidak merespons |
+| 502 | `INTEGRATION_ERROR` | Gapura tidak merespons |
 
 ```json
 {
-  "message": "Xendit tidak merespons. Coba lagi beberapa saat.",
+  "message": "Gapura tidak merespons. Coba lagi beberapa saat.",
   "code": "INTEGRATION_ERROR"
 }
 ```
 
 ### Acceptance Criteria
 
-- [ ] Memanggil INT-XD-02 dan, bila `PAID`/`SETTLED`/`EXPIRED`, menjalankan alur yang sama dengan WH-01.
+- [ ] Memanggil INT-GP-02 dan, bila `PAID` (`00`/`02`) atau `EXPIRED` (`05`/`07`), menjalankan alur yang sama dengan WH-01. `gapura_status` berisi kode `latestTransactionStatus` DANA.
 - [ ] Bila status tidak berubah, `changed = false` dan tidak ada perubahan data.
 - [ ] Aman dipanggil berkali-kali (idempotent).
 
@@ -494,15 +494,15 @@ Tidak ada.
 
 | Query | Tipe | Wajib | Keterangan |
 | --- | --- | --- | --- |
-| `provider` | string | Tidak | `xendit` \| `jubelio` |
+| `provider` | string | Tidak | `gapura` \| `jubelio` |
 | `status` | string | Tidak | `received` \| `processed` \| `ignored` \| `failed` |
-| `event_type` | string | Tidak | mis. `invoice.paid`, `update-qty` |
+| `event_type` | string | Tidak | mis. `notify`, `update-qty` |
 | `page` | integer | Tidak | Default 1 |
 | `per_page` | integer | Tidak | Default 20, maks 100 |
 
 ### User Story
 
-Sebagai admin, saya ingin melihat webhook yang diterima dari Xendit dan Jubelio, agar bisa menemukan notifikasi yang gagal diproses.
+Sebagai admin, saya ingin melihat webhook yang diterima dari Gapura dan Jubelio, agar bisa menemukan notifikasi yang gagal diproses.
 
 ### Request Body
 
@@ -608,7 +608,7 @@ Tidak ada.
 
 ### User Story
 
-Sebagai admin yang menyiapkan toko, saya ingin melihat apakah Jubelio, Jubelio Shipment, dan Xendit sudah terhubung dan URL webhook mana yang harus didaftarkan, agar setup tidak ada yang terlewat.
+Sebagai admin yang menyiapkan toko, saya ingin melihat apakah Jubelio, Jubelio Shipment, dan Gapura sudah terhubung dan URL webhook mana yang harus didaftarkan, agar setup tidak ada yang terlewat.
 
 ### Request Body
 
@@ -637,14 +637,15 @@ Tidak ada.
       "environment": "staging",
       "origin": "Jl. Raya Pisangan No.1, Satriajaya, Tambun Utara, Kab. Bekasi 17566"
     },
-    "xendit": {
+    "gapura": {
       "configured": true,
-      "mode": "test",
-      "callback_token_set": true,
-      "invoice_duration_seconds": 7200
+      "mode": "sandbox",
+      "private_key_found": true,
+      "dana_public_key_set": false,
+      "payment_duration_seconds": 7200
     },
     "webhook_urls": {
-      "xendit_invoice": "https://<domain>/webhooks/xendit/invoice",
+      "gapura_notify": "https://<domain>/v1.0/debit/notify",
       "jubelio_update_product": "https://<domain>/webhooks/jubelio/product",
       "jubelio_update_price": "https://<domain>/webhooks/jubelio/price",
       "jubelio_update_qty": "https://<domain>/webhooks/jubelio/stock",
@@ -666,7 +667,7 @@ Nilai `store_id`, `location_id`, dan `tax_id` di contoh hanya ilustrasi.
 
 ### Acceptance Criteria
 
-- [ ] Tidak ada password, secret key, callback token, atau token Jubelio di response.
+- [ ] Tidak ada password, private key, atau token Jubelio di response.
 - [ ] `login_ok` diperoleh dengan mencoba token yang ada / login ulang (INT-JB-01), hasil di-cache 5 menit.
 - [ ] `store_name` dan `location_name` diambil dari Jubelio (INT-JB-14) untuk memastikan ID di `.env` benar.
-- [ ] `mode` Xendit = `test` bila secret key diawali `xnd_development_`, `live` bila `xnd_production_`.
+- [ ] `mode` Gapura = nilai `GAPURA_ENV` (`sandbox` atau `production`); `private_key_found` = file di `GAPURA_PRIVATE_KEY_PATH` ada; `dana_public_key_set` hanya wajib `true` di produksi.

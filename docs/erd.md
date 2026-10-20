@@ -103,7 +103,7 @@ erDiagram
   payments {
     bigint id PK
     bigint order_id FK
-    string xendit_invoice_id UK
+    string gapura_reference_no UK
     string status
   }
   order_status_histories {
@@ -288,7 +288,7 @@ Acuan: objek OrderDetail, ORD-01 – ORD-05, WH-01, WH-05, ADM-09 – ADM-12. Al
 | Kolom | Tipe | Null | Default | Keterangan |
 | --- | --- | --- | --- | --- |
 | `id` | BIGINT UNSIGNED | — | auto | PK |
-| `order_number` | VARCHAR(20) | Ya* | NULL | UNIQUE, `WEB-000123`. *NULL hanya sesaat di dalam transaksi checkout, sebelum nomor dibuat dari `id`. Dikirim sebagai `ref_no` Jubelio dan `external_id` Xendit |
+| `order_number` | VARCHAR(20) | Ya* | NULL | UNIQUE, `WEB-000123`. *NULL hanya sesaat di dalam transaksi checkout, sebelum nomor dibuat dari `id`. Dikirim sebagai `ref_no` Jubelio dan `partnerReferenceNo` Gapura |
 | `user_id` | BIGINT UNSIGNED | Tidak | — | FK `users.id`, ON DELETE RESTRICT (order tidak boleh hilang) |
 | `address_id` | BIGINT UNSIGNED | Ya | NULL | FK `addresses.id`, ON DELETE SET NULL. Hanya referensi; data kirim memakai kolom `shipping_*` |
 | `status` | VARCHAR(20) | Tidak | `pending_payment` | Enum `OrderStatus`: `pending_payment`, `paid`, `processing`, `shipped`, `completed`, `expired`, `cancelled` |
@@ -315,10 +315,10 @@ Acuan: objek OrderDetail, ORD-01 – ORD-05, WH-01, WH-05, ADM-09 – ADM-12. Al
 | `insurance_cost` | BIGINT UNSIGNED | Tidak | 0 | |
 | `discount` | BIGINT UNSIGNED | Tidak | 0 | Selalu 0 di v1 (tanpa voucher) |
 | `tax` | BIGINT UNSIGNED | Tidak | 0 | Selalu 0 (tanpa PPN) |
-| `grand_total` | BIGINT UNSIGNED | Tidak | — | = invoice Xendit = `grand_total` sales order |
+| `grand_total` | BIGINT UNSIGNED | Tidak | — | = order Gapura = `grand_total` sales order |
 | **Status & waktu** | | | | |
 | `note` | VARCHAR(255) | Ya | NULL | Catatan customer |
-| `payment_expires_at` | TIMESTAMP | Ya | NULL | Dari `expiry_date` invoice |
+| `payment_expires_at` | TIMESTAMP | Ya | NULL | Dari `validUpTo` order Gapura |
 | `paid_at` | TIMESTAMP | Ya | NULL | |
 | `cancelled_at` | TIMESTAMP | Ya | NULL | Juga diisi saat `expired` |
 | `cancel_reason` | VARCHAR(255) | Ya | NULL | Mis. "Batas waktu pembayaran habis" |
@@ -361,25 +361,25 @@ Index: `order_id`.
 
 ### `payments`
 
-Acuan: `payment` di OrderDetail, ORD-04, WH-01, INT-XD-01 – INT-XD-03.
+Acuan: `payment` di OrderDetail, ORD-04, WH-01, INT-GP-01 – INT-GP-03.
 
 | Kolom | Tipe | Null | Default | Keterangan |
 | --- | --- | --- | --- | --- |
 | `id` | BIGINT UNSIGNED | — | auto | PK |
 | `order_id` | BIGINT UNSIGNED | Tidak | — | FK `orders.id`, ON DELETE CASCADE |
-| `xendit_invoice_id` | VARCHAR(64) | Tidak | — | UNIQUE |
-| `external_id` | VARCHAR(20) | Tidak | — | = `order_number` |
-| `invoice_url` | VARCHAR(500) | Tidak | — | |
+| `gapura_reference_no` | VARCHAR(64) | Tidak | — | UNIQUE. `referenceNo` order di DANA (= `originalReferenceNo` di WH-01) |
+| `partner_reference_no` | VARCHAR(64) | Tidak | — | = `order_number`, dikirim sebagai `partnerReferenceNo` |
+| `checkout_url` | TEXT | Tidak | — | `webRedirectUrl` halaman bayar DANA (bisa lebih dari 500 karakter); API mengirim sebagai `checkout_url` |
 | `amount` | BIGINT UNSIGNED | Tidak | — | |
 | `paid_amount` | BIGINT UNSIGNED | Ya | NULL | Dibandingkan dengan `amount` (WH-01) |
-| `status` | VARCHAR(10) | Tidak | `PENDING` | Enum `PaymentStatus`: `PENDING`, `PAID`, `EXPIRED`. `SETTLED` dari Xendit disimpan sebagai `PAID` |
-| `payment_method` | VARCHAR(50) | Ya | NULL | `BANK_TRANSFER`, `EWALLET`, … |
-| `payment_channel` | VARCHAR(50) | Ya | NULL | `BCA`, `OVO`, … |
+| `status` | VARCHAR(10) | Tidak | `PENDING` | Enum `PaymentStatus`: `PENDING`, `PAID`, `EXPIRED`. Status DANA `00` dan `02` disimpan sebagai `PAID`, `05` dan `07` sebagai `EXPIRED` (`GapuraStatus`) |
+| `payment_method` | VARCHAR(50) | Ya | NULL | `payMethod` DANA: `VIRTUAL_ACCOUNT`, `NETWORK_PAY`, `CREDIT_CARD`, … |
+| `payment_channel` | VARCHAR(50) | Ya | NULL | `payOption` DANA: `VIRTUAL_ACCOUNT_BCA`, `NETWORK_PAY_PG_OVO`, … |
 | `expires_at` | TIMESTAMP | Tidak | — | |
 | `paid_at` | TIMESTAMP | Ya | NULL | |
 | `created_at`, `updated_at` | TIMESTAMP | Ya | — | |
 
-Index: `order_id`; `external_id`. Di v1 satu order punya satu invoice (ORD-04 tidak membuat invoice baru). Tabel tetap 1:N agar riwayat aman bila nanti ada pembuatan ulang invoice.
+Index: `order_id`; `partner_reference_no`. Di v1 satu order punya satu order Gapura (ORD-04 tidak membuat yang baru). Tabel tetap 1:N agar riwayat aman bila nanti ada pembuatan ulang.
 
 ### `order_status_histories`
 
@@ -390,7 +390,7 @@ Acuan: `status_history` di OrderDetail, ADM-10 (`source`).
 | `id` | BIGINT UNSIGNED | — | auto | PK |
 | `order_id` | BIGINT UNSIGNED | Tidak | — | FK `orders.id`, ON DELETE CASCADE |
 | `status` | VARCHAR(20) | Tidak | — | Nilai `OrderStatus` |
-| `source` | VARCHAR(20) | Tidak | `system` | `system`, `customer`, `admin`, `xendit`, `jubelio` |
+| `source` | VARCHAR(20) | Tidak | `system` | `system`, `customer`, `admin`, `gapura`, `jubelio` |
 | `note` | VARCHAR(255) | Ya | NULL | Mis. alasan batal |
 | `created_at` | TIMESTAMP | Tidak | — | Field `at` di API. Tanpa `updated_at` (baris tidak pernah diubah) |
 
@@ -405,9 +405,9 @@ Acuan: `webhooks.md` (pola umum, WH-01 – WH-05). Daftar dan proses ulang lewat
 | Kolom | Tipe | Null | Default | Keterangan |
 | --- | --- | --- | --- | --- |
 | `id` | BIGINT UNSIGNED | — | auto | PK |
-| `provider` | VARCHAR(10) | Tidak | — | Enum `WebhookProvider`: `xendit`, `jubelio` |
-| `event_type` | VARCHAR(50) | Tidak | — | `invoice.paid`, `invoice.expired`, `update-product`, `update-price`, `update-qty`, `update-salesorder` |
-| `idempotency_key` | VARCHAR(191) | Tidak | — | UNIQUE. `xendit:{id}:{status}` / `jubelio:{action}:{sha256 body}`. Event bersignature tidak valid memakai `invalid:{uuid}` agar tidak bentrok |
+| `provider` | VARCHAR(10) | Tidak | — | Enum `WebhookProvider`: `gapura`, `jubelio` |
+| `event_type` | VARCHAR(50) | Tidak | — | `notify`, `update-product`, `update-price`, `update-qty`, `update-salesorder` |
+| `idempotency_key` | VARCHAR(191) | Tidak | — | UNIQUE. `gapura:{order_number}:{status}` / `jubelio:{action}:{sha256 body}`. Event bersignature tidak valid memakai `invalid:{uuid}` agar tidak bentrok |
 | `signature_valid` | BOOLEAN | Tidak | — | |
 | `status` | VARCHAR(10) | Tidak | `received` | `received`, `processed`, `ignored`, `failed` |
 | `payload` | JSON | Tidak | — | Body mentah |

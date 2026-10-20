@@ -18,11 +18,14 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            // Webhooks are called server-to-server by Xendit/Jubelio: no session,
-            // no CSRF. Each route verifies its own token/signature (docs/api/webhooks.md).
+            // Webhooks are called server-to-server by Gapura (DANA) and Jubelio: no session,
+            // no CSRF. Each route verifies its own signature (docs/api/webhooks.md).
             Route::prefix('webhooks')
                 ->name('webhooks.')
                 ->group(base_path('routes/webhooks.php'));
+
+            // DANA only posts to the path /v1.0/debit/notify (ASPI format), so WH-01 lives outside /webhooks.
+            Route::name('webhooks.')->group(base_path('routes/gapura.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {

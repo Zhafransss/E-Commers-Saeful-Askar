@@ -33,6 +33,7 @@ return [
         'subdistrict' => 'Satriajaya',
         'subdistrict_id' => env('JUBELIO_SHIPMENT_ORIGIN_SUBDISTRICT_ID'),
         'district' => 'TAMBUN UTARA',
+        'city_id' => '3216',
         'city' => 'KAB. BEKASI',
         'province' => 'JAWA BARAT',
         'post_code' => '17566',

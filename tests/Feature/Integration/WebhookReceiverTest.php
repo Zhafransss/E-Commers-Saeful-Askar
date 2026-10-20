@@ -2,9 +2,10 @@
 
 use App\Enums\WebhookEventStatus;
 use App\Enums\WebhookProvider;
+use App\Jobs\ProcessGapuraWebhookJob;
 use App\Jobs\ProcessJubelioWebhookJob;
-use App\Jobs\ProcessXenditWebhookJob;
 use App\Models\WebhookEvent;
+use App\Services\Gapura\GapuraClient;
 use App\Services\Webhooks\WebhookReceiver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Queue;
@@ -14,18 +15,22 @@ use Illuminate\Testing\TestResponse;
 /*
 | The intake pattern shared by WH-01 – WH-05 (docs/api/webhooks.md): verify,
 | record (also when rejected), deduplicate by idempotency_key, answer 200, queue.
+| WH-01 is verified with DANA's public key; the tests sign with a throwaway pair (gapuraKeys()).
 | The real WH routes stay 501 until their phase, so test routes are used here.
 */
 
 beforeEach(function () {
     Route::post('/webhooks/__test/jubelio', fn (Request $request, WebhookReceiver $receiver) => $receiver
         ->jubelio($request, 'update-product', ['item_group_id' => ['required', 'integer']]));
-    Route::post('/webhooks/__test/xendit', fn (Request $request, WebhookReceiver $receiver) => $receiver->xendit($request));
+    Route::post('/webhooks/__test/gapura', fn (Request $request, WebhookReceiver $receiver, GapuraClient $gapura) => $receiver->gapura($request, $gapura));
 
-    config([
-        'jubelio.webhook_secret' => 'rahasia-webhook',
-        'xendit.callback_token' => 'token-callback',
-    ]);
+    config(['jubelio.webhook_secret' => 'rahasia-webhook']);
+
+    // Production mode makes the SDK verify with the public key from our file instead of DANA's built-in sandbox key.
+    app()->instance(GapuraClient::class, new GapuraClient([
+        'env' => 'production',
+        'dana_public_key_path' => gapuraKeys('dana')['public'],
+    ] + config('gapura')));
 
     Queue::fake();
 });
@@ -161,61 +166,70 @@ test('a Jubelio payload missing a required field answers 422 VALIDATION_ERROR', 
     expect(WebhookEvent::count())->toBe(0);
 });
 
-// --- Xendit --------------------------------------------------------------------
+// --- Gapura --------------------------------------------------------------------
 
-test('a Xendit callback with the right token is stored as xendit:{id}:{status} and answered with received', function () {
-    postRawWebhook('/webhooks/__test/xendit', fixtureContent('xendit/invoice-callback-paid.json'), ['x-callback-token' => 'token-callback'])
+function postGapura(string $body, ?array $headers = null): TestResponse
+{
+    return postRawWebhook('/webhooks/__test/gapura', $body, $headers ?? gapuraNotifyHeaders($body));
+}
+
+test('a signed Gapura notification is stored as gapura:{order}:{status} and answered with 2005600', function () {
+    postGapura(fixtureContent('gapura/finish-notify-paid.json'))
         ->assertOk()
-        ->assertExactJson(['received' => true]);
+        ->assertExactJson(['responseCode' => '2005600', 'responseMessage' => 'Successful']);
 
     expect(WebhookEvent::sole())
-        ->provider->toBe(WebhookProvider::Xendit)
-        ->event_type->toBe('invoice')
-        ->idempotency_key->toBe('xendit:6527a1b2c3d4e5f6a7b8c9d0:PAID')
-        ->summary->toBe('WEB-000123 PAID');
-    Queue::assertPushed(ProcessXenditWebhookJob::class, 1);
+        ->provider->toBe(WebhookProvider::Gapura)
+        ->event_type->toBe('notify')
+        ->idempotency_key->toBe('gapura:WEB-000123:00')
+        ->summary->toBe('WEB-000123 00')
+        ->signature_valid->toBeTrue();
+    Queue::assertPushed(ProcessGapuraWebhookJob::class, 1);
 });
 
-test('PAID and SETTLED for the same invoice are two separate events', function () {
-    $paid = fixture('xendit/invoice-callback-paid.json');
+test('the same notification delivered twice is processed once', function () {
+    $body = fixtureContent('gapura/finish-notify-paid.json');
 
-    foreach (['PAID', 'SETTLED', 'PAID'] as $status) {
-        postRawWebhook('/webhooks/__test/xendit', json_encode(['status' => $status] + $paid), ['x-callback-token' => 'token-callback'])->assertOk();
-    }
+    postGapura($body)->assertOk();
+    postGapura($body)->assertOk()->assertJsonPath('responseCode', '2005600');
 
-    expect(WebhookEvent::pluck('idempotency_key')->all())->toBe([
-        'xendit:6527a1b2c3d4e5f6a7b8c9d0:PAID',
-        'xendit:6527a1b2c3d4e5f6a7b8c9d0:SETTLED',
-    ]);
-    Queue::assertPushed(ProcessXenditWebhookJob::class, 2);
+    expect(WebhookEvent::count())->toBe(1);
+    Queue::assertPushed(ProcessGapuraWebhookJob::class, 1);
 });
 
-test('a wrong or missing callback token answers 401 INVALID_CALLBACK_TOKEN and is recorded', function (?string $token) {
-    $headers = $token === null ? [] : ['x-callback-token' => $token];
+test('paid and cancelled for different orders are separate events', function () {
+    postGapura(fixtureContent('gapura/finish-notify-paid.json'))->assertOk();
+    postGapura(fixtureContent('gapura/finish-notify-cancelled.json'))->assertOk();
 
-    assertApiError(postRawWebhook('/webhooks/__test/xendit', fixtureContent('xendit/invoice-callback-paid.json'), $headers), 401, 'INVALID_CALLBACK_TOKEN')
-        ->assertJsonPath('message', 'Callback token tidak valid.');
+    expect(WebhookEvent::pluck('idempotency_key')->all())->toBe(['gapura:WEB-000123:00', 'gapura:WEB-000124:05']);
+    Queue::assertPushed(ProcessGapuraWebhookJob::class, 2);
+});
 
-    expect(WebhookEvent::sole())->signature_valid->toBeFalse()->provider->toBe(WebhookProvider::Xendit);
+test('a bad or missing signature answers 401 INVALID_SIGNATURE and is recorded', function (string $case) {
+    $body = fixtureContent('gapura/finish-notify-paid.json');
+    $headers = match ($case) {
+        'wrong key' => gapuraNotifyHeaders($body, gapuraKeys('someone-else')['private']),
+        'no headers' => [],
+        'tampered body' => gapuraNotifyHeaders(str_replace('6935000.00', '1.00', $body)),
+    };
+
+    assertApiError(postGapura($body, $headers), 401, 'INVALID_SIGNATURE')
+        ->assertJsonPath('message', 'Signature webhook tidak valid.');
+
+    expect(WebhookEvent::sole())->signature_valid->toBeFalse()->provider->toBe(WebhookProvider::Gapura);
     Queue::assertNothingPushed();
-})->with(['wrong token' => 'salah', 'no header' => null]);
+})->with(['wrong key', 'no headers', 'tampered body']);
 
-test('without a configured callback token every Xendit callback is rejected', function () {
-    config(['xendit.callback_token' => null]);
-
-    assertApiError(postRawWebhook('/webhooks/__test/xendit', fixtureContent('xendit/invoice-callback-paid.json'), ['x-callback-token' => '']), 401, 'INVALID_CALLBACK_TOKEN');
-});
-
-test('a Xendit callback without id, external_id, or status answers 422', function (string $field) {
-    $payload = fixture('xendit/invoice-callback-paid.json');
+test('a signed Gapura notification missing a required field answers 422', function (string $field) {
+    $payload = fixture('gapura/finish-notify-paid.json');
     unset($payload[$field]);
+    $body = json_encode($payload, JSON_UNESCAPED_SLASHES);
 
-    assertApiError(postRawWebhook('/webhooks/__test/xendit', json_encode($payload), ['x-callback-token' => 'token-callback']), 422, 'VALIDATION_ERROR')
-        ->assertJsonValidationErrors($field);
-})->with(['id', 'external_id', 'status']);
+    assertApiError(postGapura($body), 422, 'VALIDATION_ERROR')->assertJsonValidationErrors($field);
+})->with(['originalPartnerReferenceNo', 'originalReferenceNo', 'latestTransactionStatus']);
 
 test('webhook intake runs without session cookies', function () {
-    $response = postRawWebhook('/webhooks/__test/xendit', fixtureContent('xendit/invoice-callback-paid.json'), ['x-callback-token' => 'token-callback']);
+    $response = postGapura(fixtureContent('gapura/finish-notify-paid.json'));
 
     expect($response->headers->getCookies())->toBeEmpty();
 });

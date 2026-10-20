@@ -1,0 +1,26 @@
+{
+  "responseCode": "2005500",
+  "responseMessage": "Successful",
+  "originalPartnerReferenceNo": "WEB-000123",
+  "originalReferenceNo": "20261020111212800110166000000000001",
+  "serviceCode": "54",
+  "latestTransactionStatus": "00",
+  "transactionStatusDesc": "success",
+  "amount": { "value": "6935000.00", "currency": "IDR" },
+  "paidTime": "2026-10-20T10:42:10+07:00",
+  "additionalInfo": {
+    "paymentViews": [
+      {
+        "cashierRequestId": "64c4fdc544a7edff9c1e51aebc80f2eb",
+        "paidTime": "2026-10-20T10:42:10+07:00",
+        "payOptionInfos": [
+          {
+            "payMethod": "VIRTUAL_ACCOUNT",
+            "payOption": "VIRTUAL_ACCOUNT_BCA",
+            "payAmount": { "value": "6935000.00", "currency": "IDR" }
+          }
+        ]
+      }
+    ]
+  }
+}

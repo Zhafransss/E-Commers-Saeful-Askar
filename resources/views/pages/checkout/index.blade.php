@@ -5,7 +5,7 @@
 
 {{--
     resources/js/components/checkoutPage.js: CART-01, ADDR-01/02 and REG-01 … REG-04 (alamat),
-    SHIP-01 (kurir & ongkir), ORD-01 (bayar → Xendit invoice).
+    SHIP-01 (kurir & ongkir), ORD-01 (bayar → halaman bayar DANA).
 --}}
 @php
     $input = 'w-full rounded-xl border bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/40';
@@ -204,7 +204,7 @@
                         </h2>
                         <div class="mt-4 flex gap-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-600">
                             <svg class="h-6 w-6 shrink-0 text-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                            <p>Setelah menekan <span class="font-semibold text-ink">Bayar</span>, Anda diarahkan ke halaman pembayaran aman <span class="font-semibold text-ink">Xendit</span> untuk memilih metode bayar. Selesaikan pembayaran dalam <span class="font-semibold text-ink">2 jam</span>; lewat dari itu pesanan dibatalkan otomatis.</p>
+                            <p>Setelah menekan <span class="font-semibold text-ink">Bayar</span>, Anda diarahkan ke halaman pembayaran aman <span class="font-semibold text-ink">DANA</span> untuk memilih metode bayar. Selesaikan pembayaran dalam <span class="font-semibold text-ink">2 jam</span>; lewat dari itu pesanan dibatalkan otomatis.</p>
                         </div>
                     </section>
                 </div>
@@ -251,7 +251,7 @@
                             <span x-text="paying ? 'Membuat pesanan…' : (blockedReason ?? 'Bayar sekarang')"></span>
                         </button>
                         <p x-cloak x-show="payError" x-text="payError" class="mt-3 rounded-lg bg-red-500/10 p-3 text-sm text-red-300" role="alert"></p>
-                        <p class="mt-4 text-center text-xs text-gray-500">Pembayaran diproses aman oleh Xendit</p>
+                        <p class="mt-4 text-center text-xs text-gray-500">Pembayaran diproses aman oleh DANA</p>
                     </div>
 
                     <div class="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 text-sm text-gray-600">

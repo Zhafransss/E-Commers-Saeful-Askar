@@ -7,7 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
 /*
-| INT-HDL queue retry: 5 retries at 10 s, 30 s, 2 min, 5 min, 15 min; Xendit 4xx
+| INT-HDL queue retry: 5 retries at 10 s, 30 s, 2 min, 5 min, 15 min; Gapura 4xx
 | (not retryable) fails at once; Jubelio 429 waits 60 seconds.
 */
 
@@ -39,7 +39,7 @@ test('jobs get the first attempt plus 5 retries with the contract backoff', func
 });
 
 test('a non-retryable error fails the job immediately', function () {
-    $error = new IntegrationException('xendit', 'POST', '/v2/invoices', 400, retryable: false);
+    $error = new IntegrationException('gapura', 'POST', '/payment-gateway/v1.0/debit/payment-host-to-host.htm', 400, retryable: false);
     $job = (new RetryPolicyTestJob($error))->withFakeQueueInteractions();
 
     runThroughIntegrationMiddleware($job);

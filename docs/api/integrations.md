@@ -1,4 +1,4 @@
-# Integrasi Keluar (Backend → Jubelio, Jubelio Shipment, Xendit)
+# Integrasi Keluar (Backend → Jubelio, Jubelio Shipment, Gapura)
 
 File ini mendokumentasikan panggilan yang dilakukan **backend** ke layanan luar. Frontend tidak pernah memanggil layanan ini langsung. Semua panggilan hanya boleh lewat kelas client:
 
@@ -6,9 +6,9 @@ File ini mendokumentasikan panggilan yang dilakukan **backend** ke layanan luar.
 | --- | --- | --- |
 | Jubelio Omnichannel | `App\Services\Jubelio\JubelioClient` | `https://api2.jubelio.com` |
 | Jubelio Shipment | `App\Services\JubelioShipment\JubelioShipmentClient` | Menunggu dokumentasi dari Jubelio |
-| Xendit | `App\Services\Xendit\XenditClient` | `https://api.xendit.co` |
+| Gapura (DANA) | `App\Services\Gapura\GapuraClient` (membungkus SDK `danaid/dana-php`) | Sandbox `https://api.sandbox.dana.id`, produksi `https://api.saas.dana.id` |
 
-Field Jubelio di bawah diambil dari spec OpenAPI resmi Jubelio (`dist.yaml`, "Jubelio API Reference"). Tanda **\*** = wajib menurut spec. Field Xendit diambil dari SDK resmi `xendit-php`.
+Field Jubelio di bawah diambil dari spec OpenAPI resmi Jubelio (`dist.yaml`, "Jubelio API Reference"). Tanda **\*** = wajib menurut spec. Field Gapura diambil dari dokumentasi API DANA dan SDK resmi `danaid/dana-php`.
 
 ---
 
@@ -16,7 +16,7 @@ Field Jubelio di bawah diambil dari spec OpenAPI resmi Jubelio (`dist.yaml`, "Ju
 
 ### Endpoint
 
-Berlaku untuk semua INT-JB, INT-JS, dan INT-XD.
+Berlaku untuk semua INT-JB, INT-JS, dan INT-GP.
 
 ### User Story
 
@@ -34,11 +34,11 @@ HTTP 2xx dari layanan luar → hasil dipetakan ke model/DTO internal.
 
 | Kondisi | Penanganan |
 | --- | --- |
-| Timeout (Jubelio 15 detik, Jubelio Shipment 10 detik, Xendit 15 detik) | Lempar `JubelioApiException` / `IntegrationException`; job di-retry |
+| Timeout (Jubelio 15 detik, Jubelio Shipment 10 detik, Gapura 8 detik) | Lempar `JubelioApiException` / `IntegrationException`; job di-retry |
 | Jubelio 401 / token kedaluwarsa | Login ulang sekali (INT-JB-01), ulangi request sekali |
 | Jubelio 429 | Tunggu 60 detik, ulangi; job sinkron menahan laju < 600 request/menit |
 | Jubelio 500 dengan `code` SQLSTATE (mis. `23505`) | Simpan pesan apa adanya di `sync_logs.message`; untuk sales order, cek dulu apakah SO dengan `ref_no` sama sudah ada sebelum retry |
-| Xendit 4xx | Tidak di-retry; catat `error_code` dan `message` dari Xendit |
+| Gapura 4xx | Tidak di-retry; catat `responseCode` dan `responseMessage` dari DANA. Gapura 429 dan 5xx di-retry dengan data yang sama (idempoten lewat `partnerReferenceNo`) |
 | 5xx lain | Retry di queue: 5 kali, jeda 10 dtk, 30 dtk, 2 mnt, 5 mnt, 15 mnt |
 
 ### Acceptance Criteria
@@ -46,7 +46,7 @@ HTTP 2xx dari layanan luar → hasil dipetakan ke model/DTO internal.
 - [ ] Hanya kelas client yang memakai HTTP client ke domain luar (dicek di code review).
 - [ ] Setiap panggilan dicatat (method, path, status, durasi) di log aplikasi; body yang berisi data pribadi/kredensial tidak dicatat.
 - [ ] Panggilan di dalam request customer (checkout, ongkir, region) tidak di-retry lebih dari sekali agar customer tidak menunggu lama; sisanya lewat queue.
-- [ ] Semua client punya fake/fixture untuk test (`tests/Fixtures/jubelio`, `tests/Fixtures/xendit`).
+- [ ] Semua client punya fake/fixture untuk test (`tests/Fixtures/jubelio`, `tests/Fixtures/gapura`); SDK DANA dites dengan Guzzle mock handler.
 
 ---
 
@@ -579,7 +579,7 @@ Header (nilai pada sales order):
 | `source`\* | Ya | `1` (Internal) |
 | `store_id` | Tidak | `JUBELIO_STORE_ID` (toko "Website Saeful Askar") |
 | `is_paid` | Tidak | `false` |
-| `payment_method` | Tidak | `"Xendit"` |
+| `payment_method` | Tidak | `"DANA Gapura"` |
 | `shipping_cost` | Tidak | Ongkir dari rate yang dipilih |
 | `insurance_cost` | Tidak | Asuransi dari rate (0 bila tidak ada) |
 | `shipping_full_name`, `shipping_phone`, `shipping_address`, `shipping_area`, `shipping_city`, `shipping_subdistrict`, `shipping_province`, `shipping_post_code`, `shipping_country` | Tidak | Salinan alamat order; `shipping_country = "Indonesia"` |
@@ -625,7 +625,7 @@ Item (`items[]`):
   "source": 1,
   "store_id": "-1043",
   "is_paid": false,
-  "payment_method": "Xendit",
+  "payment_method": "DANA Gapura",
   "shipping_cost": 185000,
   "insurance_cost": 0,
   "shipping_full_name": "Budi Santoso",
@@ -687,7 +687,7 @@ Setelah itu backend memanggil INT-JB-13 untuk mengambil `salesorder_no`.
 
 ### Acceptance Criteria
 
-- [ ] `grand_total` = `orders.grand_total` = jumlah invoice Xendit.
+- [ ] `grand_total` = `orders.grand_total` = jumlah order Gapura.
 - [ ] Sales order tampil di Jubelio pada toko "Website Saeful Askar", status belum bayar, dengan alamat dan kurir lengkap.
 - [ ] Tidak pernah ada dua sales order dengan `ref_no` sama.
 - [ ] `jubelio_salesorder_id` dan `jubelio_salesorder_no` tersimpan di `orders`.
@@ -702,7 +702,7 @@ Setelah itu backend memanggil INT-JB-13 untuk mengambil `salesorder_no`.
 
 ### User Story
 
-Sebagai backend, saya ingin menandai sales order lunas segera setelah Xendit mengonfirmasi pembayaran, agar gudang mulai memproses pesanan.
+Sebagai backend, saya ingin menandai sales order lunas segera setelah Gapura mengonfirmasi pembayaran, agar gudang mulai memproses pesanan.
 
 ### Request Body
 
@@ -776,7 +776,7 @@ Lihat INT-HDL. Gagal permanen → `jubelio_sync_status = failed`, dikirim ulang 
 
 ### Acceptance Criteria
 
-- [ ] Dipanggil saat WH-01 `EXPIRED`, ORD-05, dan pembatalan karena invoice Xendit gagal dibuat (ORD-01 langkah 8).
+- [ ] Dipanggil saat WH-01 `05` (kedaluwarsa), ORD-05, dan pembatalan karena order Gapura gagal dibuat (ORD-01 langkah 8).
 - [ ] Setelah berhasil, stok varian naik kembali (terkonfirmasi lewat WH-04 atau rekonsiliasi).
 
 ---
@@ -955,105 +955,134 @@ Dipetakan ke objek **ShippingRate** (lihat `README.md`): kode dan nama kurir, ko
 
 ---
 
-## INT-XD-01 · Buat invoice Xendit
+## INT-GP-00 · Persiapan Gapura (DANA)
+
+Gapura adalah payment gateway DANA. Website memakai **Hosted Checkout**: backend membuat order di DANA, DANA membalas URL halaman bayar, pelanggan membayar di sana, lalu DANA memberi tahu hasilnya lewat WH-01. Semua panggilan memakai SDK resmi `danaid/dana-php` lewat `App\Services\Gapura\GapuraClient`.
+
+| Hal | Isi |
+| --- | --- |
+| Base URL | Sandbox `https://api.sandbox.dana.id`, produksi `https://api.saas.dana.id` (dipilih `GAPURA_ENV`) |
+| Otentikasi | Tanda tangan RSA-2048 SHA-256 (SNAP) dengan **private key kita** di header `X-SIGNATURE`. String yang ditandatangani: `METHOD:PATH:<hex sha256 body yang di-minify>:<X-TIMESTAMP>`. Tanpa access token. SDK mengisi `X-SIGNATURE`, `X-TIMESTAMP`, `X-PARTNER-ID`, `X-EXTERNAL-ID`, `CHANNEL-ID`, dan `ORIGIN` |
+| Kredensial sandbox | Dari `https://dashboard.dana.id/sandbox/`: Merchant ID, Client ID (= `X-PARTNER-ID`), Client Secret, public key, dan private key |
+| Kredensial produksi | Buat pasangan kunci sendiri (`openssl genrsa -out rsa_private_key.pem 2048`, lalu `openssl pkcs8 -topk8 -in rsa_private_key.pem -out pkcs8_rsa_private_key.pem -nocrypt`, lalu `openssl rsa -in rsa_private_key.pem -out rsa_public_key.pem -pubout`), unggah **public key** ke Merchant Portal, lalu terima Merchant ID dan Client ID. Public key produksi DANA diminta ke tim integrasi DANA |
+| Timeout | 8 detik per panggilan (nilai yang diharapkan DANA) |
+| Batas sandbox | `validUpTo` paling lama 30 menit ke depan dan nominal paling besar Rp10.000.000 |
+
+Konfigurasi di `.env` (`config/gapura.php`):
+
+| Variabel | Isi |
+| --- | --- |
+| `GAPURA_ENV` | `sandbox` atau `production` |
+| `GAPURA_CLIENT_ID` | Client ID (`X-PARTNER-ID`) |
+| `GAPURA_MERCHANT_ID` | Merchant ID |
+| `GAPURA_PRIVATE_KEY_PATH` | Path file private key (PEM), di luar web root dan di luar git |
+| `GAPURA_DANA_PUBLIC_KEY_PATH` | Public key DANA untuk verifikasi webhook; hanya perlu di produksi (SDK membawa kunci sandbox) |
+| `GAPURA_ORIGIN` | Domain asal request (default `APP_URL`) |
+| `GAPURA_MCC` | Merchant category code, wajib di Create Order |
+| `GAPURA_NOTIFY_URL` | URL publik webhook; kosong = `APP_URL` + `/v1.0/debit/notify`. Lewat tunnel (ngrok) isi URL lengkapnya |
+| `GAPURA_PAYMENT_DURATION` | Batas bayar dalam detik (default 7200; di sandbox dipotong menjadi 30 menit) |
+
+---
+
+## INT-GP-01 · Buat order Gapura (Hosted Checkout)
 
 ### Endpoint
 
-`POST https://api.xendit.co/v2/invoices/` · Basic Auth (`XENDIT_SECRET_KEY` sebagai username, password kosong)
+`POST {base_url}/payment-gateway/v1.0/debit/payment-host-to-host.htm` · SNAP service code 54 · `GapuraClient::createOrder()`
 
 ### User Story
 
-Sebagai backend, saya ingin membuat tagihan Xendit dengan batas waktu bayar untuk setiap pesanan, agar customer bisa membayar dengan metode yang ia pilih dan pesanan otomatis batal bila tidak dibayar.
+Sebagai backend, saya ingin membuat order di DANA dengan batas waktu bayar untuk setiap pesanan, agar customer bisa membayar dengan metode yang ia pilih di halaman DANA dan pesanan otomatis batal bila tidak dibayar.
 
 ### Request Body
 
-| Field Xendit | Wajib | Nilai dari website |
+| Field DANA | Wajib | Nilai dari website |
 | --- | --- | --- |
-| `external_id` | Ya | `orders.order_number` |
-| `amount` | Ya | `orders.grand_total` |
-| `payer_email` | Tidak | `users.email` |
-| `description` | Tidak | `"Pesanan WEB-000123 - Toko Sepeda Listrik Saeful Askar"` |
-| `invoice_duration` | Tidak | `XENDIT_INVOICE_DURATION` (detik) |
-| `currency` | Tidak | `IDR` |
-| `customer` | Tidak | Nama, email, nomor HP |
-| `items` | Tidak | Nama, qty, harga tiap item + baris ongkir |
-| `success_redirect_url` | Tidak | `https://<domain>/checkout/finish?order=WEB-000123` |
-| `failure_redirect_url` | Tidak | `https://<domain>/checkout/finish?order=WEB-000123&failed=1` |
-| `payment_methods` | Tidak | Dikosongkan = semua metode aktif di akun; atau daftar yang disepakati |
-| `locale` | Tidak | `id` |
-| `metadata` | Tidak | `{ "order_id": 123 }` |
+| `partnerReferenceNo` | Ya | `orders.order_number` (maks 64 karakter). Kunci idempoten bersama `merchantId`: permintaan ulang dengan data sama mengembalikan order yang sama (`2005400`), data berbeda ditolak `4045418` |
+| `merchantId` | Ya | `GAPURA_MERCHANT_ID` |
+| `amount.value` | Ya | `orders.grand_total` sebagai string dua desimal, mis. `"6935000.00"` |
+| `amount.currency` | Ya | `IDR` |
+| `validUpTo` | Ya | Sekarang + `GAPURA_PAYMENT_DURATION`, format `YYYY-MM-DDTHH:mm:ss+07:00` |
+| `urlParams[]` `NOTIFICATION` | Ya | `GAPURA_NOTIFY_URL` atau `<APP_URL>/v1.0/debit/notify`, `isDeeplink = "N"` |
+| `urlParams[]` `PAY_RETURN` | Ya | `https://<domain>/checkout/finish?order=WEB-000123`, `isDeeplink = "N"` |
+| `additionalInfo.mcc` | Ya | `GAPURA_MCC` |
+| `additionalInfo.envInfo.sourcePlatform` | Ya | `IPG` |
+| `additionalInfo.envInfo.terminalType` | Ya | `SYSTEM` |
+| `additionalInfo.order.orderTitle` | Ya | `"Pesanan WEB-000123"` |
+| `additionalInfo.order.scenario` | Ya | `REDIRECT` |
 
 ```json
 {
-  "external_id": "WEB-000123",
-  "amount": 6935000,
-  "payer_email": "budi@example.com",
-  "description": "Pesanan WEB-000123 - Toko Sepeda Listrik Saeful Askar",
-  "invoice_duration": 7200,
-  "currency": "IDR",
-  "locale": "id",
-  "customer": {
-    "given_names": "Budi Santoso",
-    "email": "budi@example.com",
-    "mobile_number": "+6281234567890"
-  },
-  "items": [
-    { "name": "Sepeda Listrik Uwinfly C1 Pro - Hitam", "quantity": 1, "price": 6750000 },
-    { "name": "Ongkir JNE Trucking", "quantity": 1, "price": 185000 }
+  "partnerReferenceNo": "WEB-000123",
+  "merchantId": "216620000000000000000",
+  "amount": { "value": "6935000.00", "currency": "IDR" },
+  "validUpTo": "2026-10-20T12:30:00+07:00",
+  "urlParams": [
+    { "url": "https://<domain>/v1.0/debit/notify", "type": "NOTIFICATION", "isDeeplink": "N" },
+    { "url": "https://<domain>/checkout/finish?order=WEB-000123", "type": "PAY_RETURN", "isDeeplink": "N" }
   ],
-  "success_redirect_url": "https://<domain>/checkout/finish?order=WEB-000123",
-  "failure_redirect_url": "https://<domain>/checkout/finish?order=WEB-000123&failed=1",
-  "metadata": { "order_id": 123 }
+  "additionalInfo": {
+    "mcc": "5499",
+    "envInfo": { "sourcePlatform": "IPG", "terminalType": "SYSTEM" },
+    "order": { "orderTitle": "Pesanan WEB-000123", "scenario": "REDIRECT" }
+  }
 }
 ```
 
 ### Response Success
 
-`200 OK` (dipotong)
+`200 OK`
 
 ```json
 {
-  "id": "6527a1b2c3d4e5f6a7b8c9d0",
-  "external_id": "WEB-000123",
-  "status": "PENDING",
-  "amount": 6935000,
-  "invoice_url": "https://checkout.xendit.co/web/6527a1b2c3d4e5f6a7b8c9d0",
-  "expiry_date": "2026-10-14T16:30:00.000Z",
-  "currency": "IDR"
+  "responseCode": "2005400",
+  "responseMessage": "Successful",
+  "referenceNo": "20261020111212800110166000000000001",
+  "partnerReferenceNo": "WEB-000123",
+  "webRedirectUrl": "https://m.dana.id/d/portal/cashier?ticket=…"
 }
 ```
 
 ### Response Failed
 
-| HTTP | `error_code` Xendit | Penanganan |
+| HTTP | `responseCode` DANA | Penanganan |
 | --- | --- | --- |
-| 400 | `API_VALIDATION_ERROR` | Bug data; batalkan SO (INT-JB-12), ORD-01 → 502 |
-| 401 | `INVALID_API_KEY` | Kredensial salah; ORD-01 → 502, alert |
-| 409 | `DUPLICATE_ERROR` | Invoice dengan `external_id` sama sudah ada → ambil lewat INT-XD-02 |
-| 5xx / timeout | — | Retry sekali; gagal → batalkan SO, ORD-01 → 502 |
+| 400 | `4005400` – `4005402` | Bug data; batalkan SO (INT-JB-12), ORD-01 → 502 |
+| 401 | `4015400` | Tanda tangan salah (kunci atau jam server); ORD-01 → 502, alert |
+| 403 | `4035402`, `4035405`, `4035415` | Nominal melewati batas atau transaksi tidak diizinkan; ORD-01 → 502 |
+| 404 | `4045408` | Merchant tidak valid; ORD-01 → 502, alert |
+| 404 | `4045418` | Data berbeda untuk `partnerReferenceNo` yang sama; periksa lewat INT-GP-02 |
+| 429, 5xx | `4295400`, `5005401` | Retry dengan data **yang sama** (aman karena idempoten), sekali di request customer; gagal → batalkan SO, ORD-01 → 502 |
+| timeout | — | Maksimal 3 percobaan dengan data yang sama; masih gagal → batalkan SO, ORD-01 → 502 |
 
 ### Acceptance Criteria
 
-- [ ] `id` → `payments.xendit_invoice_id`, `invoice_url` → `payments.invoice_url`, `expiry_date` → `payments.expires_at` dan `orders.payment_expires_at` (dikonversi ke +07:00).
-- [ ] Jumlah `items` = `amount`.
-- [ ] Nomor HP dikirim format E.164 (`+62…`).
-- [ ] Mode test (`xnd_development_…`) di lokal/staging, live di produksi.
+- [ ] `referenceNo` → `payments.gapura_reference_no`, `partnerReferenceNo` → `payments.partner_reference_no`, `webRedirectUrl` → `payments.checkout_url`, `validUpTo` → `payments.expires_at` dan `orders.payment_expires_at`.
+- [ ] Hanya `responseCode = 2005400` dengan `webRedirectUrl` yang dianggap berhasil; kode lain → `IntegrationException` tidak retryable.
+- [ ] Penandatanganan dan `X-*` header diisi SDK; tidak ada kode tanda tangan buatan sendiri.
+- [ ] Mode `sandbox` di lokal/staging, `production` di produksi; `GAPURA_ENV` juga diekspor ke `DANA_ENV` agar aturan sandbox di SDK konsisten.
 
 ---
 
-## INT-XD-02 · Ambil status invoice
+## INT-GP-02 · Cek status pembayaran
 
 ### Endpoint
 
-`GET https://api.xendit.co/v2/invoices/{invoice_id}` · Basic Auth
+`POST {base_url}/payment-gateway/v1.0/debit/status.htm` · SNAP service code 55 · `GapuraClient::queryPayment()`
 
 ### User Story
 
-Sebagai backend, saya ingin mengecek status invoice langsung ke Xendit saat webhook terlambat atau admin memintanya, agar status pesanan tidak tertinggal.
+Sebagai backend, saya ingin mengecek status order langsung ke DANA saat webhook terlambat atau admin memintanya, agar status pesanan tidak tertinggal.
 
 ### Request Body
 
-Tidak ada.
+| Field DANA | Wajib | Nilai dari website |
+| --- | --- | --- |
+| `originalPartnerReferenceNo` | Ya* | `orders.order_number` |
+| `serviceCode` | Ya | `54` (kode Create Order) |
+| `merchantId` | Ya | `GAPURA_MERCHANT_ID` |
+
+\* Salah satu dari `originalPartnerReferenceNo` atau `originalReferenceNo` wajib diisi.
 
 ### Response Success
 
@@ -1061,69 +1090,91 @@ Tidak ada.
 
 ```json
 {
-  "id": "6527a1b2c3d4e5f6a7b8c9d0",
-  "external_id": "WEB-000123",
-  "status": "PAID",
-  "amount": 6935000,
-  "paid_amount": 6935000,
-  "paid_at": "2026-10-14T14:42:10.000Z",
-  "payment_method": "BANK_TRANSFER",
-  "payment_channel": "BCA",
-  "expiry_date": "2026-10-14T16:30:00.000Z"
+  "responseCode": "2005500",
+  "responseMessage": "Successful",
+  "originalPartnerReferenceNo": "WEB-000123",
+  "originalReferenceNo": "20261020111212800110166000000000001",
+  "latestTransactionStatus": "00",
+  "transactionStatusDesc": "success",
+  "amount": { "value": "6935000.00", "currency": "IDR" },
+  "paidTime": "2026-10-20T10:42:10+07:00",
+  "additionalInfo": {
+    "paymentViews": [
+      { "payOptionInfos": [ { "payMethod": "VIRTUAL_ACCOUNT", "payOption": "VIRTUAL_ACCOUNT_BCA" } ] }
+    ]
+  }
 }
 ```
 
-Status: `PENDING`, `PAID`, `SETTLED`, `EXPIRED`.
+`latestTransactionStatus` dipetakan oleh `GapuraStatus` ke `PaymentStatus`:
+
+| Kode DANA | Arti | `PaymentStatus` |
+| --- | --- | --- |
+| `00` | Sukses, sudah dibayar | `PAID` |
+| `02` | Sedang diproses, pembayaran berhasil | `PAID` |
+| `01` | Dibuat, belum dibayar | `PENDING` |
+| `05` | Order ditutup (kedaluwarsa atau dibatalkan) | `EXPIRED` |
+| `07` | Order tidak ditemukan | `EXPIRED` |
+
+Kode lain → `IntegrationException` (tidak dipercaya).
 
 ### Response Failed
 
 | HTTP | Penanganan |
 | --- | --- |
-| 404 `INVOICE_NOT_FOUND_ERROR` | Catat sebagai `failed`, tampilkan di ADM-10 |
-| 5xx / timeout | ADM-12 → 502; job cadangan mencoba lagi di putaran berikutnya |
+| 404 `4045501` | Catat sebagai `failed`, tampilkan di ADM-10 |
+| 429, 5xx / timeout | ADM-12 → 502; job cadangan mencoba lagi di putaran berikutnya |
 
 ### Acceptance Criteria
 
 - [ ] Dipakai oleh ORD-04, ADM-12, dan job `ExpireUnpaidOrders`.
-- [ ] Hasil `PAID`/`SETTLED`/`EXPIRED` diproses dengan alur yang sama dengan WH-01 (idempotent).
+- [ ] Hasil `PAID` dan `EXPIRED` diproses dengan alur yang sama dengan WH-01 (idempotent).
 
 ---
 
-## INT-XD-03 · Kedaluwarsakan invoice
+## INT-GP-03 · Batalkan order
 
 ### Endpoint
 
-`POST https://api.xendit.co/invoices/{invoice_id}/expire!` · Basic Auth
+`POST {base_url}/payment-gateway/v1.0/debit/cancel.htm` · `GapuraClient::cancelOrder()`
 
 ### User Story
 
-Sebagai backend, saya ingin menutup tagihan Xendit saat customer membatalkan pesanan, agar customer tidak bisa membayar pesanan yang sudah dibatalkan.
+Sebagai backend, saya ingin menutup order di DANA saat customer membatalkan pesanan, agar customer tidak bisa membayar pesanan yang sudah dibatalkan.
 
 ### Request Body
 
-Tidak ada.
+| Field DANA | Wajib | Nilai dari website |
+| --- | --- | --- |
+| `originalPartnerReferenceNo` | Ya | `orders.order_number` |
+| `merchantId` | Ya | `GAPURA_MERCHANT_ID` |
+| `reason` | Tidak | mis. `"Dibatalkan pelanggan"` |
 
 ### Response Success
 
-`200 OK` — objek invoice dengan `"status": "EXPIRED"`.
+`200 OK` dengan `responseCode = 2005700` (dibatalkan), atau `202` dengan `2025700` (sedang diproses). Keduanya dianggap diterima.
 
 ```json
 {
-  "id": "6527a1b2c3d4e5f6a7b8c9d0",
-  "external_id": "WEB-000123",
-  "status": "EXPIRED",
-  "amount": 6935000
+  "responseCode": "2005700",
+  "responseMessage": "Successful",
+  "originalPartnerReferenceNo": "WEB-000123",
+  "originalReferenceNo": "20261020111212800110166000000000001",
+  "cancelTime": "2026-10-20T10:50:00+07:00"
 }
 ```
 
 ### Response Failed
 
-| HTTP | Penanganan |
-| --- | --- |
-| 404 / invoice sudah `PAID` | Jangan batalkan order; jalankan alur bayar, ORD-05 → 409 `ORDER_NOT_CANCELLABLE` |
-| 5xx / timeout | ORD-05 → 502, status order tidak berubah |
+| HTTP | `responseCode` | Penanganan |
+| --- | --- | --- |
+| 403 | `4035700` Transaction Expired | Order sudah kedaluwarsa; jalankan alur kedaluwarsa, ORD-05 mengikuti status sebenarnya |
+| 404 | `4045700` Invalid Transaction Status | Sudah dibayar atau sudah ditutup: jangan batalkan order; jalankan INT-GP-02 lalu alur yang sesuai, ORD-05 → 409 `ORDER_NOT_CANCELLABLE` |
+| 404 | `4045701` Transaction Not Found | Order tidak ada di DANA; periksa lewat INT-GP-02 |
+| 429, 5xx / timeout | — | ORD-05 → 502, status order tidak berubah |
 
 ### Acceptance Criteria
 
 - [ ] Dipanggil **sebelum** membatalkan sales order Jubelio di ORD-05.
-- [ ] Callback `EXPIRED` yang datang setelahnya diabaikan dengan aman (order sudah `cancelled`).
+- [ ] Notifikasi `05` yang datang setelahnya diabaikan dengan aman (order sudah `cancelled`).
+- [ ] Refund (`refund.htm`) tidak dipakai di v1: pesanan dibatalkan hanya sebelum dibayar (PRD F-19).

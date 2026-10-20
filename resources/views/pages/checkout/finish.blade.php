@@ -4,34 +4,12 @@
 @section('robots', 'noindex, nofollow')
 
 {{--
-    Return page from Xendit: /checkout/finish?order=WEB-000123[&failed=1] (INT-XD-01).
-    Live: polls ORD-03 every 3 s until status leaves pending_payment or 60 s pass, and
-    "Lanjutkan pembayaran" calls ORD-04. Static preview: reads the order the checkout
-    page left in sessionStorage and ends in "pending" (nothing was really paid).
+    Return page from DANA (Gapura): /checkout/finish?order=WEB-000123 (INT-GP-01, PAY_RETURN).
+    Polls ORD-03 every 3 s (max 60 s) until the order leaves pending_payment; "Lanjutkan pembayaran" is ORD-04.
+    Behaviour lives in resources/js/components/finishPage.js.
 --}}
 @section('content')
-    <div x-data="{
-            orderNumber: @js($orderNumber),
-            failed: @js($failed),
-            order: null,
-            state: 'checking',
-            now: Date.now(),
-            init() {
-                try {
-                    const saved = JSON.parse(sessionStorage.getItem('saefulaskar.last-order'));
-                    if (saved?.order_number === this.orderNumber) this.order = saved;
-                } catch {}
-                setInterval(() => (this.now = Date.now()), 1000);
-                // Live: poll api.get(endpoints.orders.show(orderNumber)) every 3 s, max 60 s.
-                setTimeout(() => (this.state = this.failed ? 'failed' : (this.order?.status === 'paid' ? 'paid' : 'pending')), 2000);
-            },
-            get remaining() {
-                if (! this.order?.payment_expires_at) return null;
-                const ms = Math.max(0, new Date(this.order.payment_expires_at) - this.now);
-                const h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60, s = Math.floor(ms / 1000) % 60;
-                return [h, m, s].map((n) => String(n).padStart(2, '0')).join(':');
-            },
-         }" class="bg-gray-50">
+    <div x-data="finishPage(@js($orderNumber), @js($failed))" class="bg-gray-50">
         <div class="mx-auto max-w-3xl px-4 py-12 md:py-16">
             {{-- Status card --}}
             <section class="overflow-hidden rounded-3xl border border-gray-200 bg-white text-center">
@@ -74,11 +52,22 @@
                         <p class="mt-2 text-gray-600">Tidak ada dana yang terpotong. Anda bisa mencoba lagi selama batas waktu bayar belum habis.</p>
                     </div>
 
+                    {{-- closed (expired / cancelled / unknown) --}}
+                    <div x-cloak x-show="state === 'closed'">
+                        <span class="mx-auto grid h-16 w-16 place-items-center rounded-full bg-gray-100 text-gray-500">
+                            <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+                        </span>
+                        <h1 class="mt-6 text-2xl font-bold" x-text="order ? 'Pesanan ' + order.status_label.toLowerCase() : 'Pesanan tidak ditemukan'"></h1>
+                        <p class="mt-2 text-gray-600">Pesanan ini tidak bisa dibayar lagi. Silakan belanja kembali bila masih membutuhkannya.</p>
+                    </div>
+
                     <p class="mt-6 text-sm text-gray-500">Nomor pesanan <span class="font-mono font-semibold text-ink" x-text="orderNumber">{{ $orderNumber }}</span></p>
 
+                    <p x-cloak x-show="resumeError" class="mt-4 text-sm text-red-600" x-text="resumeError"></p>
+
                     <div x-cloak x-show="state !== 'checking'" class="mt-8 flex flex-wrap justify-center gap-3">
-                        {{-- ORD-04 returns the existing invoice_url (never a new invoice). --}}
-                        <button type="button" x-show="state === 'pending' || state === 'failed'"
+                        {{-- ORD-04 returns the existing payment page (never a new bill). --}}
+                        <button type="button" x-show="state === 'pending' || state === 'failed'" @click="resume()" :disabled="resuming"
                                 class="rounded-full bg-brand px-7 py-3.5 text-sm font-semibold text-ink transition hover:bg-brand-hover">
                             Lanjutkan pembayaran
                         </button>
@@ -111,7 +100,7 @@
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-widest text-gray-500">Dikirim ke</p>
                         <p class="mt-2 font-semibold" x-text="order?.shipping_address.recipient_name + ' · ' + order?.shipping_address.phone"></p>
-                        <p class="mt-1 leading-relaxed text-gray-600" x-text="order ? `${order.shipping_address.address_line}, ${order.shipping_address.subdistrict.name}, ${order.shipping_address.district.name}, ${order.shipping_address.city.name} ${order.shipping_address.post_code}` : ''"></p>
+                        <p class="mt-1 leading-relaxed text-gray-600" x-text="order ? `${order.shipping_address.address_line}, ${order.shipping_address.subdistrict}, ${order.shipping_address.district}, ${order.shipping_address.city} ${order.shipping_address.post_code}` : ''"></p>
                         <p class="mt-2 text-gray-600"><span class="font-semibold text-ink" x-text="order?.shipping.service_name"></span> · estimasi <span x-text="order?.shipping.etd_text"></span></p>
                     </div>
                     <dl class="space-y-2">

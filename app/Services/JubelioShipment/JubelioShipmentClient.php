@@ -2,6 +2,7 @@
 
 namespace App\Services\JubelioShipment;
 
+use App\Exceptions\IntegrationException;
 use App\Services\IntegrationClient;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
@@ -27,6 +28,24 @@ class JubelioShipmentClient extends IntegrationClient
     public function usesStub(): bool
     {
         return $this->config['driver'] === 'stub';
+    }
+
+    /**
+     * INT-JS-01 · Courier rates from the origin warehouse to a destination, for a total weight.
+     * With the `stub` driver they are sample rates; any other driver is not built yet, because
+     * Jubelio has not shared the rates API.
+     *
+     * @param  array{city_id: string, province_id: string}  $destination
+     * @return list<array<string, mixed>> SHIP-01 rate fields without `rate_id`
+     */
+    public function rates(array $destination, int $weightGrams): array
+    {
+        if ($this->usesStub()) {
+            return StubRates::quote((string) $this->config['origin']['city_id'], $destination, $weightGrams);
+        }
+
+        throw new IntegrationException('jubelio_shipment', 'POST', '/rates', retryable: false,
+            providerMessage: 'API rates Jubelio Shipment belum diimplementasikan; pakai JUBELIO_SHIPMENT_DRIVER=stub.');
     }
 
     /**

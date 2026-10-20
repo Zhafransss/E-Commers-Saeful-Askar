@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('provider', 10);
             $table->string('event_type', 50);
-            // xendit:{id}:{status} | jubelio:{action}:{sha256 body} | invalid:{uuid}
+            // gapura:{partner_reference_no}:{status} | jubelio:{action}:{sha256 body} | invalid:{uuid}
             $table->string('idempotency_key', 191)->unique();
             $table->boolean('signature_valid');
             $table->string('status', 10)->default('received');

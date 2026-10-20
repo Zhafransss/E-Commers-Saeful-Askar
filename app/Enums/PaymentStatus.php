@@ -3,7 +3,8 @@
 namespace App\Enums;
 
 /**
- * Local invoice status. Xendit's SETTLED is stored as PAID (WH-01).
+ * Local payment status. DANA's `latestTransactionStatus` maps to it in GapuraStatus:
+ * 00 and 02 are PAID, 01 is PENDING, 05 (closed) and 07 (not found) are EXPIRED.
  */
 enum PaymentStatus: string
 {

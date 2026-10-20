@@ -20,7 +20,7 @@ return [
         'intro' => 'Sepeda listrik, baterai, dan sparepart. Harga dan stok selalu sama dengan gudang kami di Tambun Utara, Bekasi.',
         'body' => '<h2>Belanja sepeda listrik dan sparepart di Saeful Askar</h2>'
             .'<p>Saeful Askar adalah toko sepeda listrik di Tambun Utara, Bekasi, yang sudah lebih dari 10 tahun melayani pelanggan di Jabodetabek. Di katalog ini Anda bisa membeli sepeda listrik, baterai lithium, charger, dan sparepart secara online, dengan harga dan stok yang selalu sama dengan gudang kami.</p>'
-            .'<p>Pesanan dibayar aman lewat Xendit dan dikirim dari gudang Tambun Utara ke seluruh Indonesia. Untuk area Bekasi dan sekitarnya, Anda juga bisa datang langsung ke toko atau memesan service di rumah.</p>',
+            .'<p>Pesanan dibayar aman lewat DANA dan dikirim dari gudang Tambun Utara ke seluruh Indonesia. Untuk area Bekasi dan sekitarnya, Anda juga bisa datang langsung ke toko atau memesan service di rumah.</p>',
     ],
 
     'sepeda-listrik' => [

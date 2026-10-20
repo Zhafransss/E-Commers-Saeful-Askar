@@ -5,6 +5,8 @@ import cartStore from './stores/cart.js';
 import { forgotPasswordForm, loginForm, registerForm, resetPasswordForm } from './components/authForms.js';
 import cartPage from './components/cartPage.js';
 import checkoutPage from './components/checkoutPage.js';
+import finishPage from './components/finishPage.js';
+import orderPage from './components/orderPage.js';
 import productDetail from './components/productDetail.js';
 import productList from './components/productList.js';
 import { api } from './api/client.js';
@@ -21,6 +23,8 @@ Alpine.data('forgotPasswordForm', forgotPasswordForm);
 Alpine.data('resetPasswordForm', resetPasswordForm);
 Alpine.data('cartPage', cartPage);
 Alpine.data('checkoutPage', checkoutPage);
+Alpine.data('finishPage', finishPage);
+Alpine.data('orderPage', orderPage);
 Alpine.data('productDetail', productDetail);
 Alpine.data('productList', productList);
 

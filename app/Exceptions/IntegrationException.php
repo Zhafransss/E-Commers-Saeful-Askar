@@ -3,7 +3,7 @@
 namespace App\Exceptions;
 
 /**
- * An outgoing call to Jubelio, Jubelio Shipment, or Xendit failed (INT-HDL).
+ * An outgoing call to Jubelio, Jubelio Shipment, or Gapura failed (INT-HDL).
  *
  * Reaches the customer as `502 INTEGRATION_ERROR` with a non-technical message;
  * the technical detail (status, provider code/message) is kept for logs and

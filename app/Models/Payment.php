@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Xendit invoice for an order.
+ * Gapura (DANA) hosted-checkout order for an order: `partner_reference_no` is our order number,
+ * `gapura_reference_no` is DANA's, and `checkout_url` is where the customer pays.
  */
 class Payment extends Model
 {

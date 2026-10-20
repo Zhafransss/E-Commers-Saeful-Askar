@@ -12,8 +12,10 @@ return [
 
     'handlers' => [
 
-        // event_type 'invoice' → WH-01 (Fase 5)
-        'xendit' => [],
+        // event_type 'notify' → WH-01
+        'gapura' => [
+            'notify' => Handlers\GapuraPaymentNotified::class,
+        ],
 
         // event_type = Jubelio action; 'update-salesorder' → WH-05 (Fase 5)
         'jubelio' => [

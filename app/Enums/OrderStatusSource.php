@@ -10,6 +10,6 @@ enum OrderStatusSource: string
     case System = 'system';
     case Customer = 'customer';
     case Admin = 'admin';
-    case Xendit = 'xendit';
+    case Gapura = 'gapura';
     case Jubelio = 'jubelio';
 }

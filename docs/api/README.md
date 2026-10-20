@@ -18,8 +18,8 @@ Dokumen ini adalah kontrak antara frontend (Blade + Alpine.js) dan backend (Lara
 | `shipping.md` | Tarif ongkir (Jubelio Shipment) | FE + BE |
 | `checkout-orders.md` | Checkout, pembayaran, riwayat dan detail pesanan | FE + BE |
 | `admin.md` | Panel admin: pesanan, sinkron | FE + BE |
-| `webhooks.md` | Webhook masuk dari Xendit dan Jubelio | BE |
-| `integrations.md` | Panggilan keluar ke Jubelio, Jubelio Shipment, Xendit | BE |
+| `webhooks.md` | Webhook masuk dari Gapura (DANA) dan Jubelio | BE |
+| `integrations.md` | Panggilan keluar ke Jubelio, Jubelio Shipment, Gapura | BE |
 | `dist.yaml` | OpenAPI resmi Jubelio (diunduh dari dokumentasi Jubelio), acuan INT-JB-xx dan signature webhook | BE |
 
 ## Format setiap endpoint
@@ -63,7 +63,7 @@ Setiap endpoint ditulis dengan enam bagian yang sama:
   - **Publik**: boleh tanpa login.
   - **Customer**: wajib login dengan role `customer` atau `admin`.
   - **Admin**: wajib login dengan role `admin`.
-  - **Webhook**: dipanggil server Xendit/Jubelio, diverifikasi dengan token/signature.
+  - **Webhook**: dipanggil server Gapura (DANA) dan Jubelio, diverifikasi dengan signature.
 
 ### Format response sukses
 
@@ -131,7 +131,7 @@ Semua error memakai bentuk yang sama:
 | 429 | `TOO_MANY_REQUESTS` | Melebihi batas request |
 | 500 | `SERVER_ERROR` | Error tak terduga di backend |
 | 501 | `NOT_IMPLEMENTED` | **Hanya selama pengembangan:** route sudah terdaftar tapi endpoint belum dibangun backend (response menyertakan `endpoint`, mis. `"CAT-02"`). Tidak boleh ada lagi saat rilis |
-| 502 | `INTEGRATION_ERROR` | Jubelio, Jubelio Shipment, atau Xendit gagal merespons dengan benar |
+| 502 | `INTEGRATION_ERROR` | Jubelio, Jubelio Shipment, atau Gapura gagal merespons dengan benar |
 | 503 | `SERVICE_UNAVAILABLE` | Mode perawatan |
 
 Kode khusus per endpoint ditulis di file masing-masing. Daftar lengkapnya ada di bagian **Indeks kode error khusus** di bawah.
@@ -182,12 +182,12 @@ Saat terlampaui: `429 TOO_MANY_REQUESTS` dengan header `Retry-After` (detik).
 
 | Status | Arti | Diubah oleh |
 | --- | --- | --- |
-| `pending_payment` | Order dibuat, menunggu pembayaran Xendit | Checkout |
-| `paid` | Pembayaran diterima | Webhook Xendit PAID |
+| `pending_payment` | Order dibuat, menunggu pembayaran Gapura | Checkout |
+| `paid` | Pembayaran diterima | Webhook Gapura (`00`/`02`) |
 | `processing` | Diproses gudang di Jubelio (picking/packing) | Webhook Jubelio `update-salesorder` |
 | `shipped` | Sudah diserahkan ke kurir, ada nomor resi | Webhook Jubelio `update-salesorder` |
 | `completed` | Diterima customer / ditandai selesai di Jubelio | Webhook Jubelio `update-salesorder` |
-| `expired` | Batas waktu bayar habis, order dibatalkan otomatis | Webhook Xendit EXPIRED / job cadangan |
+| `expired` | Batas waktu bayar habis, order dibatalkan otomatis | Webhook Gapura (`05`) / job cadangan |
 | `cancelled` | Dibatalkan customer (sebelum bayar) atau dibatalkan di Jubelio | `POST /orders/{order_number}/cancel` / webhook Jubelio |
 
 Transisi yang sah:
@@ -419,7 +419,7 @@ ID wilayah mengikuti endpoint Region Jubelio (string). Response REG-04 (keluraha
   },
   "payment": {
     "status": "PAID",
-    "invoice_url": null,
+    "checkout_url": null,
     "payment_method": "BANK_TRANSFER",
     "payment_channel": "BCA",
     "expires_at": "2026-10-14T23:30:00+07:00",
@@ -439,11 +439,11 @@ ID wilayah mengikuti endpoint Region Jubelio (string). Response REG-04 (keluraha
 }
 ```
 
-`payment.invoice_url` hanya terisi saat status `pending_payment` dan invoice belum kedaluwarsa. `can_pay` dan `can_cancel` = `true` hanya saat `pending_payment`.
+`payment.checkout_url` (halaman bayar DANA) hanya terisi saat status `pending_payment` dan order belum kedaluwarsa. `can_pay` dan `can_cancel` = `true` hanya saat `pending_payment`.
 
 ## Indeks endpoint
 
-Total **49 endpoint** milik website: 44 dipanggil frontend dan 5 webhook masuk. Empat endpoint admin bertanda **(v1.1)** — ADM-01, ADM-15, ADM-16, ADM-17 — ditunda sesuai PRD §9, sehingga versi 1 berisi **45 endpoint** (40 frontend + 5 webhook). Kontraknya tetap disimpan di `admin.md` sebagai acuan v1.1. Fitur artikel (blog) dihapus dari lingkup: ART-01, ART-02, dan ADM-02 – ADM-08 tidak ada lagi, dan kode ADM-09 dan seterusnya tidak dinomori ulang. Ditambah 18 kelompok panggilan keluar (INT-JB-01 – INT-JB-14, INT-JS-01, INT-XD-01 – INT-XD-03) dan aturan umumnya (INT-HDL) di `integrations.md`.
+Total **49 endpoint** milik website: 44 dipanggil frontend dan 5 webhook masuk. Empat endpoint admin bertanda **(v1.1)** — ADM-01, ADM-15, ADM-16, ADM-17 — ditunda sesuai PRD §9, sehingga versi 1 berisi **45 endpoint** (40 frontend + 5 webhook). Kontraknya tetap disimpan di `admin.md` sebagai acuan v1.1. Fitur artikel (blog) dihapus dari lingkup: ART-01, ART-02, dan ADM-02 – ADM-08 tidak ada lagi, dan kode ADM-09 dan seterusnya tidak dinomori ulang. Ditambah 18 kelompok panggilan keluar (INT-JB-01 – INT-JB-14, INT-JS-01, INT-GP-01 – INT-GP-03) dan aturan umumnya (INT-HDL) di `integrations.md`.
 
 ### Untuk frontend (`/api/v1`, kecuali CSRF)
 
@@ -498,7 +498,7 @@ Total **49 endpoint** milik website: 44 dipanggil frontend dan 5 webhook masuk. 
 
 | Kode | Method | Path | Pengirim | Event |
 | --- | --- | --- | --- | --- |
-| WH-01 | POST | `/webhooks/xendit/invoice` | Xendit | Invoice `PAID`, `SETTLED`, `EXPIRED` |
+| WH-01 | POST | `/v1.0/debit/notify` | Gapura (DANA) | Finish Notify: `latestTransactionStatus` `00`, `02`, `05` |
 | WH-02 | POST | `/webhooks/jubelio/product` | Jubelio | `update-product` |
 | WH-03 | POST | `/webhooks/jubelio/price` | Jubelio | `update-price` |
 | WH-04 | POST | `/webhooks/jubelio/stock` | Jubelio | `update-qty` |
@@ -510,7 +510,7 @@ Total **49 endpoint** milik website: 44 dipanggil frontend dan 5 webhook masuk. 
 | --- | --- | --- | --- |
 | INT-JB-01 … INT-JB-14 | Jubelio Omnichannel | Login, kategori, produk, berat, stok, data item, region, contact, sales order, setup | integrations.md |
 | INT-JS-01 | Jubelio Shipment | Tarif ongkir | integrations.md |
-| INT-XD-01 … INT-XD-03 | Xendit | Buat, ambil, kedaluwarsakan invoice | integrations.md |
+| INT-GP-01 … INT-GP-03 | Gapura (DANA) | Buat order, cek status, batalkan order (persiapan di INT-GP-00) | integrations.md |
 | INT-HDL | Semua | Aturan umum retry, timeout, logging | integrations.md |
 
 ## Indeks kode error khusus
@@ -542,5 +542,4 @@ Total **49 endpoint** milik website: 44 dipanggil frontend dan 5 webhook masuk. 
 | `ALREADY_SYNCED` | 409 | ADM-11 |
 | `SYNC_ALREADY_RUNNING` | 409 | ADM-13 |
 | `WEBHOOK_EVENT_NOT_FOUND` | 404 | ADM-16 (v1.1) |
-| `INVALID_CALLBACK_TOKEN` | 401 | WH-01 |
-| `INVALID_SIGNATURE` | 401 | WH-02 – WH-05 |
+| `INVALID_SIGNATURE` | 401 | WH-01 – WH-05 |

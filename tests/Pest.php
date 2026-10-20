@@ -88,6 +88,48 @@ function jubelioSignature(string $body, string $secret = 'rahasia-webhook'): str
 }
 
 /**
+ * A throwaway RSA key pair for Gapura tests, as PEM files in the system temp directory:
+ * `private` stands in for DANA's private key (to sign webhooks) or ours, `public` for the matching
+ * public key. Created once per test run.
+ *
+ * @return array{private: string, public: string}
+ */
+function gapuraKeys(string $name = 'dana'): array
+{
+    static $keys = [];
+
+    if (! isset($keys[$name])) {
+        $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+        openssl_pkey_export($key, $private);
+        $paths = [
+            'private' => sys_get_temp_dir()."/gapura-test-{$name}-private.pem",
+            'public' => sys_get_temp_dir()."/gapura-test-{$name}-public.pem",
+        ];
+        file_put_contents($paths['private'], $private);
+        file_put_contents($paths['public'], openssl_pkey_get_details($key)['key']);
+        $keys[$name] = $paths;
+    }
+
+    return $keys[$name];
+}
+
+/**
+ * Headers DANA sends with Finish Notify (SNAP): X-SIGNATURE is an RSA SHA-256 signature of
+ * "POST:/v1.0/debit/notify:<lowercase hex sha256 of the minified body>:<X-TIMESTAMP>".
+ *
+ * @return array<string, string>
+ */
+function gapuraNotifyHeaders(string $body, ?string $privateKeyPath = null, string $timestamp = '2026-10-20T10:42:11+07:00'): array
+{
+    $private = openssl_pkey_get_private(file_get_contents($privateKeyPath ?? gapuraKeys()['private']));
+    // DANA hashes the minified body (no whitespace, slashes unescaped).
+    $minified = json_encode(json_decode($body), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    openssl_sign('POST:/v1.0/debit/notify:'.hash('sha256', $minified).':'.$timestamp, $signature, $private, OPENSSL_ALGO_SHA256);
+
+    return ['X-TIMESTAMP' => $timestamp, 'X-SIGNATURE' => base64_encode($signature), 'X-PARTNER-ID' => 'dana'];
+}
+
+/**
  * Answers Jubelio catalog calls from tests/Fixtures/jubelio/catalog, routed by
  * path. $overrides replaces or adds paths, e.g. ['/inventory/items/group/18' =>
  * Http::response([], 404)]. Unknown paths answer 404, like Jubelio does.

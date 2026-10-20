@@ -1,8 +1,8 @@
 # Arsitektur Sistem — E-Commerce Saeful Askar
 
-Laravel monolit: Blade + Alpine.js + Tailwind (FE) memanggil REST API `/api/v1` (BE). Auth session cookie (Sanctum stateful). MySQL sekaligus menjadi cache (token Jubelio, ongkir, region), antrean job, dan atomic lock lewat driver `database` Laravel — tanpa Redis.  Integrasi keluar hanya lewat `app/Services/*/...Client` (JubelioClient, JubelioShipmentClient, XenditClient). Webhook Xendit & Jubelio → verifikasi → `webhook_events` → job di queue (idempotent). Scheduler: sinkron katalog (malam penuh, 30 menit inkremental), rekonsiliasi stok 15 menit, batalkan order kedaluwarsa 5 menit, retry push order.
+Laravel monolit: Blade + Alpine.js + Tailwind (FE) memanggil REST API `/api/v1` (BE). Auth session cookie (Sanctum stateful). MySQL sekaligus menjadi cache (token Jubelio, ongkir, region), antrean job, dan atomic lock lewat driver `database` Laravel — tanpa Redis.  Integrasi keluar hanya lewat `app/Services/*/...Client` (JubelioClient, JubelioShipmentClient, GapuraClient). Webhook Gapura (DANA) & Jubelio → verifikasi → `webhook_events` → job di queue (idempotent). Scheduler: sinkron katalog (malam penuh, 30 menit inkremental), rekonsiliasi stok 15 menit, batalkan order kedaluwarsa 5 menit, retry push order.
 
-Kerja paralel: semua endpoint disiapkan sejak awal di `docs/api/*.md` (satu file Markdown per modul); FE memakai mock JSON di `resources/js/api/mocks/` (`VITE_API_MOCK=true`); BE feature test sesuai struktur JSON di kontrak dengan fixture Jubelio/Xendit. Branch Git: `backend` dan `frontend` di-merge ke `development`, lalu `development` ke `main` (rincian di PRD §8).
+Kerja paralel: semua endpoint disiapkan sejak awal di `docs/api/*.md` (satu file Markdown per modul); FE memakai mock JSON di `resources/js/api/mocks/` (`VITE_API_MOCK=true`); BE feature test sesuai struktur JSON di kontrak dengan fixture Jubelio/Gapura. Branch Git: `backend` dan `frontend` di-merge ke `development`, lalu `development` ke `main` (rincian di PRD §8).
 
 ## Diagram arsitektur (Mermaid)
 ```mermaid
@@ -17,10 +17,10 @@ flowchart TB
     direction TB
     WEB["Blade + Alpine.js + Tailwind<br/>halaman toko & panel admin"]
     API["REST API /api/v1<br/>Controller → Service"]
-    WH["Webhook endpoint<br/>/webhooks/xendit · /webhooks/jubelio"]
+    WH["Webhook endpoint<br/>/v1.0/debit/notify · /webhooks/jubelio"]
     Q["Queue worker<br/>job sinkron & order"]
     SCH["Scheduler<br/>sinkron katalog · order kedaluwarsa"]
-    CL["Integration client<br/>JubelioClient · ShipmentClient · XenditClient"]
+    CL["Integration client<br/>JubelioClient · ShipmentClient · GapuraClient"]
   end
 
   subgraph DATA["Penyimpanan"]
@@ -30,7 +30,7 @@ flowchart TB
 
   subgraph EXT["Layanan eksternal"]
     direction LR
-    XD["Xendit<br/>invoice pembayaran"]
+    XD["Gapura (DANA)<br/>order pembayaran"]
     JS["Jubelio Shipment<br/>tarif ongkir"]
     JB["Jubelio Omnichannel<br/>api2.jubelio.com"]
   end
@@ -51,7 +51,7 @@ flowchart TB
   Q --> CL
   API --> DATA
   Q --> DATA
-  CL -->|"buat invoice"| XD
+  CL -->|"buat order"| XD
   CL -->|"cek tarif"| JS
   CL -->|"produk · stok · contact · sales order"| JB
   XD -.->|"webhook PAID / EXPIRED"| WH
@@ -68,7 +68,7 @@ sequenceDiagram
   participant W as Website Laravel
   participant S as Jubelio Shipment
   participant J as Jubelio
-  participant X as Xendit
+  participant X as Gapura (DANA)
   C->>W: Pilih alamat dan kurir
   W->>S: Cek tarif (asal Tambun, berat varian)
   S-->>W: Daftar layanan dan ongkir
@@ -77,17 +77,17 @@ sequenceDiagram
   W->>J: POST /contacts/ (jika customer belum punya contact)
   W->>J: POST /sales/orders/ belum bayar, ref_no WEB-xxxxxx
   J-->>W: salesorder_id
-  W->>X: Buat invoice dengan batas waktu bayar
-  X-->>W: invoice_url
-  W-->>C: Arahkan ke halaman bayar Xendit
+  W->>X: Buat order dengan batas waktu bayar
+  X-->>W: webRedirectUrl
+  W-->>C: Arahkan ke halaman bayar DANA
   alt Dibayar sebelum batas waktu
-    X->>W: Webhook invoice PAID
+    X->>W: Finish Notify 00 (lunas)
     W->>J: POST /sales/orders/set-as-paid
     Note over J: Picking, packing, resi di gudang
     J->>W: Webhook update-salesorder (status, resi)
     W-->>C: Status pesanan dan nomor resi
   else Batas waktu habis
-    X->>W: Webhook invoice EXPIRED
+    X->>W: Finish Notify 05 (ditutup)
     W->>J: POST /sales/orders/cancel/
     Note over J: Stok kembali tersedia
     W-->>C: Pesanan dibatalkan
@@ -107,8 +107,8 @@ saeful-askar/
 │   │   ├── shipping.md                     tarif Jubelio Shipment
 │   │   ├── checkout-orders.md
 │   │   ├── admin.md                        panel admin: pesanan, sinkron
-│   │   ├── webhooks.md                     webhook masuk Xendit & Jubelio
-│   │   └── integrations.md                 panggilan keluar ke Jubelio, Jubelio Shipment, Xendit
+│   │   ├── webhooks.md                     webhook masuk Gapura & Jubelio
+│   │   └── integrations.md                 panggilan keluar ke Jubelio, Jubelio Shipment, Gapura
 │   ├── PRD-Website-ECommerce-Saeful-Askar.md   kebutuhan produk (acuan utama)
 │   ├── arsitektur-sistem.md                diagram arsitektur, alur checkout, struktur folder
 │   └── erd.md                              ERD v2: kolom, relasi, index 13 tabel (pemetaan field Jubelio ada di api/integrations.md)
@@ -155,7 +155,7 @@ saeful-askar/
 │   │   │   │   ├── OrderController.php
 │   │   │   │   └── SyncController.php          tombol sinkron manual + log
 │   │   │   └── Webhook/
-│   │   │       ├── XenditWebhookController.php
+│   │   │       ├── GapuraWebhookController.php
 │   │   │       └── JubelioWebhookController.php
 │   │   ├── Middleware/
 │   │   │   ├── EnsureUserIsAdmin.php
@@ -172,7 +172,7 @@ saeful-askar/
 │   │   │   └── CancelSalesOrderJob.php
 │   │   └── Webhooks/
 │   │       ├── ProcessJubelioWebhookJob.php
-│   │       └── ProcessXenditWebhookJob.php
+│   │       └── ProcessGapuraWebhookJob.php
 │   ├── Models/                             User, Address, Category, Product, ProductVariant, ProductImage, CartItem,
 │   │                                       Order, OrderItem, Payment, OrderStatusHistory, WebhookEvent, SyncLog
 │   ├── Policies/
@@ -194,14 +194,15 @@ saeful-askar/
 │   │   ├── JubelioShipment/
 │   │   │   ├── JubelioShipmentClient.php
 │   │   │   └── ShippingRateService.php
-│   │   ├── Xendit/
-│   │   │   ├── XenditClient.php
-│   │   │   └── InvoiceService.php
+│   │   ├── Gapura/
+│   │   │   ├── GapuraClient.php            satu-satunya pemanggil DANA, membungkus SDK danaid/dana-php
+│   │   │   ├── GapuraStatus.php            kode status DANA → PaymentStatus
+│   │   │   └── GapuraOrder · GapuraPayment · GapuraNotification   DTO hasil
 │   │   ├── Webhooks/
 │   │   │   └── WebhookReceiver.php         verifikasi token/signature → webhook_events → queue
 │   │   └── Shop/
 │   │       ├── CartService.php
-│   │       ├── CheckoutService.php         orkestrasi stok → SO → invoice dalam satu alur
+│   │       ├── CheckoutService.php         orkestrasi stok → SO → order Gapura dalam satu alur
 │   │       └── OrderNumberGenerator.php    WEB-000123
 │   └── Providers/AppServiceProvider.php
 │
@@ -209,7 +210,7 @@ saeful-askar/
 ├── config/                                 BE
 │   ├── jubelio.php                         base_url, email, password, store_id, location_id, tax_id, webhook_secret
 │   ├── jubelio_shipment.php                client_id, client_secret, origin, environment
-│   └── xendit.php                          secret_key, callback_token, invoice_duration
+│   └── gapura.php                          env, client_id, merchant_id, private_key_path, mcc, notify_url, payment_duration
 │
 ├── database/                               BE
 │   ├── migrations/                         13 tabel sesuai docs/erd.md
@@ -252,7 +253,7 @@ saeful-askar/
 │       │   ├── products/show.blade.php
 │       │   ├── cart.blade.php
 │       │   ├── checkout/index.blade.php
-│       │   ├── checkout/finish.blade.php   halaman kembali dari Xendit
+│       │   ├── checkout/finish.blade.php   halaman kembali dari DANA
 │       │   ├── account/orders/index.blade.php
 │       │   ├── account/orders/show.blade.php
 │       │   ├── account/addresses.blade.php
@@ -264,7 +265,8 @@ saeful-askar/
 ├── routes/                                 BERSAMA · web.php milik FE, api.php & webhooks.php milik BE
 │   ├── web.php                             halaman Blade
 │   ├── api.php                             prefix /api/v1
-│   ├── webhooks.php                        /webhooks/xendit, /webhooks/jubelio
+│   ├── webhooks.php                        /webhooks/jubelio
+│   ├── gapura.php                          /v1.0/debit/notify (WH-01, path ditetapkan DANA)
 │   └── console.php                         jadwal sinkron & pembatalan
 │
 ├── tests/                                  BE (wajib)
@@ -275,7 +277,7 @@ saeful-askar/
 │   ├── Unit/Services/Jubelio/              mapper & payload builder
 │   └── Fixtures/
 │       ├── jubelio/                        contoh response & webhook dari spec
-│       └── xendit/
+│       └── gapura/
 │
 ├── lang/id/                                BERSAMA · pesan validasi & auth Bahasa Indonesia
 ├── scripts/generate-api-mocks.mjs          BERSAMA · docs/api → resources/js/api/mocks/contract.json

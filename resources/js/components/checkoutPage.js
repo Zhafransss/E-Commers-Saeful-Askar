@@ -278,7 +278,7 @@ export default () => ({
     // --- Pay (ORD-01) -----------------------------------------------------------
 
     /**
-     * ORD-01, then the browser goes to the Xendit invoice. The server empties the cart on
+     * ORD-01, then the browser goes to the DANA checkout page (payment.checkout_url). The server empties the cart on
      * success, so the badge is refreshed before leaving.
      */
     async pay() {

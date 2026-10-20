@@ -3,7 +3,7 @@
 /*
 | Blade pages. Owner: frontend. Pages only render a shell; data is fetched by
 | Alpine from /api/v1. Paths /reset-password and /checkout/finish are fixed by
-| the contract (AUTH-08 email link, Xendit redirect URL).
+| the contract (AUTH-08 email link, DANA redirect URL).
 */
 
 use App\Http\Controllers\Web;

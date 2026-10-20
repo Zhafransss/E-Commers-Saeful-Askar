@@ -2,7 +2,8 @@
 
 /*
 | Incoming webhooks (docs/api/webhooks.md), served under /webhooks without
-| session or CSRF. Owner: backend.
+| session or CSRF. Owner: backend. WH-01 (Gapura) is in routes/gapura.php because
+| DANA only posts to /v1.0/debit/notify.
 |
 | Each WH-xx controller hands the request to App\Services\Webhooks\WebhookReceiver,
 | which verifies the token/signature, records the event (also when rejected,
@@ -11,10 +12,7 @@
 */
 
 use App\Http\Controllers\Webhook\JubelioWebhookController;
-use App\Http\Controllers\Webhook\XenditWebhookController;
 use Illuminate\Support\Facades\Route;
-
-Route::post('xendit/invoice', [XenditWebhookController::class, 'invoice'])->name('xendit.invoice');           // WH-01
 
 Route::prefix('jubelio')->name('jubelio.')->group(function () {
     Route::post('product', [JubelioWebhookController::class, 'product'])->name('product');                   // WH-02

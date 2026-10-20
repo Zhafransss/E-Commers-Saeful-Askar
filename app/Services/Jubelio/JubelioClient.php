@@ -219,6 +219,125 @@ class JubelioClient extends IntegrationClient
     }
 
     /**
+     * INT-JB-09 · A customer contact with exactly this email, if Jubelio has one (a search by `q`
+     * also returns similar emails).
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findCustomerByEmail(string $email): ?array
+    {
+        $json = $this->get('/contacts/customers/', ['q' => $email, 'page' => 1, 'pageSize' => 10])->json();
+        $rows = is_array($json) ? ($json['data'] ?? $json) : [];
+
+        foreach ($rows as $row) {
+            if (is_array($row) && strcasecmp((string) ($row['email'] ?? ''), $email) === 0) {
+                return $row;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * INT-JB-09 · Creates the contact (`contact_id` 0) or updates it, and returns its id.
+     *
+     * @param  array<string, mixed>  $contact
+     */
+    public function saveContact(array $contact): int
+    {
+        return $this->idFrom($this->post('/contacts/', $contact), 'contact_id', 'POST', '/contacts/');
+    }
+
+    /**
+     * INT-JB-10 · Creates an unpaid sales order and returns its id.
+     *
+     * @param  array<string, mixed>  $order
+     */
+    public function createSalesOrder(array $order): int
+    {
+        return $this->idFrom($this->post('/sales/orders/', $order), 'id', 'POST', '/sales/orders/');
+    }
+
+    /**
+     * INT-JB-11 · Marks sales orders paid, so the warehouse starts on them. Safe to repeat.
+     *
+     * @param  list<int>  $ids
+     */
+    public function setSalesOrdersPaid(array $ids): void
+    {
+        $this->post('/sales/orders/set-as-paid', ['ids' => $ids]);
+    }
+
+    /**
+     * INT-JB-12 · Cancels sales orders, which gives their stock back.
+     *
+     * @param  list<int>  $ids
+     */
+    public function cancelSalesOrders(array $ids): void
+    {
+        $this->post('/sales/orders/cancel/', ['ids' => $ids]);
+    }
+
+    /**
+     * INT-JB-13 · One sales order, or null when Jubelio does not know it.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function salesOrder(int $id): ?array
+    {
+        try {
+            $json = $this->get("/sales/orders/{$id}")->json();
+        } catch (JubelioApiException $e) {
+            if ($e->httpStatus === 404) {
+                return null;
+            }
+
+            throw $e;
+        }
+
+        return is_array($json) ? $json : null;
+    }
+
+    /**
+     * INT-JB-13 · The website store's sales order with exactly this `ref_no`. The search also matches
+     * text inside other numbers, so the result is checked for an exact match.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findSalesOrderByRefNo(string $refNo): ?array
+    {
+        $json = $this->get('/sales/v2/orders/', [
+            'page' => 1,
+            'page_size' => 10,
+            'q' => $refNo,
+            'store_id' => $this->config['store_id'],
+        ])->json();
+
+        foreach (is_array($json) ? ($json['data'] ?? []) : [] as $row) {
+            if (is_array($row) && ($row['ref_no'] ?? null) === $refNo) {
+                return $row;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The id Jubelio answers a create call with; anything else is not trusted.
+     */
+    private function idFrom(Response $response, string $key, string $method, string $path): int
+    {
+        $id = $response->json($key);
+
+        if (! is_numeric($id) || (int) $id <= 0) {
+            throw new JubelioApiException('jubelio', $method, $path, $response->status(), retryable: false,
+                providerMessage: "Respons Jubelio tidak berisi {$key}.");
+        }
+
+        return (int) $id;
+    }
+
+    /**
      * @return array{data: list<array<string, mixed>>, totalCount: int}
      */
     private function page(string $path, int $page, int $pageSize, bool $newestFirst = false): array

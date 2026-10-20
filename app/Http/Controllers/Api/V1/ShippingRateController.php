@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Exceptions\NotImplementedException;
+use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\ShippingRatesRequest;
+use App\Services\Shop\ShippingRateService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 /**
  * Contract: docs/api/shipping.md
@@ -15,8 +16,15 @@ class ShippingRateController extends Controller
     /**
      * SHIP-01 · Hitung pilihan kurir dan ongkir
      */
-    public function store(Request $request): JsonResponse
+    public function store(ShippingRatesRequest $request, ShippingRateService $rates): JsonResponse
     {
-        throw new NotImplementedException('SHIP-01');
+        // Another user's address is "not found", not forbidden, so ids do not leak.
+        $address = $request->user()->addresses()->find($request->integer('address_id'))
+            ?? throw new ApiException('Alamat tidak ditemukan.', 'ADDRESS_NOT_FOUND', 404);
+
+        $data = $rates->quote($request->user(), $address, $request->validated('service_types', []));
+        $data['expires_at'] = $data['expires_at']->toIso8601String();
+
+        return response()->json(['data' => $data]);
     }
 }
