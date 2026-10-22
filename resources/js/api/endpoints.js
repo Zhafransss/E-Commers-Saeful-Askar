@@ -64,5 +64,6 @@ export const endpoints = {
         shipments: '/admin/shipments', // ADM-21
         refreshShipments: '/admin/shipments/refresh', // ADM-22
         refreshPayments: '/admin/orders/refresh-payments', // ADM-23
+        sendInvoice: (orderNumber) => `/admin/orders/${seg(orderNumber)}/send-invoice`, // ADM-24
     },
 };

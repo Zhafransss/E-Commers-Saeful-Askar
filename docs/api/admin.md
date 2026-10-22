@@ -461,6 +461,12 @@ Sebagai admin yang baru mengubah produk di Jubelio, saya ingin menjalankan sinkr
 
 `200 OK`: `{ "data": { "checked", "updated", "failed", "remaining" }, "message": "1 resi baru ditemukan di Jubelio." }`. Satu pesanan yang gagal dibaca tidak menghentikan yang lain.
 
+## ADM-24 · Kirim invoice ke email pelanggan
+
+`POST /api/v1/admin/orders/{order_number}/send-invoice` · **Admin**. Tanpa body. Mengantrekan email "Invoice pesanan" ke email pelanggan dengan invoice PDF terlampir. Hanya untuk pesanan yang sudah dibayar (`paid`, `processing`, `shipped`, `completed`); selain itu `409 ORDER_NOT_PAID`, dan `404 ORDER_NOT_FOUND` untuk nomor yang tidak ada.
+
+`202 Accepted`: `{ "data": { "order_number", "sent_to" }, "message": "Invoice dikirim ke ... Email sampai dalam sekitar satu menit." }`. Pengiriman otomatis tidak lewat endpoint ini: email "Pembayaran diterima" sudah membawa invoice PDF saat pembayaran dikonfirmasi.
+
 ## ADM-23 · Periksa pembayaran semua pesanan menunggu
 
 `POST /api/v1/admin/orders/refresh-payments` · **Admin**. Tanpa body. Menanyakan ke DANA (aturan yang sama dengan ADM-12) untuk pesanan `pending_payment` yang punya order pembayaran, terbaru dulu, paling banyak 40 sekali panggil.

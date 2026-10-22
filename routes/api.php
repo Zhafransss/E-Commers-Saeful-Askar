@@ -79,6 +79,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('orders', [Admin\OrderController::class, 'index']);                     // ADM-09
         Route::get('orders/{orderNumber}', [Admin\OrderController::class, 'show']);        // ADM-10
         Route::post('orders/refresh-payments', [Admin\OrderController::class, 'refreshPayments']);   // ADM-23
+        Route::post('orders/{orderNumber}/send-invoice', [Admin\OrderController::class, 'sendInvoice']);     // ADM-24
         Route::post('orders/{orderNumber}/push-jubelio', [Admin\OrderController::class, 'pushJubelio']);       // ADM-11
         Route::post('orders/{orderNumber}/refresh-payment', [Admin\OrderController::class, 'refreshPayment']); // ADM-12
 

@@ -127,8 +127,9 @@
                                    class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-gray-100">Lihat invoice (PDF)</a>
                                 <a :href="invoiceUrl(detail.order_number, true)"
                                    class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-gray-100">Unduh invoice</a>
-                                <button type="button" disabled title="Menunggu pengembangan selanjutnya"
-                                        class="rounded-lg border border-dashed border-gray-300 px-3 py-2 text-xs font-semibold text-gray-400">Kirim invoice ke email (segera)</button>
+                                <button type="button" @click="sendInvoice()" :disabled="busy || !canSendInvoice"
+                                        :title="canSendInvoice ? 'Kirim invoice PDF ke email pelanggan' : 'Hanya untuk pesanan yang sudah dibayar'"
+                                        class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-gray-100 disabled:opacity-40">Kirim invoice ke email</button>
                             </div>
                             <p x-cloak x-show="notice" class="mt-2 rounded bg-green-50 p-2 text-green-700" x-text="notice"></p>
                             <p x-cloak x-show="actionError" class="mt-2 rounded bg-red-50 p-2 text-red-700" x-text="actionError"></p>

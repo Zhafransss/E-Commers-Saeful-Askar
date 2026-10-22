@@ -2,6 +2,8 @@
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
+use App\Mail\InvoiceMail;
+use App\Mail\PaymentReceivedMail;
 use App\Models\Address;
 use App\Models\Category;
 use App\Models\Order;
@@ -9,6 +11,8 @@ use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
+use App\Notifications\ResetPasswordNotification;
+use App\Services\Admin\InvoicePdf;
 use App\Services\Gapura\GapuraClient;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
@@ -16,7 +20,9 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use Symfony\Component\Mime\Email;
 
 /*
 | ADM-18 – ADM-23 (docs/api/admin.md) and the admin-only rules of the shop: customers, products, shipments (resi),
@@ -50,6 +56,7 @@ test('the new admin endpoints refuse guests and customers', function (string $me
     ['GET', '/api/v1/admin/shipments'],
     ['POST', '/api/v1/admin/shipments/refresh'],
     ['POST', '/api/v1/admin/orders/refresh-payments'],
+    ['POST', '/api/v1/admin/orders/WEB-000001/send-invoice'],
 ]);
 
 test('the invoice page is for admins only', function () {
@@ -288,4 +295,98 @@ test('the storefront header shows the cart to customers and guests but not to an
     $this->get('/')->assertOk()->assertSee('aria-label="Keranjang"', false);
     $this->actingAs($this->customer)->get('/')->assertSee('aria-label="Keranjang"', false);
     $this->actingAs($this->admin)->get('/')->assertOk()->assertDontSee('aria-label="Keranjang"', false);
+});
+
+// --- Invoice by email (ADM-24 and the automatic one) ---------------------------------------------
+
+/**
+ * Sends a mailable now through the in-memory mailer and returns the message that "left", for looking at its parts.
+ */
+function sentNow($mailable, string $to): Email
+{
+    config(['mail.default' => 'array']);
+    app('mail.manager')->forgetMailers();
+    Mail::to($to)->sendNow($mailable);
+
+    return app('mail.manager')->mailer('array')->getSymfonyTransport()->messages()->last()->getOriginalMessage();
+}
+
+test('ADM-24 queues the invoice mail to the customer of a paid order', function () {
+    Mail::fake();
+    panelOrder($this->customer, 'WEB-000006', ['status' => OrderStatus::Paid]);
+
+    $response = $this->actingAs($this->admin)->postJson('/api/v1/admin/orders/WEB-000006/send-invoice')->assertStatus(202);
+
+    expect($response->json('data'))->toBe(['order_number' => 'WEB-000006', 'sent_to' => 'siti@example.com'])
+        ->and($response->json('message'))->toStartWith('Invoice dikirim ke siti@example.com.');
+    Mail::assertQueued(InvoiceMail::class, fn (InvoiceMail $mail) => $mail->hasTo('siti@example.com') && $mail->order->order_number === 'WEB-000006');
+});
+
+test('ADM-24 refuses an order that was not paid, and an unknown one', function () {
+    Mail::fake();
+    panelOrder($this->customer, 'WEB-000001', ['status' => OrderStatus::PendingPayment]);
+    panelOrder($this->customer, 'WEB-000002', ['status' => OrderStatus::Cancelled]);
+
+    assertApiError($this->actingAs($this->admin)->postJson('/api/v1/admin/orders/WEB-000001/send-invoice'), 409, 'ORDER_NOT_PAID');
+    assertApiError($this->actingAs($this->admin)->postJson('/api/v1/admin/orders/WEB-000002/send-invoice'), 409, 'ORDER_NOT_PAID');
+    assertApiError($this->actingAs($this->admin)->postJson('/api/v1/admin/orders/WEB-999999/send-invoice'), 404, 'ORDER_NOT_FOUND');
+    Mail::assertNothingQueued();
+});
+
+test('the invoice mail carries the invoice as a PDF attachment', function () {
+    $order = panelOrder($this->customer, 'WEB-000006', ['status' => OrderStatus::Paid]);
+
+    $message = sentNow(new InvoiceMail($order), 'siti@example.com');
+    $attachment = $message->getAttachments()[0];
+
+    expect($message->getSubject())->toBe('Invoice pesanan WEB-000006')
+        ->and($message->getAttachments())->toHaveCount(1)
+        ->and($attachment->getFilename())->toBe('inv-web-000006.pdf')
+        ->and($attachment->getMediaType().'/'.$attachment->getMediaSubtype())->toBe('application/pdf')
+        ->and(substr($attachment->getBody(), 0, 5))->toBe('%PDF-')
+        ->and($message->getHtmlBody())->toContain('INV-WEB-000006');
+});
+
+test('the mail sent when a payment arrives carries the invoice too, and still goes out if the PDF cannot be made', function () {
+    $order = panelOrder($this->customer, 'WEB-000006', ['status' => OrderStatus::Paid]);
+
+    $with = sentNow(new PaymentReceivedMail($order), 'siti@example.com');
+    expect($with->getAttachments())->toHaveCount(1)->and($with->getHtmlBody())->toContain('Invoice pesanan ini terlampir');
+
+    app()->bind(InvoicePdf::class, fn () => new class extends InvoicePdf
+    {
+        public function render(Order $order): string
+        {
+            throw new RuntimeException('dompdf is broken');
+        }
+    });
+
+    $without = sentNow(new PaymentReceivedMail($order), 'siti@example.com');
+    expect($without->getAttachments())->toHaveCount(0)->and($without->getSubject())->toBe('Pembayaran pesanan WEB-000006 diterima');
+});
+
+test('mail:test says what it did, and refuses a bad address', function () {
+    config(['mail.default' => 'array']);
+
+    $this->artisan('mail:test', ['to' => 'nope'])->expectsOutputToContain('Alamat email tidak valid.')->assertFailed();
+    $this->artisan('mail:test', ['to' => 'admin@saefulaskar.test'])->expectsOutputToContain('hanya ditulis ke log')->expectsOutputToContain('Email uji dikirim ke admin@saefulaskar.test')->assertSuccessful();
+});
+
+test('a reset-password request sends the reset link by mail to a registered customer, and nothing for an unknown address', function () {
+    Mail::fake();
+    Notification::fake();
+
+    $this->postJson('/api/v1/auth/forgot-password', ['email' => 'siti@example.com'])->assertOk();
+    $this->postJson('/api/v1/auth/forgot-password', ['email' => 'nobody@example.com'])->assertOk();
+
+    Notification::assertSentTo($this->customer, ResetPasswordNotification::class);
+    Notification::assertCount(1);
+});
+
+test('the reset-password mail links to this site with the token and the email', function () {
+    $notification = new ResetPasswordNotification('tok123');
+    $mail = $notification->toMail($this->customer);
+
+    expect($mail->actionUrl)->toStartWith(url('/reset-password').'?')->toContain('token=tok123')->toContain('email=siti%40example.com')
+        ->and($mail->subject)->toBe('Atur ulang password akun Anda');
 });

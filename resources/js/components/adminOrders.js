@@ -132,6 +132,14 @@ export default () => ({
         return `${APP_URL}/admin/orders/${encodeURIComponent(orderNumber)}/invoice${download ? '?download=1' : ''}`;
     },
 
+    // ADM-24
+    async sendInvoice() {
+        await this.act(async () => {
+            const { message } = await api.post(endpoints.admin.sendInvoice(this.detail.order_number));
+            this.notice = message;
+        });
+    },
+
     // ADM-12
     async refreshPayment() {
         await this.act(async () => {
@@ -169,6 +177,11 @@ export default () => ({
         } finally {
             this.busy = false;
         }
+    },
+
+    /** An invoice goes out only for an order that was paid. */
+    get canSendInvoice() {
+        return this.detail && ['paid', 'processing', 'shipped', 'completed'].includes(this.detail.status);
     },
 
     get canResend() {

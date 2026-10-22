@@ -12,6 +12,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Admin\AdminOrderDetailResource;
 use App\Http\Resources\Admin\AdminOrderSummaryResource;
 use App\Jobs\Jubelio\PushOrderToJubelioJob;
+use App\Mail\InvoiceMail;
 use App\Models\Order;
 use App\Models\SyncLog;
 use App\Services\Admin\JubelioResend;
@@ -20,6 +21,7 @@ use App\Services\Shop\PaymentOutcome;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -139,6 +141,25 @@ class OrderController extends Controller
                 default => 'Status pembayaran belum berubah.',
             },
         ]);
+    }
+
+    /**
+     * ADM-24 · Kirim invoice ke email pelanggan (admin)
+     */
+    public function sendInvoice(string $orderNumber): JsonResponse
+    {
+        $order = $this->find($orderNumber)->load('user');
+
+        if (! in_array($order->status, [OrderStatus::Paid, OrderStatus::Processing, OrderStatus::Shipped, OrderStatus::Completed], true)) {
+            throw new ApiException('Invoice hanya bisa dikirim untuk pesanan yang sudah dibayar.', 'ORDER_NOT_PAID', 409);
+        }
+
+        Mail::to($order->user)->queue(new InvoiceMail($order));
+
+        return response()->json([
+            'data' => ['order_number' => $order->order_number, 'sent_to' => $order->user->email],
+            'message' => "Invoice dikirim ke {$order->user->email}. Email sampai dalam sekitar satu menit.",
+        ], 202);
     }
 
     /**

@@ -13,7 +13,7 @@ Halo {{ $order->shipping_recipient_name }}, terima kasih! Pembayaran pesanan **{
 | **Total dibayar** | | **Rp{{ number_format($order->grand_total, 0, ',', '.') }}** |
 </x-mail::table>
 
-Nomor resi akan muncul di halaman pesanan setelah barang dikirim.
+Invoice pesanan ini terlampir dalam bentuk PDF. Nomor resi akan muncul di halaman pesanan setelah barang dikirim.
 
 <x-mail::button :url="$url">
 Lihat pesanan
