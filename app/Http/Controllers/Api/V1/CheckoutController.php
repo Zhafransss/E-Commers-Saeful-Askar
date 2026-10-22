@@ -30,6 +30,7 @@ class CheckoutController extends Controller
                 'order' => (new OrderDetailResource($order))->response()->getData(true)['data'],
                 'redirect_url' => $order->payment->checkout_url,
             ],
+            $request->validated('item_ids'),
         );
 
         return response()->json(['data' => $data], 201);

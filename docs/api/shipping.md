@@ -23,6 +23,7 @@ Sebagai customer di halaman checkout, saya ingin melihat pilihan kurir beserta o
 | Field | Tipe | Wajib | Aturan |
 | --- | --- | --- | --- |
 | `address_id` | integer | Ya | Alamat milik user |
+| `item_ids` | integer[] | Tidak | ID baris keranjang yang dibeli (yang dicentang customer). Tanpa field ini seluruh keranjang dihitung. Harus sama dengan `item_ids` saat ORD-01, kalau tidak `rate_id` dianggap `RATE_EXPIRED` |
 | `service_types` | array of string | Tidak | Saring jenis layanan: `instant`, `same_day`, `regular`, `cargo`. Default semua |
 
 Isi paket diambil backend dari keranjang user (tidak dikirim frontend).

@@ -5,7 +5,8 @@ import { endpoints } from '../api/endpoints.js';
  * Alpine.data('checkoutPage'): the /checkout page (docs/api/checkout-orders.md ORD-01,
  * shipping.md SHIP-01, addresses-regions.md ADDR-01/02 and REG-01 … REG-04, cart.md CART-01).
  *
- * The cart lives in Alpine.store('cart'). Addresses, regions, shipping rates, and the order
+ * The cart lives in Alpine.store('cart'); only the lines ticked on /cart are bought, so `cart` here is
+ * those lines and their summary, and `item_ids` tells SHIP-01 and ORD-01 which ones. Addresses, regions, shipping rates, and the order
  * all come from the API; this component only holds the page state. Which prices and totals
  * count is always the server's: `expected_grand_total` only lets ORD-01 notice that
  * something changed since the customer looked (PRICE_CHANGED).
@@ -26,6 +27,9 @@ const emptyForm = () => ({
     post_code: '',
     is_default: false,
 });
+
+/** Same clean-up as the server's PhoneNumber::clean(): separators and a leading + are dropped. */
+const cleanPhone = (value) => value.trim().replace(/[\s\-.()]+|^\+/g, '');
 
 const EMPTY_CART = { items: [], summary: { item_count: 0, total_qty: 0, subtotal: 0, total_weight: 0, has_issue: false } };
 
@@ -50,6 +54,8 @@ export default () => ({
     formErrors: {},
     formMessage: null,
     saving: false,
+    // True while the post code was filled in from the chosen kelurahan, and is then not typed by hand.
+    postCodeAuto: false,
 
     // Region choices, loaded one level at a time (REG-01 … REG-04).
     provinces: [],
@@ -109,7 +115,8 @@ export default () => ({
     },
 
     get cart() {
-        return this.$store.cart.cart ?? EMPTY_CART;
+        const store = this.$store.cart;
+        return store.cart ? { items: store.selectedItems, summary: store.selectedSummary } : EMPTY_CART;
     },
 
     get address() {
@@ -162,10 +169,15 @@ export default () => ({
         lists.slice(below - 1).forEach((key) => (this[key] = []));
 
         if (level === 'subdistrict_id') {
-            const postCode = this.subdistricts.find((s) => s.id === this.form.subdistrict_id)?.post_code;
-            if (postCode) this.form.post_code = postCode;
+            // The post code follows the kelurahan; when it is not known the customer types it.
+            const postCode = this.subdistricts.find((s) => s.id === this.form.subdistrict_id)?.post_code ?? null;
+            this.form.post_code = postCode ?? '';
+            this.postCodeAuto = postCode !== null;
             return;
         }
+
+        this.form.post_code = '';
+        this.postCodeAuto = false;
 
         const parentId = this.form[level];
         if (!parentId) return;
@@ -175,11 +187,17 @@ export default () => ({
             city_id: [endpoints.regions.districts, 'city_id', 'districts'],
             district_id: [endpoints.regions.subdistricts, 'district_id', 'subdistricts'],
         }[level];
+        const query = { [param]: parentId };
+        if (level === 'district_id') {
+            // Names only help REG-04 find the post codes; the ids stay the truth.
+            query.district_name = this.districts.find((d) => d.id === parentId)?.name;
+            query.city_name = this.cities.find((c) => c.id === this.form.city_id)?.name;
+        }
 
         this.regionLoading = list;
         this.formMessage = null;
         try {
-            const { data } = await api.get(endpoint, { query: { [param]: parentId } });
+            const { data } = await api.get(endpoint, { query });
             // The customer may have picked something else while this was loading.
             if (this.form[level] === parentId) this[list] = data;
         } catch (error) {
@@ -196,6 +214,7 @@ export default () => ({
         this.formErrors = {};
         this.formMessage = null;
         this.cities = this.districts = this.subdistricts = [];
+        this.postCodeAuto = false;
         this.formOpen = true;
         this.loadProvinces();
     },
@@ -206,7 +225,7 @@ export default () => ({
         const errors = {};
         if (f.label.length > 50) errors.label = 'Maksimal 50 karakter.';
         if (f.recipient_name.trim().length < 2 || f.recipient_name.length > 100) errors.recipient_name = 'Nama penerima 2–100 karakter.';
-        if (!/^(08|628)\d{8,13}$/.test(f.phone.replace(/[\s-]/g, ''))) errors.phone = 'Nomor HP Indonesia 10–15 digit, diawali 08 atau 628.';
+        if (!/^(08|628)\d{8,13}$/.test(cleanPhone(f.phone))) errors.phone = 'Nomor HP 10–15 digit angka, diawali 08 atau 628.';
         if (f.address_line.trim().length < 10 || f.address_line.length > 255) errors.address_line = 'Alamat lengkap 10–255 karakter (jalan, nomor, RT/RW, patokan).';
         if (!f.province_id) errors.province_id = 'Pilih provinsi.';
         if (!f.city_id) errors.city_id = 'Pilih kota/kabupaten.';
@@ -229,7 +248,7 @@ export default () => ({
                 ...f,
                 label: f.label.trim() || null,
                 recipient_name: f.recipient_name.trim(),
-                phone: f.phone.replace(/[\s-]/g, ''),
+                phone: cleanPhone(f.phone),
                 address_line: f.address_line.trim(),
             });
 
@@ -259,7 +278,7 @@ export default () => ({
         const address = this.address;
         this.ratesLoading = true;
         try {
-            const { data } = await api.post(endpoints.shipping.rates, { address_id: address.id });
+            const { data } = await api.post(endpoints.shipping.rates, { address_id: address.id, item_ids: this.$store.cart.selectedIds });
             if (this.address !== address) return; // A newer request replaced this one.
             this.rates = data.rates;
             this.ratesExpireAt = data.expires_at ? Date.parse(data.expires_at) : Date.now() + RATE_TTL_FALLBACK_MS;
@@ -289,7 +308,7 @@ export default () => ({
             return;
         }
 
-        const body = { address_id: this.addressId, rate_id: this.rateId, note: this.note.trim() || null, expected_grand_total: this.grandTotal };
+        const body = { item_ids: this.$store.cart.selectedIds, address_id: this.addressId, rate_id: this.rateId, note: this.note.trim() || null, expected_grand_total: this.grandTotal };
         const bodyKey = JSON.stringify(body);
         if (this.payKeyBody !== bodyKey) {
             this.payKey = uuid();

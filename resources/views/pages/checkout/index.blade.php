@@ -42,9 +42,9 @@
 
         {{-- Empty cart --}}
         <div x-cloak x-show="loaded && ! loadError && cart.items.length === 0" class="mx-auto max-w-md px-4 py-24 text-center">
-            <h2 class="text-2xl font-bold">Keranjang masih kosong</h2>
-            <p class="mt-2 text-gray-600">Tambahkan produk ke keranjang sebelum checkout.</p>
-            <a href="{{ route('products.index') }}" class="mt-8 inline-flex rounded-full bg-brand px-7 py-3.5 font-semibold text-ink transition hover:bg-brand-hover">Mulai belanja</a>
+            <h2 class="text-2xl font-bold">Belum ada produk untuk di-checkout</h2>
+            <p class="mt-2 text-gray-600">Pilih produk yang ingin dibeli di keranjang dulu.</p>
+            <a href="{{ route('cart') }}" class="mt-8 inline-flex rounded-full bg-brand px-7 py-3.5 font-semibold text-ink transition hover:bg-brand-hover">Ke keranjang</a>
         </div>
 
         <div x-cloak x-show="loaded && ! loadError && cart.items.length > 0" class="mx-auto max-w-7xl px-4 py-8 md:px-8 md:py-10">
@@ -94,6 +94,7 @@
                                 <label class="block">
                                     <span class="mb-1.5 block text-sm font-medium">{{ $label }}</span>
                                     <input type="{{ $type }}" x-model="form.{{ $field }}" placeholder="{{ $placeholder }}" autocomplete="{{ $autocomplete }}"
+                                           @if ($field === 'phone') inputmode="numeric" maxlength="15" @input="form.phone = form.phone.replace(/\D/g, '')" @endif
                                            :class="formErrors.{{ $field }} ? 'border-red-500' : 'border-gray-300 focus:border-ink'" class="{{ $input }}">
                                     <span x-show="formErrors.{{ $field }}" x-text="formErrors.{{ $field }}" class="mt-1 block text-xs text-red-600"></span>
                                 </label>
@@ -127,8 +128,10 @@
 
                             <label class="block">
                                 <span class="mb-1.5 block text-sm font-medium">Kode pos</span>
-                                <input type="text" x-model="form.post_code" inputmode="numeric" maxlength="5" placeholder="17565" autocomplete="postal-code"
-                                       :class="formErrors.post_code ? 'border-red-500' : 'border-gray-300 focus:border-ink'" class="{{ $input }}">
+                                <input type="text" x-model="form.post_code" inputmode="numeric" maxlength="5" placeholder="Terisi otomatis" autocomplete="postal-code"
+                                       :readonly="postCodeAuto" @input="form.post_code = form.post_code.replace(/\D/g, '')"
+                                       :class="[formErrors.post_code ? 'border-red-500' : 'border-gray-300 focus:border-ink', postCodeAuto ? 'bg-gray-50 text-gray-600' : '']" class="{{ $input }}">
+                                <span x-show="! postCodeAuto && form.subdistrict_id" class="mt-1 block text-xs text-gray-500">Kode pos tidak ditemukan otomatis, silakan isi manual.</span>
                                 <span x-show="formErrors.post_code" x-text="formErrors.post_code" class="mt-1 block text-xs text-red-600"></span>
                             </label>
                             <label class="block">

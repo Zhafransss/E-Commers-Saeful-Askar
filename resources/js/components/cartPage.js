@@ -36,6 +36,11 @@ export default () => ({
         return this.$store.cart.cart ?? EMPTY_CART;
     },
 
+    /** Summary of the ticked lines: what the summary box and the Checkout button go by. */
+    get selected() {
+        return this.$store.cart.selectedSummary;
+    },
+
     issueMessage(item) {
         return ISSUE_MESSAGES[item.issue] ?? 'Item ini perlu diperiksa.';
     },

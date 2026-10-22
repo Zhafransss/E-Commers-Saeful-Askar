@@ -3,8 +3,10 @@
 namespace App\Services\Jubelio;
 
 use App\Exceptions\IntegrationException;
+use App\Services\RajaOngkir\DestinationResolver;
 use Closure;
 use Illuminate\Support\Facades\Cache;
+use Throwable;
 
 /**
  * Jubelio's region lists (INT-JB-08) for REG-01 – REG-04 and the address book,
@@ -20,7 +22,10 @@ class RegionService
 
     public const UNAVAILABLE_MESSAGE = 'Data wilayah sedang tidak bisa dimuat. Coba lagi beberapa saat.';
 
-    public function __construct(private readonly JubelioClient $jubelio) {}
+    public function __construct(
+        private readonly JubelioClient $jubelio,
+        private readonly DestinationResolver $destinations,
+    ) {}
 
     /**
      * @return list<array{id: string, name: string}>
@@ -47,14 +52,53 @@ class RegionService
     }
 
     /**
-     * Jubelio's subdistricts carry no post code today, so post_code is null and
-     * the customer types it (REG-04); a post code is used if Jubelio adds one.
+     * Jubelio's subdistricts carry no post code today, so they are filled from RajaOngkir when the caller names
+     * the district and city (REG-04); a post code from Jubelio is used if it ever sends one. Without an answer
+     * post_code stays null and the customer types it.
      *
      * @return list<array{id: string, name: string, post_code: string|null}>
      */
-    public function subdistricts(string $districtId): array
+    public function subdistricts(string $districtId, ?string $districtName = null, ?string $cityName = null): array
     {
-        return $this->list('subdistricts', ['district_id' => $districtId], 'subdistrict_id', withPostCode: true);
+        $rows = $this->list('subdistricts', ['district_id' => $districtId], 'subdistrict_id', withPostCode: true);
+
+        if (blank($districtName) || blank($cityName) || config('shipping.driver') !== 'rajaongkir'
+            || collect($rows)->every(fn (array $row) => $row['post_code'] !== null)) {
+            return $rows;
+        }
+
+        $codes = $this->postCodes($districtId, $districtName, $cityName);
+
+        return array_map(function (array $row) use ($codes): array {
+            $row['post_code'] ??= $codes[trim(preg_replace('/[^a-z0-9]+/', ' ', mb_strtolower($row['name'])))] ?? null;
+
+            return $row;
+        }, $rows);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function postCodes(string $districtId, string $districtName, string $cityName): array
+    {
+        // The names only steer the search, so they are part of the key: a wrong name cannot fill a right district's entry.
+        $key = 'regions:postcodes:'.$districtId.':'.md5(mb_strtolower("{$districtName}|{$cityName}"));
+
+        if (is_array($cached = Cache::get($key))) {
+            return $cached;
+        }
+
+        try {
+            $codes = $this->destinations->postCodesInDistrict($districtName, $cityName);
+        } catch (Throwable) {
+            return []; // Post codes are a convenience; the customer can still type one.
+        }
+
+        if ($codes !== []) {
+            Cache::put($key, $codes, self::FRESH_FOR);
+        }
+
+        return $codes;
     }
 
     /**

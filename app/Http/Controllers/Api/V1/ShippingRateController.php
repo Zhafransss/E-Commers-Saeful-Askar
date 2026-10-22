@@ -22,7 +22,7 @@ class ShippingRateController extends Controller
         $address = $request->user()->addresses()->find($request->integer('address_id'))
             ?? throw new ApiException('Alamat tidak ditemukan.', 'ADDRESS_NOT_FOUND', 404);
 
-        $data = $rates->quote($request->user(), $address, $request->validated('service_types', []));
+        $data = $rates->quote($request->user(), $address, $request->validated('service_types', []), $request->validated('item_ids'));
         $data['expires_at'] = $data['expires_at']->toIso8601String();
 
         return response()->json(['data' => $data]);

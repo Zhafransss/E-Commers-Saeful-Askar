@@ -44,7 +44,10 @@ class RegionController extends Controller
      */
     public function subdistricts(Request $request): JsonResponse
     {
-        return response()->json(['data' => $this->regions->subdistricts($this->parent($request, 'district_id', 'Kecamatan wajib dipilih.'))]);
+        $districtId = $this->parent($request, 'district_id', 'Kecamatan wajib dipilih.');
+        $hints = $request->validate(['district_name' => ['nullable', 'string', 'max:100'], 'city_name' => ['nullable', 'string', 'max:100']]);
+
+        return response()->json(['data' => $this->regions->subdistricts($districtId, $hints['district_name'] ?? null, $hints['city_name'] ?? null)]);
     }
 
     private function parent(Request $request, string $field, string $requiredMessage): string

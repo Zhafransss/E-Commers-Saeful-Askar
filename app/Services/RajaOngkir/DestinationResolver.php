@@ -48,6 +48,30 @@ class DestinationResolver
             ?? throw new ApiException('Gudang asal belum dikenali oleh layanan ongkir. Isi RAJAONGKIR_ORIGIN_ID.', 'NO_SHIPPING_SERVICE', 422);
     }
 
+    /**
+     * Post codes of the subdistricts of one district, keyed by the normalised subdistrict name. Jubelio's
+     * lists carry no post codes, so the address form takes them from here (REG-04). One search covers the
+     * whole district; a place RajaOngkir does not know is simply missing from the answer.
+     *
+     * @return array<string, string>
+     */
+    public function postCodesInDistrict(string $district, string $city): array
+    {
+        $codes = [];
+
+        foreach ($this->client->withinCustomerRequest()->searchDestinations(trim("{$district} {$city}"), 100) as $candidate) {
+            if (! $this->same($candidate['district_name'], $district)
+                || $this->cityName($candidate['city_name']) !== $this->cityName($city)
+                || ! preg_match('/^\d{5}$/', $candidate['zip_code'])) {
+                continue;
+            }
+
+            $codes[$this->normalize($candidate['subdistrict_name'])] ??= $candidate['zip_code'];
+        }
+
+        return $codes;
+    }
+
     private function find(string $key, string $subdistrict, string $district, string $city, string $postCode): ?int
     {
         $cacheKey = "rajaongkir:destination:{$key}:".md5(mb_strtolower("{$subdistrict}|{$district}|{$city}|{$postCode}"));
@@ -111,6 +135,18 @@ class DestinationResolver
     private function sameCity(string $a, string $b): bool
     {
         return $this->cityKey($a) === $this->cityKey($b) && $this->cityKey($a) !== '';
+    }
+
+    /**
+     * City name for the post code lookup, where the match decides which zip is shown: the same rules as
+     * cityKey(), but also tolerant of the dot in "KAB. BEKASI".
+     */
+    private function cityName(string $name): string
+    {
+        $isCity = (bool) preg_match('/\b(kota|adm)\b/u', mb_strtolower($name));
+        $core = preg_replace('/\b(kabupaten|kab|kota|adm|administrasi)\b/u', ' ', mb_strtolower($name));
+
+        return ($isCity ? 'kota ' : 'kab ').$this->normalize($core);
     }
 
     private function cityKey(string $name): string

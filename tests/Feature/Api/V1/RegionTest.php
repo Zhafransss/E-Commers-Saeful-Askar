@@ -35,6 +35,25 @@ test('REG-02 to REG-04 follow the chain down to the warehouse village', function
     ]]);
 });
 
+test('REG-04 fills post codes from RajaOngkir when the district and city are named', function () {
+    config(['shipping.driver' => 'rajaongkir', 'shipping.rajaongkir.api_key' => 'k']);
+    fakeJubelioRegions(['/api/v1/destination/domestic-destination' => Http::response(fixture('rajaongkir/destinations-satriajaya.json'))]);
+
+    $this->getJson('/api/v1/regions/subdistricts?district_id=321605&district_name=Tambun%20Utara&city_name=KAB.%20BEKASI')
+        ->assertOk()->assertExactJson(['data' => [
+            ['id' => '3216052001', 'name' => 'Satriajaya', 'post_code' => '17565'],
+            ['id' => '3216052006', 'name' => 'Srijaya', 'post_code' => '17564'],
+        ]]);
+});
+
+test('REG-04 still answers when RajaOngkir fails', function () {
+    config(['shipping.driver' => 'rajaongkir', 'shipping.rajaongkir.api_key' => 'k']);
+    fakeJubelioRegions(['/api/v1/destination/domestic-destination' => Http::response([], 500)]);
+
+    $this->getJson('/api/v1/regions/subdistricts?district_id=321605&district_name=Tambun%20Utara&city_name=KAB.%20BEKASI')
+        ->assertOk()->assertJsonPath('data.0.post_code', null);
+});
+
 test('Jubelio is called without a slash before the query string', function () {
     $this->getJson('/api/v1/regions/cities?province_id=32')->assertOk();
 

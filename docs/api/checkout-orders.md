@@ -34,6 +34,7 @@ Sebagai customer, saya ingin menekan "Bayar" setelah memilih alamat dan kurir, l
 | `address_id` | integer | Ya | Alamat milik user |
 | `rate_id` | string | Ya | Dari SHIP-01, belum kedaluwarsa, dibuat untuk user + alamat + isi keranjang yang sama |
 | `note` | string | Tidak | Catatan untuk toko, maks 255 karakter |
+| `item_ids` | integer[] | Tidak | ID baris keranjang yang dibeli (yang dicentang customer); tanpa field ini seluruh keranjang. Hanya baris ini yang masuk pesanan dan dihapus dari keranjang; baris lain tetap. Tidak ada yang cocok → `CART_EMPTY` |
 | `expected_grand_total` | integer | Ya | Total yang dilihat customer di layar (subtotal + ongkir); dipakai mendeteksi perubahan harga |
 
 Item pesanan diambil dari keranjang user, tidak dikirim frontend.

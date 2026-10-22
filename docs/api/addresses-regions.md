@@ -171,6 +171,8 @@ Tidak ada.
 | Query | Tipe | Wajib | Keterangan |
 | --- | --- | --- | --- |
 | `district_id` | string | Ya | ID dari REG-03 |
+| `district_name` | string | Tidak | Nama kecamatan terpilih. Bersama `city_name`, dipakai mencari kode pos kelurahan di RajaOngkir (Jubelio tidak menyediakannya); hanya petunjuk pencarian |
+| `city_name` | string | Tidak | Nama kota/kabupaten terpilih |
 
 ### User Story
 

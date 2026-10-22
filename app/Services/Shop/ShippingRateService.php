@@ -26,11 +26,12 @@ class ShippingRateService
 
     /**
      * @param  list<string>  $serviceTypes  Empty means every type
+     * @param  list<int>|null  $itemIds  The cart lines being bought; null means the whole cart
      * @return array<string, mixed> The SHIP-01 `data` object
      */
-    public function quote(User $user, Address $address, array $serviceTypes = []): array
+    public function quote(User $user, Address $address, array $serviceTypes = [], ?array $itemIds = null): array
     {
-        $package = $this->package($user);
+        $package = $this->package($user, $itemIds);
 
         if ($package['items']->isEmpty()) {
             throw new ApiException('Keranjang Anda kosong.', 'CART_EMPTY', 422);
@@ -97,12 +98,13 @@ class ShippingRateService
      * The rate a checkout names, if it was made for this user, address, and cart contents and has not
      * expired (ORD-01 step 2). Anything else is `RATE_EXPIRED`.
      *
+     * @param  list<int>|null  $itemIds  The cart lines being bought; null means the whole cart
      * @return array<string, mixed> The rate fields, without the bookkeeping keys
      */
-    public function resolve(string $rateId, User $user, Address $address): array
+    public function resolve(string $rateId, User $user, Address $address, ?array $itemIds = null): array
     {
         $stored = Cache::get($this->cacheKey($rateId));
-        $package = $this->package($user);
+        $package = $this->package($user, $itemIds);
 
         if (! is_array($stored)
             || $stored['user_id'] !== $user->id
@@ -117,11 +119,14 @@ class ShippingRateService
     /**
      * The payable part of the cart: lines whose product was deactivated do not count (CART-01, SHIP-01).
      *
+     * @param  list<int>|null  $itemIds  Only these cart lines count; null means every line
      * @return array{items: Collection<int, CartItem>, weight: int, subtotal: int, signature: string}
      */
-    public function package(User $user): array
+    public function package(User $user, ?array $itemIds = null): array
     {
-        $items = $this->cart->items($user)->reject(fn (CartItem $item) => $item->issue() === CartItem::ISSUE_PRODUCT_INACTIVE)->values();
+        $items = $this->cart->items($user)
+            ->when($itemIds !== null, fn ($lines) => $lines->whereIn('id', $itemIds))
+            ->reject(fn (CartItem $item) => $item->issue() === CartItem::ISSUE_PRODUCT_INACTIVE)->values();
 
         return [
             'items' => $items,

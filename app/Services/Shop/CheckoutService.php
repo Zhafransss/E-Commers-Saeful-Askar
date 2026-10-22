@@ -10,6 +10,7 @@ use App\Exceptions\ApiException;
 use App\Exceptions\IntegrationException;
 use App\Http\Resources\Api\V1\CartResource;
 use App\Jobs\Jubelio\CancelSalesOrderJob;
+use App\Jobs\Jubelio\UpdateJubelioContactJob;
 use App\Models\Address;
 use App\Models\CartItem;
 use App\Models\Order;
@@ -27,7 +28,7 @@ use Throwable;
 
 /**
  * ORD-01 (docs/api/checkout-orders.md), in the contract's order: validate → rate → price → live stock
- * → Jubelio contact → order → Jubelio sales order → Gapura order → empty the cart.
+ * → Jubelio contact → order → Jubelio sales order → Gapura order → remove the bought lines from the cart.
  *
  * Nothing here may happen twice. One checkout per customer runs at a time (a second click while the
  * first is still working gets `DUPLICATE_REQUEST`), and the answer to an `Idempotency-Key` is kept for
@@ -56,9 +57,10 @@ class CheckoutService
     /**
      * @param  Closure(Order): array<string, mixed>  $respond  Builds the response data of a placed order; the
      *                                                         result is kept for the idempotency key
+     * @param  list<int>|null  $itemIds  The cart lines being bought; null means the whole cart
      * @return array<string, mixed> The response data (a replay returns the stored one)
      */
-    public function handle(User $user, string $idempotencyKey, int $addressId, string $rateId, ?string $note, int $expectedTotal, Closure $respond): array
+    public function handle(User $user, string $idempotencyKey, int $addressId, string $rateId, ?string $note, int $expectedTotal, Closure $respond, ?array $itemIds = null): array
     {
         $storedKey = "checkout:response:{$user->id}:{$idempotencyKey}";
 
@@ -78,7 +80,7 @@ class CheckoutService
                 return $stored;
             }
 
-            $response = $respond($this->place($user, $addressId, $rateId, $note, $expectedTotal));
+            $response = $respond($this->place($user, $addressId, $rateId, $note, $expectedTotal, $itemIds));
             Cache::put($storedKey, $response, now()->addHours(self::RESPONSE_TTL_HOURS));
 
             return $response;
@@ -87,15 +89,21 @@ class CheckoutService
         }
     }
 
-    private function place(User $user, int $addressId, string $rateId, ?string $note, int $expectedTotal): Order
+    /**
+     * @param  list<int>|null  $itemIds
+     */
+    private function place(User $user, int $addressId, string $rateId, ?string $note, int $expectedTotal, ?array $itemIds): Order
     {
         $address = $user->addresses()->find($addressId)
             ?? throw new ApiException('Alamat tidak ditemukan.', 'ADDRESS_NOT_FOUND', 404);
 
-        $lines = $this->cart->items($user);
-        $this->assertCartReady($user, $lines);
+        $lines = $this->cart->items($user)
+            ->when($itemIds !== null, fn ($items) => $items->whereIn('id', $itemIds))
+            ->values();
+        $this->assertCartReady($lines);
+        $this->ensureProfilePhone($user, $address);
 
-        $rate = $this->rates->resolve($rateId, $user, $address);
+        $rate = $this->rates->resolve($rateId, $user, $address, $itemIds);
 
         $subtotal = (int) $lines->sum(fn (CartItem $line) => $line->variant->price * $line->qty);
         $amounts = [
@@ -121,7 +129,7 @@ class CheckoutService
         $order = $this->createOrder($user, $address, $lines, $rate, $amounts, $note);
 
         $this->createSalesOrder($order);
-        $this->createGapuraOrder($order, $user);
+        $this->createGapuraOrder($order, $lines);
 
         return $order->load(['items', 'payment', 'statusHistories']);
     }
@@ -129,7 +137,7 @@ class CheckoutService
     /**
      * @param  Collection<int, CartItem>  $lines
      */
-    private function assertCartReady(User $user, Collection $lines): void
+    private function assertCartReady(Collection $lines): void
     {
         if ($lines->isEmpty()) {
             throw new ApiException('Keranjang Anda kosong.', 'CART_EMPTY', 422);
@@ -143,9 +151,27 @@ class CheckoutService
                 extra: ['cart' => (new CartResource($lines))->response()->getData(true)['data']],
             );
         }
+    }
 
-        if (blank($user->phone)) {
-            throw new ApiException('Lengkapi nomor HP di profil Anda sebelum checkout.', 'PROFILE_INCOMPLETE', 422);
+    /**
+     * The courier and Jubelio need a phone number on the account. A customer who never had one on the profile
+     * (there is no page to add it) uses the number of the delivery address, which is always valid; it is kept
+     * on the profile so the next order does not ask again.
+     */
+    private function ensureProfilePhone(User $user, Address $address): void
+    {
+        if (filled($user->phone)) {
+            return;
+        }
+
+        if (blank($address->phone)) {
+            throw new ApiException('Lengkapi nomor HP di alamat pengiriman Anda sebelum checkout.', 'PROFILE_INCOMPLETE', 422);
+        }
+
+        $user->forceFill(['phone' => $address->phone])->save();
+
+        if ($user->jubelio_contact_id !== null) {
+            UpdateJubelioContactJob::dispatch($user->id);
         }
     }
 
@@ -260,7 +286,10 @@ class CheckoutService
     /**
      * ORD-01 step 8. A failure gives the sales order back, then ends the checkout like step 7.
      */
-    private function createGapuraOrder(Order $order, User $user): void
+    /**
+     * @param  Collection<int, CartItem>  $lines  The cart lines this order was made from
+     */
+    private function createGapuraOrder(Order $order, Collection $lines): void
     {
         try {
             $gapura = $this->gapura->withinCustomerRequest()->createOrder(
@@ -277,7 +306,7 @@ class CheckoutService
             throw $this->asBusy($e);
         }
 
-        DB::transaction(function () use ($order, $user, $gapura): void {
+        DB::transaction(function () use ($order, $lines, $gapura): void {
             Payment::create([
                 'order_id' => $order->id,
                 'gapura_reference_no' => $gapura->referenceNo,
@@ -288,7 +317,8 @@ class CheckoutService
                 'expires_at' => $gapura->expiresAt,
             ]);
             $order->forceFill(['payment_expires_at' => $gapura->expiresAt])->save();
-            $this->cart->clear($user);
+            // Only what was bought; lines the customer left unticked stay in the cart.
+            CartItem::whereIn('id', $lines->modelKeys())->delete();
         });
     }
 

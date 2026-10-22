@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * ORD-01 (docs/api/checkout-orders.md). The items come from the customer's cart, so only what the
- * customer chose is sent: address, rate (from SHIP-01), a note, and the total they saw. The
+ * customer chose is sent: the cart lines to buy (`item_ids`, the whole cart when left out), address, rate (from SHIP-01), a note, and the total they saw. The
  * `Idempotency-Key` header, a fresh UUID per click on "Bayar", is validated as a field of its own.
  */
 class CheckoutRequest extends FormRequest
@@ -24,6 +24,8 @@ class CheckoutRequest extends FormRequest
         return [
             'idempotency_key' => ['required', 'uuid'],
             'address_id' => ['required', 'integer'],
+            'item_ids' => ['sometimes', 'array', 'min:1', 'max:100'],
+            'item_ids.*' => ['integer'],
             'rate_id' => ['required', 'string', 'max:50'],
             'note' => ['nullable', 'string', 'max:255'],
             'expected_grand_total' => ['required', 'integer', 'min:0'],
@@ -39,6 +41,7 @@ class CheckoutRequest extends FormRequest
             'idempotency_key.required' => 'Header Idempotency-Key wajib diisi.',
             'idempotency_key.uuid' => 'Header Idempotency-Key harus berupa UUID.',
             'address_id.required' => 'Alamat pengiriman wajib dipilih.',
+            'item_ids.min' => 'Pilih minimal satu produk untuk di-checkout.',
             'rate_id.required' => 'Kurir pengiriman wajib dipilih.',
             'note.max' => 'Catatan maksimal 255 karakter.',
             'expected_grand_total.required' => 'Total pesanan wajib dikirim.',

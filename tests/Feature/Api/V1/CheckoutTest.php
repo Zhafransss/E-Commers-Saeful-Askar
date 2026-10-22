@@ -313,11 +313,46 @@ test('a cart line with a problem is CART_HAS_ISSUES and carries the cart', funct
     expect(Order::count())->toBe(0);
 });
 
-test('a customer without a phone number is PROFILE_INCOMPLETE', function () {
+test('a customer without a profile phone checks out with the address phone and keeps it', function () {
     $rate = quotedRate($this);
     $this->user->forceFill(['phone' => null])->save();
 
-    assertApiError(checkout($this, ['rate' => $rate]), 422, 'PROFILE_INCOMPLETE');
+    checkout($this, ['rate' => $rate])->assertCreated();
+
+    expect($this->user->fresh()->phone)->toBe($this->address->phone);
+});
+
+test('only the ticked cart lines are bought, and the others stay in the cart', function () {
+    $other = ProductVariant::factory()->for(Product::factory()->create(['package_weight' => 1000]))
+        ->create(['sku' => 'ACC-1', 'price' => 50000, 'available_qty' => 9, 'package_weight' => 1000]);
+    $this->user->cartItems()->create(['product_variant_id' => $other->id, 'qty' => 2]);
+    $bikeLine = $this->user->cartItems()->where('product_variant_id', $this->bike->id)->first();
+
+    $rate = $this->actingAs($this->user)
+        ->postJson('/api/v1/shipping/rates', ['address_id' => $this->address->id, 'item_ids' => [$bikeLine->id]])
+        ->assertOk()->assertJsonPath('data.package.item_count', 1)->json('data.rates.0');
+
+    checkout($this, ['rate' => $rate, 'item_ids' => [$bikeLine->id], 'expected_grand_total' => 6750000 + $rate['cost'] + $rate['insurance_cost']])
+        ->assertCreated();
+
+    expect(Order::first()->items)->toHaveCount(1)
+        ->and($this->user->cartItems()->pluck('product_variant_id')->all())->toBe([$other->id]);
+});
+
+test('a rate quoted for the whole cart does not fit a smaller selection', function () {
+    $other = ProductVariant::factory()->for(Product::factory()->create(['package_weight' => 1000]))
+        ->create(['sku' => 'ACC-1', 'price' => 50000, 'available_qty' => 9, 'package_weight' => 1000]);
+    $this->user->cartItems()->create(['product_variant_id' => $other->id, 'qty' => 1]);
+    $rate = quotedRate($this);
+    $bikeLine = $this->user->cartItems()->where('product_variant_id', $this->bike->id)->first();
+
+    assertApiError(checkout($this, ['rate' => $rate, 'item_ids' => [$bikeLine->id]]), 409, 'RATE_EXPIRED');
+});
+
+test('item_ids that match nothing in the cart are CART_EMPTY', function () {
+    $rate = quotedRate($this);
+
+    assertApiError(checkout($this, ['rate' => $rate, 'item_ids' => [999999]]), 422, 'CART_EMPTY');
     expect(Order::count())->toBe(0);
 });
 

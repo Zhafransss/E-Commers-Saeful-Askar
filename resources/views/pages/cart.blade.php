@@ -3,7 +3,7 @@
 @section('title', 'Keranjang')
 @section('robots', 'noindex, nofollow')
 
-{{-- resources/js/components/cartPage.js: CART-01 (show), CART-03 (qty), CART-04 (remove), CART-05 (clear). --}}
+{{-- resources/js/components/cartPage.js: CART-01 (show), CART-03 (qty), CART-04 (remove), CART-05 (clear); the ticked lines are what /checkout pays for. --}}
 
 @section('content')
     <div x-data="cartPage()">
@@ -43,9 +43,29 @@
                     <p x-cloak x-show="notice" x-text="notice" role="status"
                        class="rounded-2xl border border-gray-300 bg-white p-4 text-sm text-gray-700"></p>
 
+                    <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm sm:px-5">
+                        <label class="flex cursor-pointer items-center gap-3 font-semibold">
+                            <input type="checkbox" class="h-5 w-5 accent-ink" :checked="$store.cart.allSelected" @change="$store.cart.toggleAll()">
+                            Pilih semua <span class="font-normal text-gray-500">(<span x-text="selected.item_count"></span>/<span x-text="cart.items.length"></span> produk)</span>
+                        </label>
+
+                        <button type="button" x-show="! confirmingClear" @click="confirmingClear = true"
+                                class="inline-flex items-center gap-2 rounded-full border border-gray-300 px-4 py-1.5 font-semibold text-gray-600 transition hover:border-red-600 hover:text-red-600">
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3" /></svg>
+                            Hapus semua
+                        </button>
+                        <div x-cloak x-show="confirmingClear" class="flex items-center gap-2">
+                            <span class="text-gray-600">Hapus semua item?</span>
+                            <button type="button" @click="clear()" class="rounded-full bg-red-600 px-4 py-1.5 font-semibold text-white transition hover:bg-red-700">Ya, hapus semua</button>
+                            <button type="button" @click="confirmingClear = false" class="rounded-full border border-gray-300 px-4 py-1.5 font-semibold transition hover:border-ink">Batal</button>
+                        </div>
+                    </div>
+
                     <template x-for="item in cart.items" :key="item.id">
-                        <article class="flex gap-4 rounded-2xl border bg-white p-4 transition sm:p-5"
+                        <article class="flex gap-3 rounded-2xl border bg-white p-4 transition sm:gap-4 sm:p-5"
                                  :class="item.issue ? 'border-brand ring-1 ring-brand' : 'border-gray-200'">
+                            <input type="checkbox" class="mt-1 h-5 w-5 shrink-0 self-start accent-ink sm:self-center" :checked="$store.cart.isSelected(item)" @change="$store.cart.toggle(item)"
+                                   :aria-label="'Pilih ' + item.product.name">
                             <a :href="`{{ url('/products') }}/${item.product.slug}`" class="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-ink-soft sm:h-28 sm:w-28">
                                 <template x-if="item.variant.image_url">
                                     <img :src="item.variant.image_url" :alt="item.product.name" class="h-full w-full object-cover">
@@ -97,12 +117,6 @@
                     <div class="flex flex-wrap items-center justify-between gap-3 pt-2 text-sm">
                         <a href="{{ route('products.index') }}" class="font-semibold underline decoration-brand decoration-2 underline-offset-4">&larr; Lanjut belanja</a>
 
-                        <button type="button" x-show="! confirmingClear" @click="confirmingClear = true" class="text-gray-500 transition hover:text-red-600">Kosongkan keranjang</button>
-                        <div x-cloak x-show="confirmingClear" class="flex items-center gap-2">
-                            <span class="text-gray-600">Hapus semua item?</span>
-                            <button type="button" @click="clear()" class="rounded-full bg-red-600 px-4 py-1.5 font-semibold text-white transition hover:bg-red-700">Ya, kosongkan</button>
-                            <button type="button" @click="confirmingClear = false" class="rounded-full border border-gray-300 px-4 py-1.5 font-semibold transition hover:border-ink">Batal</button>
-                        </div>
                     </div>
                 </div>
 
@@ -110,20 +124,22 @@
                 <aside class="h-fit rounded-2xl bg-ink p-6 text-white lg:sticky lg:top-24">
                     <h2 class="text-lg font-semibold">Ringkasan</h2>
                     <dl class="mt-6 space-y-3 text-sm">
-                        <div class="flex justify-between gap-4"><dt class="text-gray-400">Subtotal (<span x-text="cart.summary.total_qty"></span> barang)</dt><dd class="font-semibold tabular-nums" x-text="$format.formatRupiah(cart.summary.subtotal)"></dd></div>
-                        <div class="flex justify-between gap-4"><dt class="text-gray-400">Total berat</dt><dd class="font-semibold" x-text="$format.formatWeight(cart.summary.total_weight)"></dd></div>
+                        <div class="flex justify-between gap-4"><dt class="text-gray-400">Subtotal (<span x-text="selected.total_qty"></span> barang)</dt><dd class="font-semibold tabular-nums" x-text="$format.formatRupiah(selected.subtotal)"></dd></div>
+                        <div class="flex justify-between gap-4"><dt class="text-gray-400">Total berat</dt><dd class="font-semibold" x-text="$format.formatWeight(selected.total_weight)"></dd></div>
                         <div class="flex justify-between gap-4"><dt class="text-gray-400">Ongkos kirim</dt><dd class="text-gray-400">Dihitung saat checkout</dd></div>
                     </dl>
                     <div class="my-5 h-px bg-ink-line"></div>
                     <div class="flex items-baseline justify-between gap-4">
                         <span class="text-sm text-gray-400">Total</span>
-                        <span class="text-2xl font-bold tabular-nums text-brand" x-text="$format.formatRupiah(cart.summary.subtotal)"></span>
+                        <span class="text-2xl font-bold tabular-nums text-brand" x-text="$format.formatRupiah(selected.subtotal)"></span>
                     </div>
 
-                    <button type="button" x-show="cart.summary.has_issue" disabled
+                    <button type="button" x-show="selected.item_count === 0" disabled
+                            class="mt-6 w-full cursor-not-allowed rounded-full bg-ink-line py-3.5 font-semibold text-gray-500">Pilih produk dulu</button>
+                    <button type="button" x-cloak x-show="selected.item_count > 0 && selected.has_issue" disabled
                             class="mt-6 w-full cursor-not-allowed rounded-full bg-ink-line py-3.5 font-semibold text-gray-500">Perbaiki item dulu</button>
-                    <a href="{{ route('checkout') }}" x-cloak x-show="! cart.summary.has_issue"
-                       class="mt-6 block w-full rounded-full bg-brand py-3.5 text-center font-semibold text-ink transition hover:bg-brand-hover">Checkout</a>
+                    <a href="{{ route('checkout') }}" x-cloak x-show="selected.item_count > 0 && ! selected.has_issue"
+                       class="mt-6 block w-full rounded-full bg-brand py-3.5 text-center font-semibold text-ink transition hover:bg-brand-hover">Checkout (<span x-text="selected.item_count"></span>)</a>
 
                     <p class="mt-4 text-center text-xs text-gray-500">Pembayaran aman via DANA</p>
                 </aside>
