@@ -19,7 +19,7 @@ Isi teknis setiap fase diringkas dari Acceptance Criteria di API Contract. Bila 
 | 6 | Panel admin | 5 | ADM-09–14 | ADM-09–12: 5, ADM-13–14: 2 | Sedang | API selesai (halaman admin belum) |
 | 7 | Uji terpadu & rilis | 6 | — | 1–6 | Sedang | Belum mulai |
 
-Total: 1 + 6 + 24 + 2 + 6 + 6 = **45 endpoint v1** (40 frontend + 5 webhook). Fitur artikel (ART-01–02, ADM-02–08) dihapus dari lingkup. ADM-01, ADM-15, ADM-16, ADM-17 ditunda ke v1.1 dan tidak ada di roadmap ini.
+Total: 1 + 6 + 24 + 2 + 6 + 6 = **45 endpoint v1** (40 frontend + 5 webhook), ditambah ADM-18 – ADM-23 dari revisi client 22 Okt 2026 (46 frontend). Fitur artikel (ART-01–02, ADM-02–08) dihapus dari lingkup. ADM-01, ADM-15, ADM-16, ADM-17 ditunda ke v1.1 dan tidak ada di roadmap ini.
 
 ```
 Fase 0 ─► Fase 1 ─► Fase 2 ─┬─► Fase 4 ─► Fase 5 ─┬─► Fase 7

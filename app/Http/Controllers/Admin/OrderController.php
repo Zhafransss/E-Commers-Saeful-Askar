@@ -7,6 +7,7 @@ use App\Enums\OrderStatus;
 use App\Enums\SyncTrigger;
 use App\Enums\SyncType;
 use App\Exceptions\ApiException;
+use App\Exceptions\IntegrationException;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Admin\AdminOrderDetailResource;
 use App\Http\Resources\Admin\AdminOrderSummaryResource;
@@ -18,6 +19,7 @@ use App\Services\Shop\OrderPaymentService;
 use App\Services\Shop\PaymentOutcome;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -26,6 +28,9 @@ use Illuminate\Validation\ValidationException;
  */
 class OrderController extends Controller
 {
+    /** One click asks DANA about at most this many waiting orders, so the request stays short. */
+    private const BULK_LIMIT = 40;
+
     /**
      * ADM-09 · Daftar pesanan website (admin)
      */
@@ -133,6 +138,45 @@ class OrderController extends Controller
                 $result['outcome'] === PaymentOutcome::AmountMismatch => 'Jumlah yang dibayar tidak sama dengan tagihan. Pesanan tidak diubah.',
                 default => 'Status pembayaran belum berubah.',
             },
+        ]);
+    }
+
+    /**
+     * ADM-23 · Periksa pembayaran semua pesanan yang menunggu (admin)
+     */
+    public function refreshPayments(OrderPaymentService $payments): JsonResponse
+    {
+        $waiting = Order::query()->where('status', OrderStatus::PendingPayment)->whereHas('payment');
+        $orders = (clone $waiting)->with(['payment', 'user'])->latest('created_at')->latest('id')->limit(self::BULK_LIMIT)->get();
+        $paid = $expired = $failed = 0;
+
+        foreach ($orders as $order) {
+            try {
+                $outcome = $payments->reconcile($order);
+            } catch (IntegrationException $e) {
+                // One order DANA cannot answer for must not stop the others.
+                $failed++;
+                Log::warning("refresh-payments {$order->order_number}: {$e->detail()}");
+
+                continue;
+            }
+
+            if ($outcome === PaymentOutcome::Applied) {
+                $order->refresh()->status === OrderStatus::Paid ? $paid++ : $expired++;
+            }
+        }
+
+        $remaining = max(0, (clone $waiting)->count() - $orders->count() + $paid + $expired);
+        $message = match (true) {
+            $orders->isEmpty() => 'Tidak ada pesanan yang menunggu pembayaran.',
+            $paid + $expired > 0 => "{$orders->count()} pesanan diperiksa: {$paid} dibayar, {$expired} kedaluwarsa.",
+            $failed === $orders->count() => 'DANA tidak bisa dihubungi. Coba lagi beberapa saat.',
+            default => "{$orders->count()} pesanan diperiksa, belum ada yang berubah.",
+        };
+
+        return response()->json([
+            'data' => ['checked' => $orders->count(), 'paid' => $paid, 'expired' => $expired, 'failed' => $failed, 'remaining' => $remaining],
+            'message' => $message,
         ]);
     }
 

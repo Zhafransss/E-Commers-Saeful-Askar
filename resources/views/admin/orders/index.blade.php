@@ -5,10 +5,17 @@
 {{-- ADM-09 list, ADM-10 detail panel, ADM-11 resend to Jubelio, ADM-12 re-check payment. Behaviour: resources/js/components/adminOrders.js --}}
 @section('content')
     <div x-data="adminOrders" @keydown.escape.window="close()">
-        <div class="flex flex-wrap items-end justify-between gap-2">
-            <h1 class="text-2xl font-bold">Pesanan</h1>
-            <p class="text-sm text-gray-500"><span x-text="meta.total"></span> pesanan</p>
+        <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-bold">Pesanan</h1>
+                <p class="mt-1 text-sm text-gray-500"><span x-text="meta.total"></span> pesanan, yang terbaru di atas.</p>
+            </div>
+            <button type="button" @click="refreshAllPayments()" :disabled="bulkBusy"
+                    class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40" x-text="bulkBusy ? 'Memeriksa pembayaran…' : 'Periksa pembayaran'"></button>
         </div>
+        <p class="mt-2 text-xs text-gray-500">Tombol <span class="font-semibold">Periksa pembayaran</span> menanyakan ke DANA status semua pesanan yang masih menunggu pembayaran dan memperbaruinya (dibayar atau kedaluwarsa).</p>
+        <p x-cloak x-show="bulkNotice" class="mt-3 rounded-lg bg-green-50 p-3 text-sm text-green-700" x-text="bulkNotice"></p>
+        <p x-cloak x-show="bulkError" class="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700" x-text="bulkError"></p>
 
         {{-- Filters --}}
         <form class="mt-4 grid gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-6" @submit.prevent="fetchPage(1)">
@@ -114,6 +121,14 @@
                                         class="rounded-lg bg-gray-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">Periksa pembayaran (DANA)</button>
                                 <button type="button" @click="pushJubelio()" :disabled="busy || !canResend"
                                         class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold disabled:opacity-40">Kirim ulang ke Jubelio</button>
+                            </div>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                <a :href="invoiceUrl(detail.order_number)" target="_blank" rel="noopener"
+                                   class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-gray-100">Lihat invoice (PDF)</a>
+                                <a :href="invoiceUrl(detail.order_number, true)"
+                                   class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-gray-100">Unduh invoice</a>
+                                <button type="button" disabled title="Menunggu pengembangan selanjutnya"
+                                        class="rounded-lg border border-dashed border-gray-300 px-3 py-2 text-xs font-semibold text-gray-400">Kirim invoice ke email (segera)</button>
                             </div>
                             <p x-cloak x-show="notice" class="mt-2 rounded bg-green-50 p-2 text-green-700" x-text="notice"></p>
                             <p x-cloak x-show="actionError" class="mt-2 rounded bg-red-50 p-2 text-red-700" x-text="actionError"></p>

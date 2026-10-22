@@ -40,7 +40,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('password', [V1\AuthController::class, 'updatePassword']);     // AUTH-07
     });
 
-    Route::prefix('cart')->group(function () {
+    Route::middleware('customer')->prefix('cart')->group(function () {
         Route::get('/', [V1\CartController::class, 'show']);                      // CART-01
         Route::post('items', [V1\CartController::class, 'storeItem']);           // CART-02
         Route::patch('items/{id}', [V1\CartController::class, 'updateItem']);     // CART-03
@@ -63,10 +63,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('addresses/{id}/default', [V1\AddressController::class, 'setDefault']); // ADDR-06
 
     Route::post('shipping/rates', [V1\ShippingRateController::class, 'store'])
-        ->middleware('throttle:shipping');                                        // SHIP-01
+        ->middleware(['customer', 'throttle:shipping']);                                        // SHIP-01
 
     Route::post('checkout', [V1\CheckoutController::class, 'store'])
-        ->middleware('throttle:checkout');                                        // ORD-01
+        ->middleware(['customer', 'throttle:checkout']);                                        // ORD-01
 
     Route::get('orders', [V1\OrderController::class, 'index']);                   // ORD-02
     Route::get('orders/{orderNumber}', [V1\OrderController::class, 'show']);      // ORD-03
@@ -78,8 +78,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('admin')->prefix('admin')->group(function () {
         Route::get('orders', [Admin\OrderController::class, 'index']);                     // ADM-09
         Route::get('orders/{orderNumber}', [Admin\OrderController::class, 'show']);        // ADM-10
+        Route::post('orders/refresh-payments', [Admin\OrderController::class, 'refreshPayments']);   // ADM-23
         Route::post('orders/{orderNumber}/push-jubelio', [Admin\OrderController::class, 'pushJubelio']);       // ADM-11
         Route::post('orders/{orderNumber}/refresh-payment', [Admin\OrderController::class, 'refreshPayment']); // ADM-12
+
+        Route::get('users', [Admin\UserController::class, 'index']);                      // ADM-18
+        Route::get('users/{id}', [Admin\UserController::class, 'show']);                  // ADM-19
+        Route::get('products', [Admin\ProductController::class, 'index']);                // ADM-20
+        Route::get('shipments', [Admin\ShipmentController::class, 'index']);              // ADM-21
+        Route::post('shipments/refresh', [Admin\ShipmentController::class, 'refresh']);   // ADM-22
 
         Route::post('sync', [Admin\SyncController::class, 'store']);                       // ADM-13
         Route::get('sync-logs', [Admin\SyncController::class, 'logs']);                    // ADM-14

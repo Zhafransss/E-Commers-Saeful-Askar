@@ -55,7 +55,16 @@ test('admin pages render for admins', function (string $uri) {
     $this->actingAs(User::factory()->admin()->create());
 
     $this->get($uri)->assertOk();
-})->with(['/admin/orders', '/admin/sync']);
+})->with(['/admin/orders', '/admin/sync', '/admin/users', '/admin/products', '/admin/shipments']);
+
+test('the admin menu names every page and the sync page is called Riwayat Sinkronisasi', function () {
+    config(['app.api_mock' => false]);
+    $this->actingAs(User::factory()->admin()->create());
+
+    $this->get('/admin/orders')->assertSeeInOrder(['Pesanan', 'Manajemen Resi', 'Produk', 'Manajemen User', 'Riwayat Sinkronisasi', 'Keluar']);
+    $this->get('/admin/sync')->assertSee('Riwayat Sinkronisasi')->assertDontSee('Sinkron semua produk');
+    $this->get('/admin/products')->assertSee('Sinkron semua produk')->assertSee('Sinkronisasi dengan Jubelio');
+});
 
 test('customer pages render for logged-in customers', function (string $uri) {
     config(['app.api_mock' => false]);

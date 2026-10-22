@@ -1,4 +1,4 @@
-import { api, ApiError } from '../api/client.js';
+import { api, ApiError, APP_URL } from '../api/client.js';
 import { endpoints } from '../api/endpoints.js';
 
 const STATUSES = [
@@ -32,6 +32,11 @@ export default () => ({
     busy: false,
     notice: null,
     actionError: null,
+
+    // ADM-23: the button above the list that re-checks every waiting order.
+    bulkBusy: false,
+    bulkNotice: null,
+    bulkError: null,
 
     init() {
         const params = new URLSearchParams(window.location.search);
@@ -102,6 +107,29 @@ export default () => ({
         this.detailError = null;
         this.detailLoading = false;
         this.remember(null);
+    },
+
+    // ADM-23
+    async refreshAllPayments() {
+        if (this.bulkBusy) return;
+        this.bulkBusy = true;
+        this.bulkNotice = null;
+        this.bulkError = null;
+        try {
+            const { data, message } = await api.post(endpoints.admin.refreshPayments);
+            this.bulkNotice = data.remaining > 0 ? `${message} Masih ada ${data.remaining} pesanan menunggu yang belum diperiksa; tekan tombol lagi.` : message;
+            await this.fetchPage(this.meta.current_page);
+            if (this.detail) await this.loadDetail(this.detail.order_number);
+        } catch (error) {
+            this.bulkError = error.message;
+        } finally {
+            this.bulkBusy = false;
+        }
+    },
+
+    /** The invoice is a PDF page of the site itself (opened in the browser, or saved with ?download=1). */
+    invoiceUrl(orderNumber, download = false) {
+        return `${APP_URL}/admin/orders/${encodeURIComponent(orderNumber)}/invoice${download ? '?download=1' : ''}`;
     },
 
     // ADM-12

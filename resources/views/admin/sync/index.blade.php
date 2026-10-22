@@ -1,35 +1,17 @@
 @extends('layouts.admin')
 
-@section('title', 'Sinkron')
+@section('title', 'Riwayat Sinkronisasi')
 
-{{-- ADM-13 start a sync, ADM-14 history. Behaviour: resources/js/components/adminSync.js --}}
+{{-- ADM-14 history (starting a sync is on the Produk page). Behaviour: resources/js/components/adminSync.js --}}
 @section('content')
     <div x-data="adminSync">
-        <h1 class="text-2xl font-bold">Sinkron Jubelio</h1>
-        <p class="mt-1 text-sm text-gray-500">Jalankan sinkron sekarang tanpa menunggu jadwal. Satu sinkron per jenis berjalan pada satu waktu.</p>
+        <h1 class="text-2xl font-bold">Riwayat Sinkronisasi</h1>
+        <p class="mt-1 text-sm text-gray-500">
+            Catatan setiap sinkronisasi dengan Jubelio, yang terbaru di atas. Untuk menjalankan sinkron sekarang, buka menu
+            <a href="{{ route('admin.products.index') }}" class="font-semibold underline">Produk</a>.
+        </p>
 
-        <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <template x-for="kind in kinds" :key="kind.type">
-                <div class="flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-4">
-                    <div>
-                        <h2 class="font-semibold" x-text="kind.label"></h2>
-                        <p class="mt-1 text-xs text-gray-500" x-text="kind.hint"></p>
-                    </div>
-                    <div class="mt-3 flex flex-wrap gap-2">
-                        <button type="button" @click="start(kind.type)" :disabled="starting !== null"
-                                class="rounded-lg bg-gray-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"
-                                x-text="starting === kind.type ? 'Memulai…' : 'Jalankan'"></button>
-                        <button type="button" x-show="kind.type === 'products'" @click="start('products', true)" :disabled="starting !== null"
-                                class="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold disabled:opacity-40">Sinkron semua produk</button>
-                    </div>
-                </div>
-            </template>
-        </div>
-
-        <p x-cloak x-show="notice" class="mt-4 rounded-lg bg-green-50 p-3 text-sm text-green-700" x-text="notice"></p>
-        <p x-cloak x-show="actionError" class="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700" x-text="actionError"></p>
-
-        <div class="mt-8 flex flex-wrap items-end justify-between gap-3">
+        <div class="mt-6 flex flex-wrap items-end justify-between gap-3">
             <h2 class="text-lg font-bold">Riwayat <span x-show="running" class="ml-2 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700">ada yang berjalan…</span></h2>
             <div class="flex gap-2">
                 <select x-model="filters.type" @change="fetchPage(1)" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
@@ -82,7 +64,7 @@
             <p class="mt-2">
                 Riwayat mencatat setiap kali website berkomunikasi dengan Jubelio: apa yang diproses, kapan, berhasil atau gagal, dan berapa lama.
                 Gunanya untuk memeriksa apakah integrasi berjalan sehat dan menemukan penyebab kalau ada yang tertahan. Ini <span class="font-semibold text-gray-900">bukan</span> riwayat pesanan pelanggan.
-                Catatan yang lebih lama dari 90 hari dihapus otomatis.
+                Catatan yang lebih lama dari 90 hari dihapus otomatis. Sinkron manual dijalankan dari menu Produk.
             </p>
 
             <h3 class="mt-5 font-semibold text-gray-900">Arti tiap kolom</h3>

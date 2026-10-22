@@ -159,11 +159,14 @@
                 </div>
 
                 <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+                    {{-- An admin account runs the shop and has no cart --}}
+                    @unless (auth()->user()?->isAdmin())
                     <button type="button" @click="addToCart()" :disabled="blockedReason !== null || adding"
                             class="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-brand px-8 py-4 font-semibold text-ink transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500">
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.3" /><circle cx="18" cy="20" r="1.3" /><path d="M2.5 3h2.6l2.4 12.2a1.5 1.5 0 0 0 1.5 1.2h8.9a1.5 1.5 0 0 0 1.5-1.1L21.5 8H6" /></svg>
                         <span x-text="adding ? 'Menambahkan…' : (blockedReason ?? 'Tambah ke keranjang')">Tambah ke keranjang</span>
                     </button>
+                    @endunless
                     <a href="{{ $waAsk }}" target="_blank" rel="noopener"
                        class="inline-flex items-center justify-center rounded-full border-2 border-ink px-6 py-4 font-semibold transition hover:bg-ink hover:text-brand">
                         Tanya via WhatsApp

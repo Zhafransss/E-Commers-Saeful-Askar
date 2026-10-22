@@ -91,11 +91,13 @@
 
                         {{-- Mobile: cart and the two-line menu button --}}
                         <div class="flex max-h-10 items-center gap-1 lg:hidden">
+                            @unless (auth()->user()?->isAdmin())
                             <a href="{{ route('cart') }}" class="relative grid h-11 w-11 place-items-center rounded-full text-neutral-300 transition hover:text-brand" aria-label="Keranjang">
                                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.3" /><circle cx="18" cy="20" r="1.3" /><path d="M2.5 3h2.6l2.4 12.2a1.5 1.5 0 0 0 1.5 1.2h8.9a1.5 1.5 0 0 0 1.5-1.1L21.5 8H6" /></svg>
                                 <span x-cloak x-show="$store.cart.totalQty > 0" x-text="$store.cart.totalQty"
                                       class="absolute right-0.5 top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-brand px-1 text-[11px] font-bold text-ink"></span>
                             </a>
+                            @endunless
                             <button type="button" @click="open = ! open" :aria-expanded="open" aria-label="Buka menu" class="relative -mr-6 cursor-pointer p-6">
                                 <span aria-hidden="true" class="m-auto block h-0.5 w-6 origin-center rounded bg-neutral-300 transition duration-300" :class="open && 'translate-y-1 rotate-45'"></span>
                                 <span aria-hidden="true" class="m-auto mt-1.5 block h-0.5 w-6 origin-center rounded bg-neutral-300 transition duration-300" :class="open && '-translate-y-1 -rotate-45'"></span>
@@ -187,11 +189,13 @@
 
                         {{-- Cart and account; the yellow pill is the main action, as on the previous site --}}
                         <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-2">
+                            @unless (auth()->user()?->isAdmin())
                             <a href="{{ route('cart') }}" class="relative hidden h-11 w-11 place-items-center rounded-full text-neutral-300 transition hover:text-brand lg:grid" aria-label="Keranjang">
                                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.3" /><circle cx="18" cy="20" r="1.3" /><path d="M2.5 3h2.6l2.4 12.2a1.5 1.5 0 0 0 1.5 1.2h8.9a1.5 1.5 0 0 0 1.5-1.1L21.5 8H6" /></svg>
                                 <span x-cloak x-show="$store.cart.totalQty > 0" x-text="$store.cart.totalQty"
                                       class="absolute right-0.5 top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-brand px-1 text-[11px] font-bold text-ink"></span>
                             </a>
+                            @endunless
 
                             <template x-if="! $store.auth.user">
                                 <a href="{{ route('login') }}"

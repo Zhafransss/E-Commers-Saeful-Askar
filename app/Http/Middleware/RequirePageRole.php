@@ -29,6 +29,11 @@ class RequirePageRole
 
         abort_if($role === 'admin' && ! $user->isAdmin(), 403);
 
+        // The shop pages (cart, checkout, orders) are for customers; an admin goes back to the panel.
+        if ($role === 'customer' && $user->isAdmin()) {
+            return redirect()->route('admin.orders.index');
+        }
+
         return $next($request);
     }
 }

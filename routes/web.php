@@ -60,5 +60,9 @@ Route::middleware('page.role:customer')->group(function () {
 Route::middleware('page.role:admin')->prefix('admin')->name('admin.')->group(function () {
     Route::redirect('/', '/admin/orders');
     Route::get('/orders', [Web\AdminPageController::class, 'orders'])->name('orders.index');
+    Route::get('/orders/{orderNumber}/invoice', [Web\AdminPageController::class, 'invoice'])->name('orders.invoice');
+    Route::get('/shipments', [Web\AdminPageController::class, 'shipments'])->name('shipments.index');
+    Route::get('/products', [Web\AdminPageController::class, 'products'])->name('products.index');
+    Route::get('/users', [Web\AdminPageController::class, 'users'])->name('users.index');
     Route::get('/sync', [Web\AdminPageController::class, 'sync'])->name('sync.index');
 });

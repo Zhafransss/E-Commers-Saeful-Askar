@@ -2,6 +2,7 @@
 
 use App\Exceptions\ApiExceptionRenderer;
 use App\Http\Middleware\EnsureUserIsAdmin;
+use App\Http\Middleware\EnsureUserIsCustomer;
 use App\Http\Middleware\RejectMalformedJson;
 use App\Http\Middleware\RequirePageRole;
 use Illuminate\Foundation\Application;
@@ -36,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,
+            'customer' => EnsureUserIsCustomer::class,
             'page.role' => RequirePageRole::class,
         ]);
     })

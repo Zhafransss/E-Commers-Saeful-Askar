@@ -58,5 +58,11 @@ export const endpoints = {
         refreshPayment: (orderNumber) => `/admin/orders/${seg(orderNumber)}/refresh-payment`, // ADM-12
         sync: '/admin/sync', // ADM-13
         syncLogs: '/admin/sync-logs', // ADM-14
+        users: '/admin/users', // ADM-18
+        user: (id) => `/admin/users/${seg(id)}`, // ADM-19
+        products: '/admin/products', // ADM-20
+        shipments: '/admin/shipments', // ADM-21
+        refreshShipments: '/admin/shipments/refresh', // ADM-22
+        refreshPayments: '/admin/orders/refresh-payments', // ADM-23
     },
 };

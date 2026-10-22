@@ -2,7 +2,7 @@
 
 Semua endpoint di file ini wajib login dengan `role = admin` (middleware `EnsureUserIsAdmin`). Customer yang memanggilnya mendapat `403 FORBIDDEN`. Produk, harga, dan stok **tidak** dikelola di sini karena sumbernya Jubelio. Konvensi umum ada di `README.md`.
 
-Versi 1 memuat ADM-09 – ADM-14. Pengelolaan artikel (ADM-02 – ADM-08) dihapus dari lingkup produk. ADM-01, ADM-15, ADM-16, dan ADM-17 ditunda ke v1.1 (PRD §9); di v1, order bermasalah ditangani lewat ADM-09 – ADM-12, dan webhook gagal diperiksa langsung di tabel `webhook_events` / log server.
+Versi 1 memuat ADM-09 – ADM-14 dan ADM-18 – ADM-23 (revisi client 22 Okt 2026). Pengelolaan artikel (ADM-02 – ADM-08) dihapus dari lingkup produk. ADM-01, ADM-15, ADM-16, dan ADM-17 ditunda ke v1.1 (PRD §9); di v1, order bermasalah ditangani lewat ADM-09 – ADM-12, dan webhook gagal diperiksa langsung di tabel `webhook_events` / log server.
 
 Error yang berlaku untuk semua endpoint admin:
 
@@ -413,6 +413,59 @@ Sebagai admin yang baru mengubah produk di Jubelio, saya ingin menjalankan sinkr
 - [ ] Hanya satu sinkron per jenis berjalan bersamaan (atomic lock Laravel di cache `database`).
 - [ ] `full` = kategori → produk → stok berurutan, masing-masing dengan baris `sync_logs` sendiri.
 - [ ] Sinkron mematuhi batas 600 request/menit Jubelio.
+
+---
+
+## ADM-18 · Daftar pelanggan
+
+`GET /api/v1/admin/users` · **Admin**. Hanya melihat data pelanggan (`role = customer`); tidak ada endpoint untuk mengubah atau menghapus.
+
+| Query | Tipe | Wajib | Keterangan |
+| --- | --- | --- | --- |
+| `q` | string | Tidak | Cari di nama, email, dan HP |
+| `page`, `per_page` | integer | Tidak | Default 20, maks 100 |
+
+`200 OK`, terbaru dulu: `{ "data": [{ "id", "name", "email", "phone", "orders_count", "paid_orders_count", "paid_total", "registered_at" }], "meta": {...} }`. `paid_*` menghitung pesanan berstatus `paid`, `processing`, `shipped`, `completed`. Password dan token tidak pernah dikirim.
+
+## ADM-19 · Detail pelanggan
+
+`GET /api/v1/admin/users/{id}` · **Admin**. Isinya seperti ADM-18, ditambah `email_verified_at`, `addresses` (objek Address) dan `recent_orders` (10 terbaru: `order_number`, `status`, `status_label`, `grand_total`, `created_at`). `404 USER_NOT_FOUND` untuk id yang tidak ada, atau milik admin.
+
+## ADM-20 · Daftar produk dan varian
+
+`GET /api/v1/admin/products` · **Admin**. Produk dibaca dari salinan lokal katalog Jubelio, semua varian ikut (termasuk yang nonaktif). Tidak ada endpoint untuk mengubah produk di sini.
+
+| Query | Tipe | Wajib | Keterangan |
+| --- | --- | --- | --- |
+| `q` | string | Tidak | Cari di nama produk, merek, SKU, dan nama varian |
+| `status` | string | Tidak | `active` atau `inactive` |
+| `page`, `per_page` | integer | Tidak | Default 20, maks 100 |
+
+`200 OK`: `{ "data": [{ "id", "jubelio_item_group_id", "name", "slug", "brand_name", "category", "thumbnail_url", "is_active", "price_min", "price_max", "total_available_qty", "variants": [{ "id", "sku", "name", "price", "available_qty", "package_weight", "image_url", "is_active" }], "synced_at" }], "meta": {...} }`. Harga dan stok total hanya menghitung varian aktif.
+
+## ADM-21 · Daftar pesanan dan resi
+
+`GET /api/v1/admin/shipments` · **Admin**. Pesanan yang sudah dibayar (`paid`, `processing`, `shipped`, `completed`), terbaru dulu, dengan nomor resi yang tercatat.
+
+| Query | Tipe | Wajib | Keterangan |
+| --- | --- | --- | --- |
+| `q` | string | Tidak | No. pesanan, resi, nama penerima atau pelanggan, HP |
+| `resi` | string | Tidak | `ada` atau `belum` |
+| `page`, `per_page` | integer | Tidak | Default 20, maks 100 |
+
+`200 OK`: `{ "data": [{ "order_number", "status", "status_label", "customer": {id, name, phone}, "recipient_name", "destination", "courier", "service", "jubelio_courier", "jubelio_salesorder_no", "tracking_no", "grand_total", "paid_at", "created_at" }], "meta": {...} }`. `courier` dan `service` adalah pilihan pelanggan saat checkout; `jubelio_courier` dan `tracking_no` diambil dari Jubelio.
+
+## ADM-22 · Ambil resi dari Jubelio
+
+`POST /api/v1/admin/shipments/refresh` · **Admin**. Tanpa body. Untuk pesanan `paid`/`processing`/`shipped` yang punya sales order Jubelio tetapi belum punya resi, membaca `tracking_no` dan `shipper` dari sales order itu dan menyimpannya. Paling banyak 30 pesanan sekali panggil, yang paling lama belum ditanyakan didahulukan. Resi tidak pernah diketik manual di sini.
+
+`200 OK`: `{ "data": { "checked", "updated", "failed", "remaining" }, "message": "1 resi baru ditemukan di Jubelio." }`. Satu pesanan yang gagal dibaca tidak menghentikan yang lain.
+
+## ADM-23 · Periksa pembayaran semua pesanan menunggu
+
+`POST /api/v1/admin/orders/refresh-payments` · **Admin**. Tanpa body. Menanyakan ke DANA (aturan yang sama dengan ADM-12) untuk pesanan `pending_payment` yang punya order pembayaran, terbaru dulu, paling banyak 40 sekali panggil.
+
+`200 OK`: `{ "data": { "checked", "paid", "expired", "failed", "remaining" }, "message": "3 pesanan diperiksa: 1 dibayar, 1 kedaluwarsa." }`. `remaining` adalah pesanan menunggu yang belum ikut diperiksa; tekan lagi bila lebih dari 0.
 
 ---
 
