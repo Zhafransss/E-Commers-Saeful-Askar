@@ -75,5 +75,52 @@
             <span class="text-gray-500">Halaman <span x-text="meta.current_page"></span> dari <span x-text="meta.last_page"></span></span>
             <button type="button" :disabled="meta.current_page >= meta.last_page" @click="fetchPage(meta.current_page + 1)" class="rounded-lg border border-gray-300 bg-white px-4 py-2 font-semibold disabled:opacity-40">Berikutnya →</button>
         </div>
+
+        {{-- What the history is, for whoever reads this page --}}
+        <section class="mt-8 rounded-xl border border-gray-200 bg-white p-5 text-sm text-gray-600">
+            <h2 class="text-base font-bold text-gray-900">Tentang Riwayat</h2>
+            <p class="mt-2">
+                Riwayat mencatat setiap kali website berkomunikasi dengan Jubelio: apa yang diproses, kapan, berhasil atau gagal, dan berapa lama.
+                Gunanya untuk memeriksa apakah integrasi berjalan sehat dan menemukan penyebab kalau ada yang tertahan. Ini <span class="font-semibold text-gray-900">bukan</span> riwayat pesanan pelanggan.
+                Catatan yang lebih lama dari 90 hari dihapus otomatis.
+            </p>
+
+            <h3 class="mt-5 font-semibold text-gray-900">Arti tiap kolom</h3>
+            <dl class="mt-2 grid gap-x-6 gap-y-2 sm:grid-cols-[8rem_1fr]">
+                <dt class="font-medium text-gray-900">Jenis</dt>
+                <dd>Apa yang disinkronkan. Angka seperti <span class="font-mono">#12</span> di sampingnya adalah ID pesanan yang bersangkutan.</dd>
+                <dt class="font-medium text-gray-900">Status</dt>
+                <dd><span class="font-semibold">running</span> sedang berjalan, <span class="font-semibold">success</span> berhasil, <span class="font-semibold">failed</span> gagal.</dd>
+                <dt class="font-medium text-gray-900">Mulai</dt>
+                <dd>Waktu sinkronisasi dimulai.</dd>
+                <dt class="font-medium text-gray-900">Durasi</dt>
+                <dd>Lama proses berlangsung. Angka yang tiba-tiba sangat besar biasanya tanda Jubelio lambat.</dd>
+                <dt class="font-medium text-gray-900">Item</dt>
+                <dd>Jumlah data yang diproses, misalnya jumlah produk atau varian yang diperbarui.</dd>
+                <dt class="font-medium text-gray-900">Pesan</dt>
+                <dd>Hanya terisi kalau gagal: alasan error dari Jubelio. Kolom kosong berarti tidak ada masalah.</dd>
+            </dl>
+
+            <h3 class="mt-5 font-semibold text-gray-900">Arti tiap jenis</h3>
+            <dl class="mt-2 grid gap-x-6 gap-y-2 sm:grid-cols-[8rem_1fr]">
+                <dt class="font-medium text-gray-900">Kategori</dt>
+                <dd>Menyalin kategori produk dari Jubelio ke website.</dd>
+                <dt class="font-medium text-gray-900">Produk</dt>
+                <dd>Menyalin produk, harga, dan varian dari Jubelio ke website.</dd>
+                <dt class="font-medium text-gray-900">Stok</dt>
+                <dd>Menyamakan stok di website dengan stok di Jubelio.</dd>
+                <dt class="font-medium text-gray-900">Kirim pesanan</dt>
+                <dd>Website membuat pesanan di Jubelio saat pelanggan checkout, sehingga stok barangnya langsung terkunci.</dd>
+                <dt class="font-medium text-gray-900">Tandai lunas</dt>
+                <dd>Website memberi tahu Jubelio bahwa pesanan sudah dibayar, supaya gudang memprosesnya.</dd>
+                <dt class="font-medium text-gray-900">Batalkan pesanan</dt>
+                <dd>Website membatalkan pesanan di Jubelio saat pesanan kedaluwarsa atau dibatalkan, sehingga stoknya kembali.</dd>
+            </dl>
+
+            <p class="mt-5">
+                Kalau ada baris <span class="font-semibold">failed</span> pada jenis pesanan (Kirim pesanan, Tandai lunas, atau Batalkan pesanan), pesanan itu belum sampai ke gudang dan perlu dikirim ulang dari halaman Pesanan.
+                Kalau tidak ada riwayat baru dalam waktu lama, periksa bahwa cron di hosting masih aktif.
+            </p>
+        </section>
     </div>
 @endsection

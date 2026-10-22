@@ -8,6 +8,9 @@ const KINDS = [
     { type: 'full', label: 'Sinkron penuh', hint: 'Kategori, lalu semua produk (nonaktifkan yang hilang), lalu stok.' },
 ];
 
+// Rows per page of the history (ADM-14); the rest is on the next pages.
+const PER_PAGE = 10;
+
 /**
  * Alpine.data('adminSync'): /admin/sync (docs/api/admin.md ADM-13 start a sync, ADM-14 history).
  * While a sync is running the history is refreshed every 3 s.
@@ -34,7 +37,7 @@ export default () => ({
     async fetchPage(page, quiet = false) {
         if (!quiet) this.loading = true;
         try {
-            const query = { page, ...Object.fromEntries(Object.entries(this.filters).filter(([, v]) => v !== '')) };
+            const query = { page, per_page: PER_PAGE, ...Object.fromEntries(Object.entries(this.filters).filter(([, v]) => v !== '')) };
             const { data, meta } = await api.get(endpoints.admin.syncLogs, { query });
             this.logs = data;
             this.meta = meta;
