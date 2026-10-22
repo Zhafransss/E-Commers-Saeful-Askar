@@ -13,6 +13,7 @@
 | The nightly times are a proposal (docs/roadmap-backend.md Fase 2), not fixed by the contract.
 */
 
+use App\Support\ScheduleKicker;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -36,6 +37,10 @@ Schedule::command('orders:expire-unpaid')->everyFiveMinutes()->withoutOverlappin
 // Shared hosting (branch `deployment`): no long-running worker is possible, so the minutely cron
 // that runs `schedule:run` also drains the queue. --max-time stays below retry_after (90 s) and
 // typical PHP time limits; withoutOverlapping() keeps two workers from running at once.
+//
+// A scheduler run started by a web request (App\Support\ScheduleKicker) skips this one: the same request
+// has already worked the queue (App\Support\QueueKicker).
 Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')
     ->everyMinute()
-    ->withoutOverlapping(2);
+    ->withoutOverlapping(2)
+    ->skip(fn () => ScheduleKicker::inKick());

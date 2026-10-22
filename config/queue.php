@@ -23,6 +23,12 @@ return [
     'kick_on_request' => (bool) env('QUEUE_KICK_ON_REQUEST', true),
 
     /*
+    | The same for the scheduler (catalog and stock sync, overdue payments): run it after a web request, at most once
+    | a minute, because the host's cron may not run (App\Support\ScheduleKicker). The cron stays as a backup.
+    */
+    'kick_schedule_on_request' => (bool) env('SCHEDULE_KICK_ON_REQUEST', true),
+
+    /*
     |--------------------------------------------------------------------------
     | Queue Connections
     |--------------------------------------------------------------------------
