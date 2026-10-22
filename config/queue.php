@@ -16,6 +16,13 @@ return [
     'default' => env('QUEUE_CONNECTION', 'database'),
 
     /*
+    | Shared hosting: work the queue for a few seconds after a web request that queued something, so mail,
+    | payment follow-up, and Jubelio calls do not wait for a cron that may run rarely (App\Support\QueueKicker).
+    | Only for the `database` queue; the cron stays as a backup. Set false on a server with a real worker.
+    */
+    'kick_on_request' => (bool) env('QUEUE_KICK_ON_REQUEST', true),
+
+    /*
     |--------------------------------------------------------------------------
     | Queue Connections
     |--------------------------------------------------------------------------

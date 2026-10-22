@@ -12,11 +12,14 @@ use App\Services\RajaOngkir\RajaOngkirRates;
 use App\Services\Shipping\RateProvider;
 use App\Services\Shipping\StubRateProvider;
 use App\Support\HtmlSanitizer;
+use App\Support\QueueKicker;
 use Carbon\CarbonInterface;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Queue\Events\JobQueued;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -58,6 +61,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureRateLimiting();
+
+        // Shared hosting: work the queue right after a web request that queued a job (see QueueKicker).
+        Event::listen(JobQueued::class, fn () => QueueKicker::jobQueued());
+        $this->app->terminating(fn () => QueueKicker::terminate());
 
         // Contract date format: ISO 8601 in WIB, e.g. "2026-10-14T21:30:00+07:00"
         // (docs/api/README.md "Aturan data"), for every date in a JSON response.
