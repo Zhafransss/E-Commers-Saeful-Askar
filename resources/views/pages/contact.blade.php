@@ -6,7 +6,6 @@
 
 @php
     $store = require resource_path('static/store.php');
-    $waNumber = '6282227222971';
 @endphp
 
 @section('content')
@@ -43,52 +42,30 @@
         </div>
     </section>
 
-    {{-- Message form (opens WhatsApp with the composed text) + map --}}
+    {{-- Location --}}
     <section class="border-t border-neutral-800/50 py-20 md:py-24">
         <div class="mx-auto grid max-w-7xl gap-6 px-4 md:px-8 lg:grid-cols-2">
-            <form class="flex flex-col gap-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-8"
-                  x-data="{ name: '', topic: 'Pembelian sepeda listrik', message: '' }"
-                  @submit.prevent="window.open('https://api.whatsapp.com/send?phone={{ $waNumber }}&text=' + encodeURIComponent(`Halo min, saya ${name}.\nTopik: ${topic}\n\n${message}`), '_blank')">
-                <div>
-                    <h2 class="text-2xl font-bold">Kirim pesan</h2>
-                    <p class="mt-1 text-sm text-neutral-400">Pesan akan dibuka di WhatsApp, tinggal tekan kirim.</p>
-                </div>
-                <label class="block">
-                    <span class="mb-2 block text-sm font-medium text-neutral-300">Nama</span>
-                    <input type="text" x-model="name" required placeholder="Nama Anda"
-                           class="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-white placeholder:text-neutral-600 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand">
-                </label>
-                <label class="block">
-                    <span class="mb-2 block text-sm font-medium text-neutral-300">Topik</span>
-                    <select x-model="topic"
-                            class="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-white focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand">
-                        <option>Pembelian sepeda listrik</option>
-                        <option>Sparepart</option>
-                        <option>Jasa service</option>
-                        <option>Gabung sebagai partner</option>
-                        <option>Status pesanan website</option>
-                        <option>Lainnya</option>
-                    </select>
-                </label>
-                <label class="block">
-                    <span class="mb-2 block text-sm font-medium text-neutral-300">Pesan</span>
-                    <textarea x-model="message" required rows="5" placeholder="Tulis pertanyaan Anda…"
-                              class="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-white placeholder:text-neutral-600 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"></textarea>
-                </label>
-                <button type="submit"
-                        class="inline-flex h-12 items-center justify-center rounded-full bg-brand px-7 text-sm font-semibold text-ink transition hover:scale-[1.01] hover:bg-brand/90">
-                    Kirim via WhatsApp
-                </button>
-            </form>
+            <div class="flex flex-col gap-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-8">
+                <h2 class="text-2xl font-bold">Lokasi <span class="text-brand">kami</span></h2>
+                <p class="text-sm font-semibold uppercase tracking-widest text-brand">{{ $store['name'] }}</p>
+                <dl class="space-y-4 text-sm">
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-widest text-neutral-500">Alamat</dt>
+                        <dd class="mt-1 leading-relaxed text-neutral-300">{{ $store['address'] }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-widest text-neutral-500">Jam buka</dt>
+                        <dd class="mt-1 text-neutral-300">{{ $store['hours'] }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-widest text-neutral-500">Telepon / WhatsApp</dt>
+                        <dd class="mt-1 text-neutral-300">{{ $store['phone'] }}</dd>
+                    </div>
+                </dl>
+            </div>
 
-            <div class="flex flex-col gap-6">
-                <div class="min-h-80 flex-1 overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900">
-                    <iframe src="{{ $store['maps_embed'] }}" title="Peta lokasi {{ $store['name'] }}" class="h-full min-h-80 w-full grayscale-[40%]" style="border:0" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
-                </div>
-                <div class="rounded-2xl border border-neutral-800 bg-neutral-900 p-6">
-                    <p class="text-sm font-semibold uppercase tracking-widest text-brand">{{ $store['name'] }}</p>
-                    <p class="mt-2 text-sm leading-relaxed text-neutral-400">{{ $store['address'] }}</p>
-                </div>
+            <div class="min-h-80 overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900">
+                <iframe src="{{ $store['maps_embed'] }}" title="Peta lokasi {{ $store['name'] }}" class="h-full min-h-80 w-full grayscale-[40%]" style="border:0" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
             </div>
         </div>
     </section>

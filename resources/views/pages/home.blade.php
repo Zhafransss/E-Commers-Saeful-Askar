@@ -266,37 +266,6 @@
         </div>
     </section>
 
-    {{-- Contact preview (full page: /kontak) --}}
-    <section class="border-t border-neutral-800/50 py-16">
-        <div class="mx-auto max-w-7xl px-4 md:px-8">
-            <div class="grid gap-6 rounded-2xl border border-neutral-800 bg-neutral-900 p-8 lg:grid-cols-[1fr_auto] lg:items-center">
-                <div class="grid gap-6 sm:grid-cols-3">
-                    @foreach ([
-                        ['Alamat', $store['address_short'], 'M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Zm0-8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z'],
-                        ['Jam buka', $store['hours'], 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 4v5l3 2'],
-                        ['Telepon / WhatsApp', $store['phone'], 'M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z'],
-                    ] as [$label, $value, $icon])
-                        <div class="flex items-start gap-3">
-                            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand/10 text-brand">
-                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ $icon }}" /></svg>
-                            </span>
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-widest text-neutral-500">{{ $label }}</p>
-                                <p class="mt-1 text-sm text-neutral-200">{{ $value }}</p>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-                <div class="flex flex-wrap gap-3">
-                    <a href="{{ route('contact') }}"
-                       class="inline-flex h-11 items-center justify-center rounded-full bg-brand px-6 text-sm font-semibold text-ink transition hover:scale-[1.02] hover:bg-brand/90">Hubungi Kami</a>
-                    <a href="{{ $store['maps_url'] }}" target="_blank" rel="noopener"
-                       class="inline-flex h-11 items-center justify-center rounded-full border border-neutral-700 px-6 text-sm font-semibold transition hover:border-neutral-500 hover:bg-neutral-800/50">Petunjuk Arah</a>
-                </div>
-            </div>
-        </div>
-    </section>
-
     {{-- Closing CTA --}}
     <section class="pb-20 md:pb-28">
         <div class="mx-auto max-w-7xl px-4 md:px-8">
