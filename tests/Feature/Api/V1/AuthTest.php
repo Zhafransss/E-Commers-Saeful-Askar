@@ -73,6 +73,33 @@ test('AUTH-02 stores the email in lower case and rejects the same email in other
         ->assertJsonPath('errors.email.0', 'Email sudah terdaftar.');
 });
 
+test('AUTH-02 refuses a phone number another account already has, whichever way it is written', function (string $second) {
+    User::factory()->create(['phone' => '081234567890']);
+
+    assertApiError(fromFrontend()->postJson('/api/v1/auth/register', registration(['phone' => $second, 'email' => 'baru@example.com'])), 422, 'VALIDATION_ERROR')
+        ->assertJsonPath('errors.phone.0', 'Nomor HP sudah terdaftar di akun lain.');
+    expect(User::where('email', 'baru@example.com')->exists())->toBeFalse();
+})->with(['081234567890', '6281234567890', '+62 812-3456-7890']);
+
+test('AUTH-02 still says an invalid number is invalid, not taken', function () {
+    User::factory()->create(['phone' => '081234567890']);
+
+    assertApiError(fromFrontend()->postJson('/api/v1/auth/register', registration(['phone' => '12345', 'email' => 'baru@example.com'])), 422, 'VALIDATION_ERROR')
+        ->assertJsonPath('errors.phone', ['Nomor HP tidak valid.']);
+});
+
+test('AUTH-06 lets a customer keep their own number but not take another account\'s', function () {
+    $other = User::factory()->create(['phone' => '081200000001']);
+    $me = User::factory()->create(['phone' => '081200000002']);
+
+    fromFrontend()->actingAs($me)->putJson('/api/v1/auth/profile', ['name' => 'Nama Baru', 'phone' => '081200000002'])->assertOk();
+    assertApiError(fromFrontend()->actingAs($me)->putJson('/api/v1/auth/profile', ['name' => 'Nama Baru', 'phone' => '6281200000001']), 422, 'VALIDATION_ERROR')
+        ->assertJsonPath('errors.phone.0', 'Nomor HP sudah terdaftar di akun lain.');
+    fromFrontend()->actingAs($me)->putJson('/api/v1/auth/profile', ['name' => 'Nama Baru', 'phone' => '081299999999'])->assertOk();
+
+    expect($me->fresh()->phone)->toBe('081299999999')->and($other->fresh()->phone)->toBe('081200000001');
+});
+
 test('AUTH-02 normalizes 628… and separators to 08…', function (string $input, string $stored) {
     fromFrontend()->postJson('/api/v1/auth/register', registration(['phone' => $input]))->assertCreated();
 

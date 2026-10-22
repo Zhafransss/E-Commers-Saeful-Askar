@@ -239,6 +239,34 @@ class JubelioClient extends IntegrationClient
     }
 
     /**
+     * INT-JB-09 · A customer contact with this phone number, if Jubelio has one. Jubelio allows one contact per
+     * email or phone, so a number the website did not register itself may already belong to a contact. The search
+     * by `q` also returns similar numbers, so the digits are compared (08… and +62… are the same number).
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findCustomerByPhone(string $phone): ?array
+    {
+        $digits = static fn (mixed $value): string => (string) preg_replace('/^62/', '0', (string) preg_replace('/\D+/', '', (string) $value));
+        $wanted = $digits($phone);
+
+        if ($wanted === '') {
+            return null;
+        }
+
+        $json = $this->get('/contacts/customers/', ['q' => $wanted, 'page' => 1, 'pageSize' => 10])->json();
+        $rows = is_array($json) ? ($json['data'] ?? $json) : [];
+
+        foreach ($rows as $row) {
+            if (is_array($row) && ($digits($row['phone'] ?? '') === $wanted || $digits($row['mobile'] ?? '') === $wanted)) {
+                return $row;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * INT-JB-09 · Creates the contact (`contact_id` 0) or updates it, and returns its id.
      *
      * @param  array<string, mixed>  $contact

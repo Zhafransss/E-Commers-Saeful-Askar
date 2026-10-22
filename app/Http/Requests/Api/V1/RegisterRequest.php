@@ -30,7 +30,7 @@ class RegisterRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'min:2', 'max:100'],
             'email' => ['required', 'string', 'email', 'max:191', 'unique:users,email'],
-            'phone' => ['required', 'string', PhoneNumber::RULE],
+            'phone' => ['bail', 'required', 'string', PhoneNumber::RULE, PhoneNumber::uniqueRule()],
             'password' => $this->newPasswordRules(),
         ];
     }

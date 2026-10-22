@@ -322,6 +322,16 @@ test('a customer without a profile phone checks out with the address phone and k
     expect($this->user->fresh()->phone)->toBe($this->address->phone);
 });
 
+test('a profile phone is not filled from an address number that another account already has', function () {
+    $rate = quotedRate($this);
+    User::factory()->create(['phone' => $this->address->phone]);
+    $this->user->forceFill(['phone' => null])->save();
+
+    checkout($this, ['rate' => $rate])->assertCreated();
+
+    expect($this->user->fresh()->phone)->toBeNull();
+});
+
 test('only the ticked cart lines are bought, and the others stay in the cart', function () {
     $other = ProductVariant::factory()->for(Product::factory()->create(['package_weight' => 1000]))
         ->create(['sku' => 'ACC-1', 'price' => 50000, 'available_qty' => 9, 'package_weight' => 1000]);

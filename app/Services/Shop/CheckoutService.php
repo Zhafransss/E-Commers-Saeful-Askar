@@ -20,6 +20,7 @@ use App\Services\Gapura\GapuraClient;
 use App\Services\Jubelio\ContactService;
 use App\Services\Jubelio\SalesOrderService;
 use App\Services\Jubelio\StockSyncService;
+use App\Support\PhoneNumber;
 use Closure;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -166,6 +167,12 @@ class CheckoutService
 
         if (blank($address->phone)) {
             throw new ApiException('Lengkapi nomor HP di alamat pengiriman Anda sebelum checkout.', 'PROFILE_INCOMPLETE', 422);
+        }
+
+        // A number another account already has stays with that account; the order still goes through, since
+        // the courier is given the address's own number.
+        if (PhoneNumber::isTaken($address->phone, $user->id)) {
+            return;
         }
 
         $user->forceFill(['phone' => $address->phone])->save();

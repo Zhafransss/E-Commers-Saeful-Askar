@@ -111,14 +111,92 @@ test('a Jubelio failure leaves the user without a contact id', function () {
     expect($this->user->fresh()->jubelio_contact_id)->toBeNull();
 });
 
+test('a contact Jubelio refuses because of a region id is saved again without the address', function () {
+    $attempt = 0;
+    $this->routes['POST /contacts/'] = function () use (&$attempt) {
+        return ++$attempt === 1
+            ? Http::response(['code' => '23503', 'message' => 'insert or update on table "contact" violates foreign key constraint'], 500)
+            : Http::response(['status' => 'ok', 'contact_id' => 5512]);
+    };
+
+    expect(app(ContactService::class)->ensure($this->user, $this->address))->toBe(5512)
+        ->and($this->user->fresh()->jubelio_contact_id)->toBe(5512);
+
+    [$first, $second] = array_map(fn ($request) => $request->data(), jubelioCallsTo('POST', '/contacts/'));
+    expect($first)->toHaveKey('s_subdistrict_id')
+        ->and($second)->not->toHaveKey('s_subdistrict_id')->not->toHaveKey('s_address')
+        ->and($second)->toMatchArray(['contact_name' => 'Budi Santoso', 'email' => 'budi@example.com']);
+});
+
+test('a phone number that already belongs to a Jubelio contact uses that contact and keeps its id, so the sales order can find it', function () {
+    $this->routes['POST /contacts/'] = Http::response(['code' => '23503', 'message' => 'Email atau phone sudah ada sebelumnya.'], 500);
+    $this->routes['GET /contacts/customers/'] = function (Request $request) {
+        parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+        // Searched by email first (nothing), then by the phone digits (another person's contact, written +62…).
+        return str_contains((string) ($query['q'] ?? ''), '@')
+            ? Http::response(['data' => []])
+            : Http::response(['data' => [['contact_id' => 777, 'email' => 'lain@example.com', 'phone' => '+62 812-3456-7890', 'mobile' => '']]]);
+    };
+
+    expect(app(ContactService::class)->ensure($this->user, $this->address))->toBe(777)
+        ->and($this->user->fresh()->jubelio_contact_id)->toBe(777)
+        ->and(jubelioCallsTo('POST', '/contacts/'))->toHaveCount(1);
+});
+
+test('a taken phone that cannot be found is left out, and the contact is made with the email', function () {
+    $attempt = 0;
+    $this->routes['POST /contacts/'] = function () use (&$attempt) {
+        return ++$attempt === 1
+            ? Http::response(['code' => '23503', 'message' => 'Email atau phone sudah ada sebelumnya.'], 500)
+            : Http::response(['status' => 'ok', 'contact_id' => 5513]);
+    };
+
+    expect(app(ContactService::class)->ensure($this->user, $this->address))->toBe(5513)
+        ->and($this->user->fresh()->jubelio_contact_id)->toBe(5513);
+
+    [$first, $second] = array_map(fn ($request) => $request->data(), jubelioCallsTo('POST', '/contacts/'));
+    expect($first['phone'])->toBe('081234567890')
+        ->and($second['phone'])->toBeNull()->and($second['mobile'])->toBeNull()
+        ->and($second)->toMatchArray(['contact_name' => 'Budi Santoso', 'email' => 'budi@example.com']);
+});
+
+test('when Jubelio keeps refusing a taken email, the checkout fails after two tries and nothing is stored', function () {
+    $this->routes['POST /contacts/'] = Http::response(['code' => '23503', 'message' => 'Email atau phone sudah ada sebelumnya.'], 500);
+
+    expect(fn () => app(ContactService::class)->ensure($this->user, $this->address))->toThrow(IntegrationException::class);
+
+    // The whole address, then without the phone; never a third try that only drops the address.
+    expect(jubelioCallsTo('POST', '/contacts/'))->toHaveCount(2)
+        ->and($this->user->fresh()->jubelio_contact_id)->toBeNull();
+});
+
+test('only a foreign key violation is retried without the address; any other refusal still fails', function () {
+    $this->routes['POST /contacts/'] = Http::response(['code' => '22001', 'message' => 'value too long'], 500);
+
+    expect(fn () => app(ContactService::class)->ensure($this->user, $this->address))->toThrow(IntegrationException::class);
+    expect(jubelioCallsTo('POST', '/contacts/'))->toHaveCount(1)
+        ->and($this->user->fresh()->jubelio_contact_id)->toBeNull();
+});
+
 test('a profile change updates the existing contact, and does nothing before the first checkout', function () {
     app(ContactService::class)->sync($this->user);
     Http::assertNothingSent();
 
+    $this->routes['GET /contacts/customers/'] = Http::response(['data' => [['contact_id' => 5512, 'email' => 'budi@example.com']]]);
     $this->user->forceFill(['jubelio_contact_id' => 5512, 'name' => 'Budi S.'])->save();
     app(ContactService::class)->sync($this->user->fresh());
 
     expect(jubelioCallsTo('POST', '/contacts/')[0]->data())->toMatchArray(['contact_id' => 5512, 'contact_name' => 'Budi S.']);
+});
+
+test('a profile change never rewrites a contact that was matched by phone and is not this customer\'s', function () {
+    $this->routes['GET /contacts/customers/'] = Http::response(['data' => [['contact_id' => 999, 'email' => 'budi@example.com']]]);
+    $this->user->forceFill(['jubelio_contact_id' => 777, 'name' => 'Budi S.'])->save();
+
+    app(ContactService::class)->sync($this->user->fresh());
+
+    expect(jubelioCallsTo('POST', '/contacts/'))->toBeEmpty();
 });
 
 // --- Sales order (INT-JB-10, INT-JB-13) ------------------------------------------------
@@ -265,6 +343,7 @@ test('AUTH-06 queues nothing when the customer has no contact yet, or nothing ch
 });
 
 test('the contact job sends the profile as it is when it runs, to the existing contact', function () {
+    $this->routes['GET /contacts/customers/'] = Http::response(['data' => [['contact_id' => 5512, 'email' => 'budi@example.com']]]);
     $this->user->forceFill(['jubelio_contact_id' => 5512, 'name' => 'Nama Baru', 'phone' => '081298765432'])->save();
 
     (new UpdateJubelioContactJob($this->user->id))->handle(app(ContactService::class));

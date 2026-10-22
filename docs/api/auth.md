@@ -71,7 +71,7 @@ Sebagai pengunjung, saya ingin membuat akun dengan nama, email, nomor HP, dan pa
 | --- | --- | --- | --- |
 | `name` | string | Ya | 2–100 karakter |
 | `email` | string | Ya | Format email, maks 191, unik (tidak peka huruf besar) |
-| `phone` | string | Ya | Nomor Indonesia, 10–15 digit, diawali `08` atau `628`; disimpan dalam format `08…` |
+| `phone` | string | Ya | Nomor Indonesia, 10–15 digit, diawali `08` atau `628`; disimpan dalam format `08…`. Satu nomor hanya untuk satu akun: yang sudah dipakai akun lain → `422 VALIDATION_ERROR`, `errors.phone`: "Nomor HP sudah terdaftar di akun lain." |
 | `password` | string | Ya | Min 8 karakter, ada huruf dan angka |
 | `password_confirmation` | string | Ya | Sama dengan `password` |
 

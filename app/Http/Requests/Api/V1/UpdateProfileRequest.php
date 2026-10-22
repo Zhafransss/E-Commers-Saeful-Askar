@@ -22,7 +22,7 @@ class UpdateProfileRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'min:2', 'max:100'],
-            'phone' => ['required', 'string', PhoneNumber::RULE],
+            'phone' => ['bail', 'required', 'string', PhoneNumber::RULE, PhoneNumber::uniqueRule($this->user()?->id)],
         ];
     }
 
