@@ -53,8 +53,8 @@
                 <a href="{{ route('cart') }}" class="font-semibold underline decoration-2 underline-offset-4">Perbaiki keranjang</a>
             </div>
 
-            <div class="grid gap-8 lg:grid-cols-[1fr_24rem]">
-                <div class="space-y-6">
+            <div class="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
+                <div class="min-w-0 space-y-6">
                     {{-- 1. Address --}}
                     <section class="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
                         <div class="flex items-center justify-between gap-4">

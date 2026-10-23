@@ -25,7 +25,7 @@
             <span x-text="error"></span> <button type="button" class="ml-2 font-semibold underline" @click="fetchPage(1)">Coba lagi</button>
         </div>
 
-        <div class="mt-4 overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <div class="mt-4 hidden overflow-x-auto rounded-xl border border-gray-200 bg-white xl:block">
             <table class="w-full min-w-[48rem] text-left text-sm">
                 <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                     <tr>
@@ -50,6 +50,22 @@
                     </template>
                 </tbody>
             </table>
+        </div>
+
+        <div class="mt-4 space-y-3 xl:hidden">
+            <p x-show="loading" class="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">Memuat…</p>
+            <p x-cloak x-show="!loading && items.length === 0" class="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">Tidak ada pelanggan yang cocok.</p>
+            <template x-for="user in items" :key="user.id">
+                <button type="button" @click="open(user.id)" class="block w-full rounded-xl border border-gray-200 bg-white p-4 text-left" :class="detail?.id === user.id && 'bg-yellow-50'">
+                    <span class="block font-medium" x-text="user.name"></span>
+                    <span class="block break-all text-xs text-gray-500" x-text="user.email"></span>
+                    <span class="mt-1 block text-sm text-gray-600" x-text="user.phone ?? '-'"></span>
+                    <span class="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-gray-500">
+                        <span><span x-text="user.orders_count"></span> pesanan<span x-show="user.orders_count > 0"> (<span x-text="user.paid_orders_count"></span> dibayar)</span> · terdaftar <span x-text="day(user.registered_at)"></span></span>
+                        <span class="text-sm font-semibold tabular-nums text-gray-900" x-text="$format.formatRupiah(user.paid_total)"></span>
+                    </span>
+                </button>
+            </template>
         </div>
 
         <x-admin-pager />

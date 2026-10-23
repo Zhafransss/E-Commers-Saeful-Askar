@@ -198,16 +198,16 @@
                         <p class="text-sm text-gray-600" aria-live="polite">
                             <span class="font-semibold text-ink" x-text="loaded ? meta.total : '…'">…</span> produk ditemukan
                         </p>
-                        <div class="flex items-center gap-2">
+                        <div class="flex min-w-0 items-center gap-2">
                             <button type="button" @click="filtersOpen = true"
                                     class="relative inline-flex h-10 items-center gap-2 rounded-full border border-gray-300 bg-white px-4 text-sm font-semibold transition hover:border-ink lg:hidden">
                                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" /></svg>
                                 Filter
                                 <span x-cloak x-show="chips.length" x-text="chips.length" class="grid h-5 min-w-5 place-items-center rounded-full bg-brand px-1 text-[11px] font-bold text-ink"></span>
                             </button>
-                            <label class="relative">
+                            <label class="relative min-w-0">
                                 <span class="sr-only">Urutkan</span>
-                                <select x-model="sort" class="h-10 appearance-none rounded-full border border-gray-300 bg-white pl-4 pr-10 text-sm font-semibold focus:border-ink focus:outline-none focus:ring-1 focus:ring-ink">
+                                <select x-model="sort" class="h-10 w-full min-w-0 appearance-none rounded-full border border-gray-300 bg-white pl-4 pr-10 text-sm font-semibold focus:border-ink focus:outline-none focus:ring-1 focus:ring-ink">
                                     <template x-for="(label, value) in sorts" :key="value">
                                         <option :value="value" x-text="'Urutkan: ' + label" :selected="value === sort"></option>
                                     </template>
@@ -236,7 +236,7 @@
                     </div>
 
                     {{-- Grid: placeholders on the first load, then the CAT-02 cards --}}
-                    <div class="mt-6 grid grid-cols-2 gap-3 sm:gap-6 xl:grid-cols-3" :aria-busy="loading">
+                    <div class="mt-6 grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3" :aria-busy="loading">
                         <template x-for="n in (loading && ! loaded ? 6 : 0)" :key="n">
                             <div class="animate-pulse overflow-hidden rounded-2xl border border-gray-200 bg-white" aria-hidden="true">
                                 <div class="aspect-[4/3] bg-gray-200"></div>

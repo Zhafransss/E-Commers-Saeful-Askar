@@ -38,7 +38,7 @@
             <span x-text="error"></span> <button type="button" class="ml-2 font-semibold underline" @click="fetchPage(1)">Coba lagi</button>
         </div>
 
-        <div class="mt-4 overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <div class="mt-4 hidden overflow-x-auto rounded-xl border border-gray-200 bg-white xl:block">
             <table class="w-full min-w-[56rem] text-left text-sm">
                 <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                     <tr>
@@ -72,6 +72,32 @@
                     </template>
                 </tbody>
             </table>
+        </div>
+
+        <div class="mt-4 space-y-3 xl:hidden">
+            <p x-show="loading" class="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">Memuat…</p>
+            <p x-cloak x-show="!loading && items.length === 0" class="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">Tidak ada pesanan yang cocok.</p>
+            <template x-for="order in items" :key="order.order_number">
+                <div class="rounded-xl border border-gray-200 bg-white p-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <a :href="`{{ route('admin.orders.index') }}?order=${order.order_number}`" class="block font-mono font-semibold underline decoration-gray-300" x-text="order.order_number"></a>
+                            <span class="block text-xs text-gray-500" x-text="date(order.paid_at ?? order.created_at)"></span>
+                        </div>
+                        <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold" :class="badge(order.status)" x-text="order.status_label"></span>
+                    </div>
+                    <p class="mt-3 text-sm font-medium" x-text="order.recipient_name"></p>
+                    <p class="text-xs text-gray-500" x-text="order.destination"></p>
+                    <p class="mt-2 text-xs text-gray-600"><span x-text="order.courier"></span> <span x-text="order.service"></span> · <span x-text="order.jubelio_salesorder_no ?? 'belum ada sales order'"></span></p>
+                    <div class="mt-3 rounded-lg bg-gray-50 px-3 py-2">
+                        <p class="text-xs text-gray-500">Resi</p>
+                        <template x-if="order.tracking_no">
+                            <p class="break-all font-mono text-sm font-semibold"><span x-text="order.tracking_no"></span> <span class="font-sans text-xs font-normal text-gray-500" x-text="order.jubelio_courier"></span></p>
+                        </template>
+                        <p x-show="! order.tracking_no" class="text-sm text-gray-400">Belum ada resi</p>
+                    </div>
+                </div>
+            </template>
         </div>
 
         <x-admin-pager />

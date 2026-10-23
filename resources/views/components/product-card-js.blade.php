@@ -29,7 +29,7 @@
         <h3 class="line-clamp-2 font-semibold text-ink group-hover:underline group-hover:decoration-brand group-hover:decoration-2 group-hover:underline-offset-4" x-text="product.name"></h3>
         <div class="mt-auto pt-3">
             <p class="text-sm font-bold tabular-nums text-ink sm:text-base">
-                <span x-text="$format.formatRupiah(product.price_min)"></span><template x-if="product.price_max && product.price_max !== product.price_min"><span><span class="font-normal text-gray-400"> – </span><span x-text="$format.formatRupiah(product.price_max)"></span></span></template>
+                <span class="whitespace-nowrap" x-text="$format.formatRupiah(product.price_min)"></span><template x-if="product.price_max && product.price_max !== product.price_min"><span> <span class="whitespace-nowrap"><span class="font-normal text-gray-400">– </span><span x-text="$format.formatRupiah(product.price_max)"></span></span></span></template>
             </p>
             <p x-show="product.variant_count > 1" class="mt-0.5 text-xs text-gray-500"><span x-text="product.variant_count"></span> varian</p>
         </div>

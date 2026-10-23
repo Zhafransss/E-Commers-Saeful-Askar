@@ -53,7 +53,7 @@
         </div>
 
         {{-- List --}}
-        <div class="mt-4 overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <div class="mt-4 hidden overflow-x-auto rounded-xl border border-gray-200 bg-white xl:block">
             <table class="w-full min-w-[56rem] text-left text-sm">
                 <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                     <tr>
@@ -88,10 +88,41 @@
             </table>
         </div>
 
-        <div x-cloak x-show="meta.last_page > 1" class="mt-4 flex items-center justify-between text-sm">
-            <button type="button" :disabled="meta.current_page <= 1" @click="fetchPage(meta.current_page - 1)" class="rounded-lg border border-gray-300 bg-white px-4 py-2 font-semibold disabled:opacity-40">← Sebelumnya</button>
-            <span class="text-gray-500">Halaman <span x-text="meta.current_page"></span> dari <span x-text="meta.last_page"></span></span>
-            <button type="button" :disabled="!hasMore" @click="fetchPage(meta.current_page + 1)" class="rounded-lg border border-gray-300 bg-white px-4 py-2 font-semibold disabled:opacity-40">Berikutnya →</button>
+        {{-- Phone and tablet: one card per order, so nothing hides behind a sideways scroll --}}
+        <div class="mt-4 space-y-3 xl:hidden">
+            <p x-show="loading" class="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">Memuat…</p>
+            <p x-cloak x-show="!loading && orders.length === 0" class="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">Tidak ada pesanan yang cocok.</p>
+            <template x-for="order in orders" :key="order.order_number">
+                <button type="button" @click="open(order.order_number)" class="block w-full rounded-xl border border-gray-200 bg-white p-4 text-left"
+                        :class="detail?.order_number === order.order_number && 'bg-yellow-50'">
+                    <span class="flex items-start justify-between gap-3">
+                        <span>
+                            <span class="block font-mono font-semibold" x-text="order.order_number"></span>
+                            <span class="block text-xs text-gray-500" x-text="date(order.created_at)"></span>
+                        </span>
+                        <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold" :class="badge(order.status)" x-text="order.status_label"></span>
+                    </span>
+                    <span class="mt-3 flex items-end justify-between gap-3">
+                        <span class="min-w-0">
+                            <span class="block truncate font-medium" x-text="order.customer.name"></span>
+                            <span class="block truncate text-xs text-gray-500" x-text="order.customer.email"></span>
+                        </span>
+                        <span class="shrink-0 font-semibold tabular-nums" x-text="$format.formatRupiah(order.grand_total)"></span>
+                    </span>
+                    <span class="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                        <span x-show="order.is_checkout_failed" class="rounded bg-red-100 px-1.5 py-0.5 font-semibold text-red-700">Checkout gagal</span>
+                        <span class="text-gray-500">Bayar: <span x-text="order.payment_status ?? '-'"></span></span>
+                        <span class="rounded-full px-2 py-0.5 font-semibold" :class="badge(order.jubelio_sync_status)" x-text="order.jubelio_sync_status"></span>
+                        <span class="text-gray-500" x-text="order.jubelio_salesorder_no"></span>
+                    </span>
+                </button>
+            </template>
+        </div>
+
+        <div x-cloak x-show="meta.last_page > 1" class="mt-4 flex items-center justify-between gap-2 text-sm">
+            <button type="button" :disabled="meta.current_page <= 1" @click="fetchPage(meta.current_page - 1)" class="shrink-0 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-2 font-semibold disabled:opacity-40 sm:px-4"><span aria-hidden="true">←</span><span class="sr-only min-[400px]:not-sr-only"> Sebelumnya</span></button>
+            <span class="min-w-0 text-center text-gray-500"><span class="hidden min-[400px]:inline">Halaman </span><span x-text="meta.current_page"></span><span class="min-[400px]:hidden"> / </span><span class="hidden min-[400px]:inline"> dari </span><span x-text="meta.last_page"></span></span>
+            <button type="button" :disabled="!hasMore" @click="fetchPage(meta.current_page + 1)" class="shrink-0 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-2 font-semibold disabled:opacity-40 sm:px-4"><span class="sr-only min-[400px]:not-sr-only">Berikutnya </span><span aria-hidden="true">→</span></button>
         </div>
 
         {{-- Detail panel --}}

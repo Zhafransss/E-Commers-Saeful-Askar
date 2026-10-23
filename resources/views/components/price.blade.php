@@ -6,5 +6,5 @@
 @endphp
 
 <span {{ $attributes->class('font-bold tabular-nums') }}>
-    {{ $rupiah($min) }}@if ($max && $max !== $min)<span class="font-normal text-gray-400"> – </span>{{ $rupiah($max) }}@endif
+    <span class="whitespace-nowrap">{{ $rupiah($min) }}</span>@if ($max && $max !== $min) <span class="whitespace-nowrap"><span class="font-normal text-gray-400">– </span>{{ $rupiah($max) }}</span>@endif
 </span>

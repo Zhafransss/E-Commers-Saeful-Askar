@@ -30,7 +30,7 @@
             <span x-text="error"></span> <button type="button" class="ml-2 font-semibold underline" @click="fetchPage(1)">Coba lagi</button>
         </div>
 
-        <div class="mt-3 overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <div class="mt-3 hidden overflow-x-auto rounded-xl border border-gray-200 bg-white xl:block">
             <table class="w-full min-w-[48rem] text-left text-sm">
                 <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                     <tr><th class="px-4 py-3">Jenis</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Mulai</th><th class="px-4 py-3">Durasi</th><th class="px-4 py-3 text-right">Item</th><th class="px-4 py-3">Pesan</th></tr>
@@ -52,10 +52,25 @@
             </table>
         </div>
 
-        <div x-cloak x-show="meta.last_page > 1" class="mt-4 flex items-center justify-between text-sm">
-            <button type="button" :disabled="meta.current_page <= 1" @click="fetchPage(meta.current_page - 1)" class="rounded-lg border border-gray-300 bg-white px-4 py-2 font-semibold disabled:opacity-40">← Sebelumnya</button>
-            <span class="text-gray-500">Halaman <span x-text="meta.current_page"></span> dari <span x-text="meta.last_page"></span></span>
-            <button type="button" :disabled="meta.current_page >= meta.last_page" @click="fetchPage(meta.current_page + 1)" class="rounded-lg border border-gray-300 bg-white px-4 py-2 font-semibold disabled:opacity-40">Berikutnya →</button>
+        <div class="mt-3 space-y-3 xl:hidden">
+            <p x-show="loading" class="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">Memuat…</p>
+            <p x-cloak x-show="!loading && logs.length === 0" class="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">Belum ada riwayat.</p>
+            <template x-for="log in logs" :key="log.id">
+                <div class="rounded-xl border border-gray-200 bg-white p-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <span class="font-medium"><span x-text="label(log.type)"></span><span x-show="log.reference_id" class="ml-1 text-xs text-gray-400" x-text="'#' + log.reference_id"></span></span>
+                        <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold" :class="badge(log.status)" x-text="log.status"></span>
+                    </div>
+                    <p class="mt-2 text-xs text-gray-500"><span x-text="date(log.started_at)"></span> · <span x-text="duration(log.duration_seconds)"></span> · <span x-text="log.items_processed"></span> item</p>
+                    <p x-show="log.message" class="mt-2 break-words text-xs text-red-600" x-text="log.message"></p>
+                </div>
+            </template>
+        </div>
+
+        <div x-cloak x-show="meta.last_page > 1" class="mt-4 flex items-center justify-between gap-2 text-sm">
+            <button type="button" :disabled="meta.current_page <= 1" @click="fetchPage(meta.current_page - 1)" class="shrink-0 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-2 font-semibold disabled:opacity-40 sm:px-4"><span aria-hidden="true">←</span><span class="sr-only min-[400px]:not-sr-only"> Sebelumnya</span></button>
+            <span class="min-w-0 text-center text-gray-500"><span class="hidden min-[400px]:inline">Halaman </span><span x-text="meta.current_page"></span><span class="min-[400px]:hidden"> / </span><span class="hidden min-[400px]:inline"> dari </span><span x-text="meta.last_page"></span></span>
+            <button type="button" :disabled="meta.current_page >= meta.last_page" @click="fetchPage(meta.current_page + 1)" class="shrink-0 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 py-2 font-semibold disabled:opacity-40 sm:px-4"><span class="sr-only min-[400px]:not-sr-only">Berikutnya </span><span aria-hidden="true">→</span></button>
         </div>
 
         {{-- What the history is, for whoever reads this page --}}

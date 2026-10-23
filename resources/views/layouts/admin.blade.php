@@ -25,7 +25,7 @@
                     <a href="{{ route('home') }}" class="font-semibold">{{ config('app.name') }}</a>
                     <p class="text-xs text-gray-500">Panel admin</p>
                 </div>
-                <nav class="flex gap-4 overflow-x-auto px-4 pb-4 text-sm md:flex-col md:gap-1">
+                <nav class="flex flex-wrap gap-x-2 gap-y-1 px-4 pb-4 text-sm md:flex-col md:flex-nowrap md:gap-1">
                     @foreach ([
                         ['admin.orders.*', 'admin.orders.index', 'Pesanan'],
                         ['admin.shipments.*', 'admin.shipments.index', 'Manajemen Resi'],
@@ -47,7 +47,7 @@
                 </div>
             </aside>
 
-            <main class="flex-1 px-4 py-6 md:px-8">
+            <main class="min-w-0 flex-1 px-4 py-6 md:px-8">
                 @yield('content')
             </main>
         </div>

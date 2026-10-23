@@ -33,8 +33,8 @@
         </div>
 
         <div x-cloak x-show="loaded && cart.items.length > 0" class="mx-auto max-w-7xl px-4 py-10 md:px-8">
-            <div class="grid gap-8 lg:grid-cols-[1fr_22rem]">
-                <div class="space-y-4">
+            <div class="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
+                <div class="min-w-0 space-y-4">
                     <div x-show="cart.summary.has_issue" class="flex gap-3 rounded-2xl border border-brand bg-brand-soft p-4 text-sm" role="alert">
                         <svg class="mt-0.5 h-5 w-5 shrink-0 text-ink" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.49 2.5c.67-1.17 2.35-1.17 3.02 0l6.28 10.9c.67 1.17-.17 2.6-1.51 2.6H3.72c-1.34 0-2.18-1.43-1.51-2.6L8.49 2.5ZM10 6a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 6Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" /></svg>
                         <p><span class="font-semibold">Ada item yang perlu diperbaiki.</span> Stok berubah sejak barang dimasukkan ke keranjang.</p>
@@ -43,7 +43,7 @@
                     <p x-cloak x-show="notice" x-text="notice" role="status"
                        class="rounded-2xl border border-gray-300 bg-white p-4 text-sm text-gray-700"></p>
 
-                    <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm sm:px-5">
+                    <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm sm:px-5">
                         <label class="flex cursor-pointer items-center gap-3 font-semibold">
                             <input type="checkbox" class="h-5 w-5 accent-ink" :checked="$store.cart.allSelected" @change="$store.cart.toggleAll()">
                             Pilih semua <span class="font-normal text-gray-500">(<span x-text="selected.item_count"></span>/<span x-text="cart.items.length"></span> produk)</span>
@@ -54,7 +54,7 @@
                             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3" /></svg>
                             Hapus semua
                         </button>
-                        <div x-cloak x-show="confirmingClear" class="flex items-center gap-2">
+                        <div x-cloak x-show="confirmingClear" class="flex flex-wrap items-center gap-2">
                             <span class="text-gray-600">Hapus semua item?</span>
                             <button type="button" @click="clear()" class="rounded-full bg-red-600 px-4 py-1.5 font-semibold text-white transition hover:bg-red-700">Ya, hapus semua</button>
                             <button type="button" @click="confirmingClear = false" class="rounded-full border border-gray-300 px-4 py-1.5 font-semibold transition hover:border-ink">Batal</button>
@@ -66,7 +66,7 @@
                                  :class="item.issue ? 'border-brand ring-1 ring-brand' : 'border-gray-200'">
                             <input type="checkbox" class="mt-1 h-5 w-5 shrink-0 self-start accent-ink sm:self-center" :checked="$store.cart.isSelected(item)" @change="$store.cart.toggle(item)"
                                    :aria-label="'Pilih ' + item.product.name">
-                            <a :href="`{{ url('/products') }}/${item.product.slug}`" class="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-ink-soft sm:h-28 sm:w-28">
+                            <a :href="`{{ url('/products') }}/${item.product.slug}`" class="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-ink-soft min-[400px]:h-24 min-[400px]:w-24 sm:h-28 sm:w-28">
                                 <template x-if="item.variant.image_url">
                                     <img :src="item.variant.image_url" :alt="item.product.name" class="h-full w-full object-cover">
                                 </template>
@@ -94,9 +94,9 @@
                                     </p>
                                 </div>
 
-                                <div class="flex items-center justify-between gap-4 sm:flex-col sm:items-end">
+                                <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 sm:flex-col sm:items-end">
                                     <p class="font-bold tabular-nums sm:order-last" x-text="$format.formatRupiah(item.subtotal)"></p>
-                                    <div class="flex items-center gap-2">
+                                    <div class="flex flex-wrap items-center gap-2">
                                         <div class="inline-flex items-center rounded-full border border-gray-300">
                                             <button type="button" class="grid h-9 w-9 place-items-center font-semibold transition hover:text-brand-hover disabled:text-gray-300"
                                                     @click="update(item, item.qty - 1)" :disabled="! canDecrease(item)" aria-label="Kurangi">−</button>

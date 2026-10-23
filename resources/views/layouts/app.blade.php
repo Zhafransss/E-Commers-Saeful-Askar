@@ -98,7 +98,7 @@
                                       class="absolute right-0.5 top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-brand px-1 text-[11px] font-bold text-ink"></span>
                             </a>
                             @endunless
-                            <button type="button" @click="open = ! open" :aria-expanded="open" aria-label="Buka menu" class="relative -mr-6 cursor-pointer p-6">
+                            <button type="button" @click="open = ! open" :aria-expanded="open" aria-label="Buka menu" class="relative -mr-4 cursor-pointer p-4 md:-mr-6 md:p-6">
                                 <span aria-hidden="true" class="m-auto block h-0.5 w-6 origin-center rounded bg-neutral-300 transition duration-300" :class="open && 'translate-y-1 rotate-45'"></span>
                                 <span aria-hidden="true" class="m-auto mt-1.5 block h-0.5 w-6 origin-center rounded bg-neutral-300 transition duration-300" :class="open && '-translate-y-1 -rotate-45'"></span>
                             </button>
