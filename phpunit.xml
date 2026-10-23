@@ -26,6 +26,7 @@
         <env name="DB_DATABASE" value="e_commers_saeful_askar_testing"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="ORDER_NUMBER_PREFIX" value="WEB"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="VITE_API_MOCK" value="false"/>
         <env name="PULSE_ENABLED" value="false"/>
