@@ -22,6 +22,19 @@ ambil perubahan dari `main` dengan `git merge main` ke `deployment`.
 5. Cron (satu-satunya yang dibutuhkan):
    `* * * * * cd /path/ke/project && php artisan schedule:run >> /dev/null 2>&1`
 
+## Rilis lewat `git pull` (tanpa upload manual)
+
+Folder project di server adalah salinan Git dari branch `deployment`. Satu rilis:
+
+1. **Di laptop:** commit perubahan, lalu bila ada perubahan di `resources/js`, `resources/css`, atau kelas Tailwind di Blade: `npm run build` dan commit hasilnya (`git add public/build`). Di branch ini `public/build/` ikut dilacak Git karena server tidak punya Node. Lalu `git push origin deployment`.
+2. **Di server (SSH):** `cd ~/domains/<domain>/app && bash scripts/deploy.sh`.
+
+`scripts/deploy.sh` mengambil commit terbaru, menjalankan `composer install --no-dev -o`, `php artisan migrate --force`, dan `php artisan optimize:clear`. Skrip berhenti dengan pesan jelas kalau ada file berlacak di server yang berbeda dari GitHub (misalnya hasil upload manual atau edit langsung), supaya tidak ada yang tertimpa diam-diam. `.env`, `storage/`, dan `vendor/` tidak dilacak Git dan tidak tersentuh.
+
+Server mengambil kode lewat HTTPS dari repo publik, tanpa kunci atau password (hanya bisa membaca). Karena repo publik, jangan pernah meng-commit rahasia (`.env`, kunci `.pem`, kredensial): semuanya sudah diabaikan di `.gitignore`. Kalau repo suatu saat dijadikan privat, pakai *deploy key* hanya-baca (Settings → Deploy keys) dan ubah alamat `origin` ke bentuk SSH; jangan menyimpan password atau token GitHub pribadi di server.
+
+Pertama kali (folder di server belum berupa repo Git): `git init -b deployment`, `git remote add origin https://github.com/Zhafransss/E-Commers-Saeful-Askar.git`, `git fetch origin deployment`, `git reset --hard origin/deployment`, lalu `bash scripts/deploy.sh`. `reset --hard` hanya mengganti file yang dilacak Git; `.env`, `storage/`, dan `vendor/` tetap utuh.
+
 ## Catatan
 - **Antrean tidak bergantung pada cron.** Setelah sebuah request web yang menambah job ke antrean `database` selesai dijawab, aplikasi memproses antrean sampai 25 detik (`App\Support\QueueKicker`, `QUEUE_KICK_ON_REQUEST`, default `true`). Notifikasi pembayaran DANA, email (reset password, invoice), dan panggilan ke Jubelio karenanya selesai dalam hitungan detik. Jadwal (sinkron katalog dan stok Jubelio, pemeriksaan pesanan kedaluwarsa) dijalankan dengan cara yang sama: setelah sebuah request web dijawab, tugas yang jatuh tempo dijalankan di dalam proses itu, paling banyak sekali per menit (`App\Support\ScheduleKicker`, `SCHEDULE_KICK_ON_REQUEST`, default `true`). Tugas yang terlewat karena tidak ada kunjungan pada menit jatuh temponya dikejar pada kunjungan berikutnya, satu kali per tugas (sampai 24 jam ke belakang), jadi sinkron tetap jalan selama ada kunjungan, walau cron mati. Cron `schedule:run` tetap dipasang sebagai cadangan; di Hostinger cron terbukti hanya berjalan sekali lalu berhenti (diuji dengan `date >> file` tiap menit), jadi jangan mengandalkannya untuk antrean.
 - Job tertunda hingga ±1 menit (email, sinkronisasi Jubelio, pembatalan). Retry/backoff dan `failed_jobs` tetap bekerja.

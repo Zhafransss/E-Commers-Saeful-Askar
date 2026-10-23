@@ -1,0 +1,21 @@
+{
+  "resources/css/app.css": {
+    "file": "assets/app-CT6jVxCU.css",
+    "src": "resources/css/app.css",
+    "isEntry": true,
+    "name": "app",
+    "names": [
+      "app.css"
+    ]
+  },
+  "resources/fonts/conthrax-sb.otf": {
+    "file": "assets/conthrax-sb-EtEutoJV.otf",
+    "src": "resources/fonts/conthrax-sb.otf"
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-BVdKzB1t.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  }
+}
