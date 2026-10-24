@@ -47,10 +47,15 @@ Route::get('/register', [Web\AuthPageController::class, 'register'])->name('regi
 Route::get('/forgot-password', [Web\AuthPageController::class, 'forgotPassword'])->name('password.request');
 Route::get('/reset-password', [Web\AuthPageController::class, 'resetPassword'])->name('password.reset');
 
+// Where DANA brings the customer back. Outside the login guard on purpose: that first request comes
+// from another site and may reach us without the session cookie, and a customer who has just paid must
+// not be thrown to the login page. The page shows nothing private by itself; it asks ORD-03, which
+// needs the login, and tells a guest to log in (finishPage.js).
+Route::get('/checkout/finish', [Web\CheckoutPageController::class, 'finish'])->name('checkout.finish');
+
 Route::middleware('page.role:customer')->group(function () {
     Route::get('/cart', Web\CartPageController::class)->name('cart');
     Route::get('/checkout', [Web\CheckoutPageController::class, 'index'])->name('checkout');
-    Route::get('/checkout/finish', [Web\CheckoutPageController::class, 'finish'])->name('checkout.finish');
 
     Route::get('/account/orders', [Web\AccountPageController::class, 'orders'])->name('account.orders');
     Route::get('/account/orders/{orderNumber}', [Web\AccountPageController::class, 'orderShow'])->name('account.orders.show');

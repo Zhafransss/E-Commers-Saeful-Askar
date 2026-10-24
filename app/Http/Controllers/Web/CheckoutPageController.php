@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Support\TempCookieDebug;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -19,6 +20,8 @@ class CheckoutPageController extends Controller
      */
     public function finish(Request $request): View
     {
+        TempCookieDebug::log('finish page', $request); // TEMP-DEBUG
+
         return view('pages.checkout.finish', [
             'orderNumber' => (string) $request->query('order'),
             'failed' => $request->boolean('failed'),

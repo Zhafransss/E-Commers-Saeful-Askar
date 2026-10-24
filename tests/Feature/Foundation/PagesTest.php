@@ -66,6 +66,13 @@ test('the admin menu names every page and the sync page is called Riwayat Sinkro
     $this->get('/admin/products')->assertSee('Sinkron semua produk')->assertSee('Sinkronisasi dengan Jubelio');
 });
 
+test('the return page from DANA opens for a guest, who is asked to log in from the page itself', function () {
+    $this->get('/checkout/finish?order=WEB-000001')
+        ->assertOk()
+        ->assertSee('Masuk untuk melihat status pesanan')
+        ->assertSee(route('login', ['next' => '/checkout/finish?order=WEB-000001']), false);
+});
+
 test('customer pages render for logged-in customers', function (string $uri) {
     config(['app.api_mock' => false]);
     $this->actingAs(User::factory()->create());

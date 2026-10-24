@@ -61,11 +61,22 @@
                         <p class="mt-2 text-gray-600">Pesanan ini tidak bisa dibayar lagi. Silakan belanja kembali bila masih membutuhkannya.</p>
                     </div>
 
+                    {{-- login (no session on this visit; the payment itself is handled by Gapura's notification) --}}
+                    <div x-cloak x-show="state === 'login'">
+                        <span class="mx-auto grid h-16 w-16 place-items-center rounded-full bg-brand-soft text-ink">
+                            <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
+                        </span>
+                        <h1 class="mt-6 text-2xl font-bold">Masuk untuk melihat status pesanan</h1>
+                        <p class="mt-2 text-gray-600">Pembayaran Anda diproses otomatis. Masuk ke akun untuk melihat statusnya.</p>
+                        <a href="{{ route('login', ['next' => '/checkout/finish?order='.$orderNumber]) }}"
+                           class="mt-6 inline-block rounded-full bg-brand px-7 py-3.5 text-sm font-semibold text-ink transition hover:bg-brand-hover">Masuk</a>
+                    </div>
+
                     <p class="mt-6 text-sm text-gray-500">Nomor pesanan <span class="font-mono font-semibold text-ink" x-text="orderNumber">{{ $orderNumber }}</span></p>
 
                     <p x-cloak x-show="resumeError" class="mt-4 text-sm text-red-600" x-text="resumeError"></p>
 
-                    <div x-cloak x-show="state !== 'checking'" class="mt-8 flex flex-wrap justify-center gap-3">
+                    <div x-cloak x-show="state !== 'checking' && state !== 'login'" class="mt-8 flex flex-wrap justify-center gap-3">
                         {{-- ORD-04 returns the existing payment page (never a new bill). --}}
                         <button type="button" x-show="state === 'pending' || state === 'failed'" @click="resume()" :disabled="resuming"
                                 class="rounded-full bg-brand px-7 py-3.5 text-sm font-semibold text-ink transition hover:bg-brand-hover">

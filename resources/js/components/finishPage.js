@@ -13,7 +13,7 @@ export default (orderNumber, failed = false) => ({
     orderNumber,
     failed,
     order: null,
-    state: 'checking', // checking | paid | pending | failed | closed
+    state: 'checking', // checking | paid | pending | failed | closed | login
     now: Date.now(),
     resuming: false,
     resumeError: null,
@@ -46,6 +46,9 @@ export default (orderNumber, failed = false) => ({
             if (error instanceof ApiError && error.status === 404) {
                 this.order = null;
                 this.state = 'closed';
+            } else if (error instanceof ApiError && error.status === 401) {
+                // No session on this request (the page may be opened from another site): ask to log in.
+                this.state = 'login';
             }
             // Any other error: keep checking until the time is up.
         }

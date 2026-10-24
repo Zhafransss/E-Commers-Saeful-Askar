@@ -76,7 +76,7 @@ test('admin refresh-payment on an order that never had a payment is 409 ORDER_HA
 });
 
 test('web pages: customer pages redirect guests to /login; admin pages are 403 for customers and open for admins', function () {
-    foreach (['/cart', '/checkout', '/checkout/finish', '/account/addresses', '/account/orders', '/account/orders/WEB-000001', '/admin', '/admin/orders', '/admin/sync'] as $uri) {
+    foreach (['/cart', '/checkout', '/account/addresses', '/account/orders', '/account/orders/WEB-000001', '/admin', '/admin/orders', '/admin/sync'] as $uri) {
         $this->get($uri)->assertRedirect('/login');
     }
     foreach (['/admin/orders', '/admin/sync'] as $uri) {
