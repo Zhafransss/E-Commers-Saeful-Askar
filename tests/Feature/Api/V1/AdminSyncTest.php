@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Sleep;
 
 /*
 | ADM-13 and ADM-14 (docs/api/admin.md): start a sync by hand, and read the history.
@@ -107,6 +108,7 @@ test('"full" writes one sync log for each of categories, products, and stock', f
 });
 
 test('a failed sync closes its log as failed and still lets the lock go', function () {
+    Sleep::fake();
     fakeJubelioCatalog(['/inventory/categories/item-categories/' => Http::response(['message' => 'boom'], 500)]);
     $lock = Cache::lock('sync:categories', 600);
     $lock->get();

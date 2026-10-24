@@ -3,6 +3,7 @@
 namespace App\Services\Jubelio;
 
 use App\Models\ProductVariant;
+use App\Services\Jubelio\Concerns\RetriesSyncCalls;
 use Illuminate\Support\Collection;
 use RuntimeException;
 
@@ -16,6 +17,8 @@ use RuntimeException;
  */
 class StockSyncService
 {
+    use RetriesSyncCalls;
+
     public function __construct(
         private readonly JubelioClient $jubelio,
         private readonly ?int $locationId,
@@ -71,7 +74,7 @@ class StockSyncService
         $page = 1;
 
         do {
-            $result = $this->jubelio->inventory($page);
+            $result = $this->retrying(fn () => $this->jubelio->inventory($page));
             foreach ($result['data'] as $row) {
                 $stock[(int) $row['item_id']] = $this->available($row, $location);
             }

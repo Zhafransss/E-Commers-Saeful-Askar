@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\IntegrationException;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
@@ -7,6 +8,7 @@ use App\Models\ProductVariant;
 use App\Services\Jubelio\ProductSyncService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
 
 /*
 | Catalog sync from Jubelio (INT-JB-02 – INT-JB-05, roadmap Fase 2), against
@@ -261,4 +263,74 @@ test('every sync drops the cached category list', function () {
     catalogSync()->syncCategories();
 
     expect(Cache::has('catalog:categories:all'))->toBeFalse();
+});
+
+// --- Calls that fail on the way ------------------------------------------------
+
+test('a full sync tries a call again after a server error instead of giving up', function () {
+    Sleep::fake();
+    $calls = 0;
+    fakeJubelioCatalog(['/inventory/items/group/18' => function () use (&$calls) {
+        return ++$calls === 1
+            ? Http::response(['message' => 'down'], 500)
+            : Http::response(fixture('jubelio/catalog/item-group-18.json'));
+    }]);
+
+    expect(catalogSync()->syncAll())->toBe(3)
+        ->and($calls)->toBe(2)
+        ->and(Product::where('jubelio_item_group_id', 18)->exists())->toBeTrue();
+    Sleep::assertSleptTimes(1);
+});
+
+test('a 429 is waited out for the minute Jubelio asks for', function () {
+    Sleep::fake();
+    $calls = 0;
+    fakeJubelioCatalog(['/inventory/items/group/18' => function () use (&$calls) {
+        return ++$calls === 1 ? Http::response([], 429) : Http::response(fixture('jubelio/catalog/item-group-18.json'));
+    }]);
+
+    expect(catalogSync()->syncAll())->toBe(3);
+    Sleep::assertSequence([Sleep::for(60)->seconds()]);
+});
+
+test('a sync gives up after four tries, and at once on an error that cannot get better', function () {
+    Sleep::fake();
+    $calls = 0;
+    fakeJubelioCatalog(['/inventory/items/group/18' => function () use (&$calls) {
+        $calls++;
+
+        return Http::response(['message' => 'down'], 500);
+    }]);
+
+    expect(fn () => catalogSync()->syncAll())->toThrow(IntegrationException::class)
+        ->and($calls)->toBe(4);
+    Sleep::assertSleptTimes(3);
+
+    Sleep::fake();
+    $calls = 0;
+    fakeJubelioCatalog(['/inventory/items/group/18' => function () use (&$calls) {
+        $calls++;
+
+        return Http::response(['message' => 'bad'], 400);
+    }]);
+
+    expect(fn () => catalogSync()->syncAll())->toThrow(IntegrationException::class)
+        ->and($calls)->toBe(1);
+    Sleep::assertNeverSlept();
+});
+
+// --- SKUs that Jubelio no longer lists -------------------------------------------
+
+test('a SKU that INT-JB-05 stops listing is hidden on the next sync, though the group detail still has it', function () {
+    catalogSync()->syncAll();
+    expect(ProductVariant::where('jubelio_item_id', 19)->sole()->is_active)->toBeTrue();
+
+    $variations = fixture('jubelio/catalog/variations.json');
+    $variations['data'] = array_values(array_filter($variations['data'], fn (array $row) => $row['item_id'] !== 19));
+    $variations['totalCount'] = count($variations['data']);
+    fakeJubelioCatalog(['/variations/' => Http::response($variations)]);
+    catalogSync()->syncAll();
+
+    expect(ProductVariant::where('jubelio_item_id', 19)->sole()->is_active)->toBeFalse()
+        ->and(ProductVariant::where('jubelio_item_id', 20)->sole()->is_active)->toBeTrue();
 });

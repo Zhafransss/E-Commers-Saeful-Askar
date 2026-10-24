@@ -12,6 +12,7 @@ use App\Services\Jubelio\StockSyncService;
 use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
 
 /*
 | Stock reconciliation (INT-JB-06), the three sync commands with their
@@ -87,6 +88,7 @@ test('each command records a successful sync_logs row with the item count', func
 ]);
 
 test('a failing Jubelio call fails the command and keeps Jubelio\'s message in sync_logs', function () {
+    Sleep::fake();
     fakeJubelioCatalog(['/inventory/items/' => Http::response(fixture('jubelio/error-sql.json'), 500)]);
 
     $this->artisan('jubelio:sync-products --full')->assertFailed();

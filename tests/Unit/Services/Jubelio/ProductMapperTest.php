@@ -108,6 +108,25 @@ test('a SKU missing from INT-JB-05 gets a name built from its variation and no w
         ->is_bundle->toBeFalse();
 });
 
+test('a SKU that INT-JB-05 no longer lists is left out; with no SKU list at all every SKU is kept', function () {
+    $without19 = $this->skuRows;
+    unset($without19[19]);
+
+    expect(array_keys($this->mapper->variants($this->group, $without19)))->toBe([20])
+        ->and(array_keys($this->mapper->variants($this->group, [])))->toBe([20, 19]);
+});
+
+test('a SKU priced at 0 is not for sale until it has a price', function () {
+    $group = $this->group;
+    $group['product_skus'][1]['sell_price'] = '0.0000';
+    $group['product_skus'][1]['prices'] = [];
+
+    $variants = $this->mapper->variants($group, $this->skuRows);
+
+    expect($variants[19])->price->toBe(0)->is_active->toBeFalse()
+        ->and($variants[20]['is_active'])->toBeTrue();
+});
+
 test('empty variation lists become null', function () {
     $group = fixture('jubelio/catalog/item-group-19.json');
 

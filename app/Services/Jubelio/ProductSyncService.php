@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
+use App\Services\Jubelio\Concerns\RetriesSyncCalls;
 use App\Services\Jubelio\Mappers\ProductMapper;
 use App\Support\CatalogCache;
 use Carbon\CarbonInterface;
@@ -28,6 +29,8 @@ use Illuminate\Support\Str;
  */
 class ProductSyncService
 {
+    use RetriesSyncCalls;
+
     /** Start of the last full or incremental run: the next incremental run reads changes after it. */
     private const LISTED_AT_KEY = 'jubelio:products:listed-at';
 
@@ -45,7 +48,7 @@ class ProductSyncService
      */
     public function syncCategories(): int
     {
-        $rows = collect($this->jubelio->categories())->filter(fn ($row) => isset($row['category_id']));
+        $rows = collect($this->retrying(fn () => $this->jubelio->categories()))->filter(fn ($row) => isset($row['category_id']));
 
         DB::transaction(function () use ($rows): void {
             $localIds = [];
@@ -90,7 +93,7 @@ class ProductSyncService
         $skuRows = $this->skuRows();
 
         foreach ($groupIds as $groupId) {
-            $this->syncGroup($groupId, $skuRows, withStock: false);
+            $this->retrying(fn () => $this->syncGroup($groupId, $skuRows, withStock: false));
         }
 
         Product::where('is_active', true)->whereNotIn('jubelio_item_group_id', $groupIds)->update(['is_active' => false]);
@@ -126,7 +129,7 @@ class ProductSyncService
         if ($groupIds !== []) {
             $skuRows = $this->skuRows();
             foreach ($groupIds as $groupId) {
-                $this->syncGroup($groupId, $skuRows);
+                $this->retrying(fn () => $this->syncGroup($groupId, $skuRows));
             }
             CatalogCache::flush();
         }
@@ -206,7 +209,7 @@ class ProductSyncService
             $seen = 0;
 
             do {
-                $result = $this->jubelio->{$list}($page, newestFirst: $since !== null);
+                $result = $this->retrying(fn () => $this->jubelio->{$list}($page, newestFirst: $since !== null));
 
                 foreach ($result['data'] as $group) {
                     $seen++;
@@ -236,7 +239,7 @@ class ProductSyncService
         $page = 1;
 
         do {
-            $result = $this->jubelio->variations($page);
+            $result = $this->retrying(fn () => $this->jubelio->variations($page));
             foreach ($result['data'] as $row) {
                 $rows[(int) $row['item_id']] = $row;
             }

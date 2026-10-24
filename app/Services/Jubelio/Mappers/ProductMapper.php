@@ -72,20 +72,30 @@ class ProductMapper
 
         foreach ($group['product_skus'] ?? [] as $sku) {
             $itemId = (int) $sku['item_id'];
+
+            // The group detail still lists a SKU that Jubelio has removed or switched off; INT-JB-05 no longer
+            // does. It is left out here, so the sync hides the variant it may have copied earlier.
+            if ($skuRows !== [] && ! isset($skuRows[$itemId])) {
+                continue;
+            }
+
             $row = $skuRows[$itemId] ?? [];
             $values = $this->variationValues($sku['variation_values'] ?? null);
             $images = $this->skuImages($sku);
+            $price = $this->price($sku);
 
             $variants[$itemId] = [
                 'jubelio_item_id' => $itemId,
                 'sku' => trim((string) $sku['item_code']),
                 'name' => $this->stringOrNull($row['item_name'] ?? null) ?? $this->variantName($groupName, $values),
                 'variation_values' => $values,
-                'price' => $this->price($sku),
+                'price' => $price,
                 'package_weight' => $this->positiveInt($row['package_weight'] ?? null),
                 'barcode' => $this->stringOrNull($sku['barcode'] ?? null),
                 'image_url' => $images[0]['cloud_key'] ?? null,
                 'is_bundle' => (bool) ($row['is_bundle'] ?? false),
+                // A bundle can be left at 0 in Jubelio; it is not for sale until it has a price.
+                'is_active' => $price > 0,
             ];
         }
 
