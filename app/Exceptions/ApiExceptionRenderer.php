@@ -2,7 +2,6 @@
 
 namespace App\Exceptions;
 
-use App\Support\TempCookieDebug;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -46,8 +45,6 @@ class ApiExceptionRenderer
         }
 
         if ($e instanceof AuthenticationException) {
-            TempCookieDebug::log('api 401 '.$request->path(), $request); // TEMP-DEBUG
-
             return $this->json(401, ...self::HTTP_ERRORS[401]);
         }
 
