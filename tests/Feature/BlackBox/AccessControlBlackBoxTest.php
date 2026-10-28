@@ -88,7 +88,7 @@ test('web pages: customer pages redirect guests to /login; admin pages are 403 f
 
 test('public pages render for guests', function (string $uri) {
     $this->get($uri)->assertOk();
-})->with(['/', '/products', '/login', '/register', '/forgot-password', '/kontak', '/jasa-service', '/testimoni', '/robots.txt', '/sitemap.xml']);
+})->with(['/', '/products', '/login', '/register', '/forgot-password', '/robots.txt', '/sitemap.xml']);
 
 test('API route-model hygiene: unknown API routes and wrong methods answer in the error shape', function () {
     bbExpectErrorShape($this->getJson('/api/v1/tidak-ada')->assertNotFound());

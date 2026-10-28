@@ -37,9 +37,5 @@
         </div>
 
         <a href="{{ route('register', request()->only('next')) }}" class="block w-full rounded-full border-2 border-ink py-3 text-center font-semibold text-ink transition hover:bg-ink hover:text-brand">Daftar sekarang</a>
-
-        <p class="mt-8 text-center text-xs text-gray-500">
-            Butuh bantuan? <a href="{{ route('contact') }}" class="font-semibold text-ink hover:underline">Hubungi kami</a>
-        </p>
     </x-auth-shell>
 @endsection

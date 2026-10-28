@@ -1,6 +1,6 @@
 @props(['eyebrow' => null, 'crumb' => null, 'image' => null])
 
-{{-- Dark page header for the company pages (jasa service, testimoni, kontak). --}}
+{{-- Dark page header for the company pages (jasa service). --}}
 <section class="relative overflow-hidden border-b border-neutral-800/50">
     @if ($image)
         <div class="absolute inset-0" aria-hidden="true">

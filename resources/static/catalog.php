@@ -149,21 +149,4 @@ $cart = [
     'summary' => ['item_count' => 2, 'total_qty' => 2, 'subtotal' => 9200000, 'total_weight' => 36500, 'has_issue' => false],
 ];
 
-// SAMPLE ONLY: replace with real customer reviews (the old site embedded Google
-// reviews through an Elfsight widget) before going live.
-$testimonials = collect([
-    ['Tambun, Bekasi', 'PCSY - 09', 'pelayanan ramah, sepeda dirakit rapi dan langsung bisa dipakai. Dijelaskan juga cara merawat baterainya.'],
-    ['Cikarang', 'Service di Rumah', 'teknisi datang sesuai jadwal, masalah rem dan lampu beres dalam satu kunjungan.'],
-    ['Bekasi Kota', 'PCSY - 12', 'beli dua unit dapat potongan harga, pengiriman ke rumah cepat dan aman.'],
-    ['Cibitung', 'Baterai Lithium 48V', 'ganti baterai di toko, ditunggu kurang dari satu jam. Jarak tempuh kembali seperti baru.'],
-    ['Jakarta Timur', 'PCSY - 15', 'admin responsif di WhatsApp, dibantu pilih model yang pas untuk anak.'],
-    ['Tambun Selatan', 'Service di Toko', 'motor listrik mati total, dicek dan diperbaiki hari itu juga dengan harga jujur.'],
-])->map(fn ($row, $i) => [
-    'name' => 'Contoh Pelanggan '.($i + 1),
-    'city' => $row[0],
-    'rating' => 5,
-    'product' => $row[1],
-    'text' => 'Contoh testimoni: '.$row[2],
-])->all();
-
-return compact('categories', 'products', 'productDetail', 'variantIndex', 'cartLines', 'cart', 'testimonials');
+return compact('categories', 'products', 'productDetail', 'variantIndex', 'cartLines', 'cart');

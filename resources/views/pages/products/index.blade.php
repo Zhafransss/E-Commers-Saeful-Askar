@@ -77,24 +77,6 @@
             </div>
         </section>
 
-        {{-- Category pills --}}
-        <div class="border-b border-gray-200 bg-white">
-            <div class="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-3 md:px-8 [scrollbar-width:none]">
-                <a href="{{ route('products.index') }}" @click.prevent="category = ''"
-                        :class="category === '' ? 'border-ink bg-ink text-brand' : 'border-gray-200 bg-white text-gray-700 hover:border-ink'"
-                        class="flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition">
-                    Semua <span class="text-xs opacity-60" x-text="countFor('')"></span>
-                </a>
-                <template x-for="item in categories" :key="item.id">
-                    <a :href="`{{ route('products.index') }}?category=${item.slug}`" @click.prevent="category = item.slug"
-                            :class="category === item.slug ? 'border-ink bg-ink text-brand' : 'border-gray-200 bg-white text-gray-700 hover:border-ink'"
-                            class="flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition">
-                        <span x-text="item.name"></span> <span class="text-xs opacity-60" x-text="item.product_count"></span>
-                    </a>
-                </template>
-            </div>
-        </div>
-
         <div class="mx-auto max-w-7xl px-4 py-8 md:px-8 md:py-10">
             <div class="grid gap-8 lg:grid-cols-[16.5rem_1fr]">
                 {{-- Mobile backdrop --}}

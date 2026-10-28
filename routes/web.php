@@ -26,8 +26,6 @@ Route::get('/sitemap.xml', fn () => response()
                 ->whereHas('products', fn ($products) => $products->visible())
                 ->pluck('slug')
                 ->map(fn ($slug) => [route('products.index', ['category' => $slug]), '0.8', 'daily']),
-            [route('service'), '0.8', 'monthly'],
-            [route('contact'), '0.6', 'monthly'],
         ],
         'products' => Product::visible()->get(['slug', 'updated_at']),
     ])
@@ -37,10 +35,8 @@ Route::get('/robots.txt', fn () => response()
     ->view('seo.robots')
     ->header('Content-Type', 'text/plain; charset=UTF-8'))->name('robots');
 
-// Static company pages; the home page shows a short preview of each.
-Route::view('/jasa-service', 'pages.service')->name('service');
-Route::view('/testimoni', 'pages.testimonials')->name('testimonials');
-Route::view('/kontak', 'pages.contact')->name('contact');
+// Jasa service lives on the main company site; every link to route('service') lands there.
+Route::redirect('/jasa-service', 'https://www.saefulaskar.com/jasa-service')->name('service');
 
 Route::get('/login', [Web\AuthPageController::class, 'login'])->name('login');
 Route::get('/register', [Web\AuthPageController::class, 'register'])->name('register');

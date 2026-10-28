@@ -112,7 +112,7 @@
 
             <div class="grid gap-4 md:grid-cols-3 md:gap-6">
                 @foreach ([
-                    ['Sepeda Listrik', 'Sepeda dan motor listrik untuk anak-anak hingga dewasa.', route('products.index', ['category' => 'sepeda-listrik']), asset('images/products/2-640.webp'), '18+ model'],
+                    ['Sepeda Listrik', 'Sepeda dan motor listrik untuk anak-anak hingga dewasa.', route('products.index', ['category' => 'unit']), asset('images/products/2-640.webp'), '18+ model'],
                     ['Sparepart', 'Baterai, charger, ban, dan suku cadang. Grosir & eceran.', route('products.index', ['category' => 'sparepart']), asset('images/products/6-640.webp'), 'Grosir & eceran'],
                     ['Jasa Service', 'Teknisi berpengalaman, service di rumah atau di toko.', route('service'), asset('images/banner.webp'), 'Di rumah / di toko'],
                 ] as [$title, $text, $url, $image, $tag])
@@ -147,7 +147,7 @@
                     <p>Dapatkan diskon sebesar <span class="text-lg font-bold text-brand">Rp 800.000</span> untuk semua varian sepeda listrik untuk setiap pembelian 2 unit sepeda listrik.</p>
                     <p>Yuk, ajak saudara dan tetanggamu beli barengan dan dapatkan <span class="font-semibold text-brand">diskonnya!</span></p>
                 </div>
-                <a href="{{ route('products.index', ['category' => 'sepeda-listrik']) }}"
+                <a href="{{ route('products.index', ['category' => 'unit']) }}"
                    class="mt-8 inline-flex h-12 items-center justify-center rounded-full bg-brand px-7 text-sm font-semibold text-ink transition hover:scale-[1.02] hover:bg-brand/90">
                     Pilih Sepeda Listrik
                 </a>
@@ -240,28 +240,6 @@
                         <span class="text-sm text-neutral-400">{{ implode(' · ', $service['points']) }}</span>
                     </a>
                 @endforeach
-            </div>
-        </div>
-    </section>
-
-    {{-- Testimonials preview (full page: /testimoni) --}}
-    <section class="border-t border-neutral-800/50 py-20 md:py-28">
-        <div class="mx-auto max-w-7xl px-4 md:px-8">
-            <x-section-heading eyebrow="Testimoni">
-                Kata <span class="text-brand">pelanggan</span> kami
-            </x-section-heading>
-
-            <div class="grid gap-6 md:grid-cols-3">
-                @foreach (array_slice($static['testimonials'], 0, 3) as $review)
-                    <x-testimonial-card :review="$review" />
-                @endforeach
-            </div>
-
-            <div class="mt-10 text-center">
-                <a href="{{ route('testimonials') }}"
-                   class="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-neutral-700 px-7 text-sm font-semibold transition hover:scale-[1.02] hover:border-neutral-500 hover:bg-neutral-800/50">
-                    Lihat Semua Testimoni
-                </a>
             </div>
         </div>
     </section>

@@ -23,7 +23,7 @@ return [
             .'<p>Pesanan dibayar aman lewat DANA dan dikirim dari gudang Tambun Utara ke seluruh Indonesia. Untuk area Bekasi dan sekitarnya, Anda juga bisa datang langsung ke toko atau memesan service di rumah.</p>',
     ],
 
-    'sepeda-listrik' => [
+    'unit' => [
         'title' => 'Jual Sepeda Listrik Bekasi – Harga Terbaru',
         'meta' => 'Jual sepeda listrik di Bekasi dengan harga terbaru. Pilihan model untuk anak hingga dewasa, stok sesuai gudang, bisa kirim ke seluruh Indonesia.',
         'h1' => 'Jual Sepeda Listrik',

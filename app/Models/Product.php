@@ -48,12 +48,14 @@ class Product extends Model
     }
 
     /**
-     * Visible on the storefront: active and with at least one active variant (catalog.md).
+     * Visible on the storefront: active, with at least one active variant (catalog.md), and not in a hidden category (config/shop.php).
      */
     public function scopeVisible(Builder $query): void
     {
         $query->where('is_active', true)
-            ->whereHas('variants', fn (Builder $variants) => $variants->where('is_active', true));
+            ->whereHas('variants', fn (Builder $variants) => $variants->where('is_active', true))
+            ->where(fn (Builder $products) => $products->whereNull('category_id')
+                ->orWhereDoesntHave('category', fn (Builder $category) => $category->whereIn('slug', config('shop.hidden_categories'))));
     }
 
     /**

@@ -60,14 +60,12 @@
 
         // Main navigation (client brief). "Product" opens a dropdown.
         $menu = [
-            ['label' => 'Home', 'url' => $home, 'active' => request()->routeIs('home')],
-            ['label' => 'Product', 'active' => request()->routeIs('products.*', 'service'), 'children' => [
-                ['label' => 'Sepeda Listrik', 'text' => 'Sepeda & motor listrik siap kirim', 'url' => route('products.index', ['category' => 'sepeda-listrik'])],
+            ['label' => 'Product', 'active' => request()->routeIs('products.*'), 'children' => [
+                ['label' => 'Sepeda Listrik', 'text' => 'Sepeda & motor listrik siap kirim', 'url' => route('products.index', ['category' => 'unit'])],
                 ['label' => 'Sparepart', 'text' => 'Baterai, ban, charger, dan suku cadang', 'url' => route('products.index', ['category' => 'sparepart'])],
-                ['label' => 'Jasa Service', 'text' => 'Service di rumah atau di toko', 'url' => route('service')],
             ]],
-            ['label' => 'Testimoni', 'url' => route('testimonials'), 'active' => request()->routeIs('testimonials')],
-            ['label' => 'Kontak', 'url' => route('contact'), 'active' => request()->routeIs('contact')],
+            ['label' => 'Jasa Service', 'url' => 'https://www.saefulaskar.com/jasa-service', 'active' => false],
+            ['label' => 'Tentang Kami', 'url' => 'https://www.saefulaskar.com/tentang-kami', 'active' => false],
         ];
 
         // Pages that open with a full-bleed hero (the home page) set @section('header_overlay', '1'): the content

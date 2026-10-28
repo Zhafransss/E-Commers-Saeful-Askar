@@ -10,4 +10,11 @@ return [
     */
     'order_prefix' => env('ORDER_NUMBER_PREFIX', 'WEB'),
 
+    /*
+    | Slugs of Jubelio categories kept off the storefront. Their products (and the category itself, which then
+    | has none) are hidden from the list, detail pages, category list, and sitemap; the sync still copies them,
+    | and the admin product list still shows them. Jasa Service is sold in the shop, not online.
+    */
+    'hidden_categories' => ['jasa-service'],
+
 ];
