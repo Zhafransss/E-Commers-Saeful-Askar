@@ -11,7 +11,7 @@
                 <p class="mt-1 text-sm text-gray-500"><span x-text="meta.total"></span> pesanan, yang terbaru di atas.</p>
             </div>
             <button type="button" @click="refreshAllPayments()" :disabled="bulkBusy"
-                    class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40" x-text="bulkBusy ? 'Memeriksa pembayaran…' : 'Periksa pembayaran'"></button>
+                    class="rounded-lg bg-gold px-4 py-2 text-sm font-semibold text-ink hover:bg-gold-hover disabled:opacity-40" x-text="bulkBusy ? 'Memeriksa pembayaran…' : 'Periksa pembayaran'"></button>
         </div>
         <p class="mt-2 text-xs text-gray-500">Tombol <span class="font-semibold">Periksa pembayaran</span> menanyakan ke DANA status semua pesanan yang masih menunggu pembayaran dan memperbaruinya (dibayar atau kedaluwarsa).</p>
         <p x-cloak x-show="bulkNotice" class="mt-3 rounded-lg bg-green-50 p-3 text-sm text-green-700" x-text="bulkNotice"></p>
@@ -149,7 +149,7 @@
                             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Tindakan</p>
                             <div class="mt-2 flex flex-wrap gap-2">
                                 <button type="button" @click="refreshPayment()" :disabled="busy || !detail.integration.gapura_reference_no"
-                                        class="rounded-lg bg-gray-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">Periksa pembayaran (DANA)</button>
+                                        class="rounded-lg bg-gold px-3 py-2 text-xs font-semibold text-ink hover:bg-gold-hover disabled:opacity-40">Periksa pembayaran (DANA)</button>
                                 <button type="button" @click="pushJubelio()" :disabled="busy || !canResend"
                                         class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold disabled:opacity-40">Kirim ulang ke Jubelio</button>
                             </div>

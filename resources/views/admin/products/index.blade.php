@@ -21,7 +21,7 @@
                     </div>
                     <div class="mt-3 flex flex-wrap gap-2">
                         <button type="button" @click="start(kind.type)" :disabled="starting !== null"
-                                class="rounded-lg bg-gray-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"
+                                class="rounded-lg bg-gold px-3 py-2 text-xs font-semibold text-ink hover:bg-gold-hover disabled:opacity-40"
                                 x-text="starting === kind.type ? 'Memulai…' : 'Jalankan'"></button>
                         <button type="button" x-show="kind.type === 'products'" @click="start('products', true)" :disabled="starting !== null"
                                 class="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold disabled:opacity-40">Sinkron semua produk</button>

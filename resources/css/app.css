@@ -26,6 +26,11 @@
     --color-ink: #0a0a0a;
     --color-ink-soft: #171717;
     --color-ink-line: #2a2a2a;
+
+    /* Admin panel accent. */
+    --color-gold: #ffbd02;
+    --color-gold-hover: #e6a900;
+    --color-gold-soft: #fff4cc;
 }
 
 /* Product descriptions arrive as HTML (description_html). */
@@ -65,4 +70,32 @@ input::-ms-clear {
 /* Hide Alpine-controlled elements until Alpine has initialised. */
 [x-cloak] {
     display: none !important;
+}
+
+/* Admin panel (resources/views/layouts/admin.blade.php). The pages and their Alpine templates keep their
+   utility classes; this layer gives them the gold-on-ink look without touching each one. */
+.admin-main h1 {
+    @apply flex items-center gap-3 text-2xl font-bold tracking-tight text-ink md:text-3xl;
+}
+.admin-main h1::before {
+    content: '';
+    @apply h-7 w-1.5 shrink-0 rounded-full bg-gold;
+}
+.admin-main .rounded-xl.border-gray-200 {
+    @apply border-gray-200/80 shadow-[0_1px_2px_rgb(10_10_10/0.04),0_6px_16px_-8px_rgb(10_10_10/0.08)];
+}
+.admin-main thead {
+    @apply bg-gold-soft text-ink/70;
+}
+.admin-main tbody tr {
+    @apply transition-colors hover:bg-gold-soft/40;
+}
+.admin-main .bg-gray-900 {
+    @apply bg-gold text-ink shadow-sm transition hover:bg-gold-hover;
+}
+.admin-main :is(input, select, textarea):focus {
+    @apply border-gold outline-none ring-2 ring-gold/40;
+}
+.admin-main a.underline {
+    @apply decoration-gold decoration-2 underline-offset-2;
 }

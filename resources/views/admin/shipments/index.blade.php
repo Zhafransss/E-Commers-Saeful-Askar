@@ -11,7 +11,7 @@
                 <p class="mt-1 text-sm text-gray-500">Pesanan yang sudah dibayar beserta nomor resinya. Resi diambil dari Jubelio, bukan diketik di sini.</p>
             </div>
             <button type="button" @click="refreshFromJubelio()" :disabled="refreshing"
-                    class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40" x-text="refreshing ? 'Mengambil dari Jubelio…' : 'Ambil resi dari Jubelio'"></button>
+                    class="rounded-lg bg-gold px-4 py-2 text-sm font-semibold text-ink hover:bg-gold-hover disabled:opacity-40" x-text="refreshing ? 'Mengambil dari Jubelio…' : 'Ambil resi dari Jubelio'"></button>
         </div>
 
         <p x-cloak x-show="notice" class="mt-4 rounded-lg bg-green-50 p-3 text-sm text-green-700" x-text="notice"></p>
