@@ -138,6 +138,21 @@ export default ({ content }) => ({
         return this.priceMin !== '' && this.priceMax !== '' && Number(this.priceMax) < Number(this.priceMin);
     },
 
+    /**
+     * The categories as the sidebar shows them: each parent followed by its own sub-categories, with
+     * `depth` for the indent. CAT-01 is a flat list in name order, so without this a child would sit
+     * under whichever parent happens to come before it alphabetically.
+     */
+    get categoryTree() {
+        const ids = new Set(this.categories.map((c) => c.id));
+        const children = {};
+        for (const c of this.categories) (children[ids.has(c.parent_id) ? c.parent_id : 0] ??= []).push(c);
+
+        const walk = (parent, depth) => (children[parent] ?? []).flatMap((c) => [{ ...c, depth }, ...walk(c.id, depth + 1)]);
+
+        return walk(0, 0);
+    },
+
     /** Product count per category from CAT-01 (a parent includes its sub-categories). */
     countFor(slug) {
         if (!this.categories.length) return '';

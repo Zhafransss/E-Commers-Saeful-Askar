@@ -109,12 +109,12 @@
                                         Semua produk <span class="text-xs opacity-60" x-text="countFor('')"></span>
                                     </a>
                                 </li>
-                                <template x-for="item in categories" :key="item.id">
+                                <template x-for="item in categoryTree" :key="item.id">
                                     <li>
                                         <a :href="`{{ route('products.index') }}?category=${item.slug}`" @click.prevent="category = item.slug"
-                                                :class="[category === item.slug ? 'bg-ink font-semibold text-brand' : 'text-gray-700 hover:bg-gray-100', item.parent_id ? 'pl-6' : 'pl-3']"
+                                                :class="[category === item.slug ? 'bg-ink font-semibold text-brand' : 'text-gray-700 hover:bg-gray-100', item.depth === 0 ? 'pl-3' : item.depth === 1 ? 'pl-6' : 'pl-9']"
                                                 class="flex w-full items-center justify-between rounded-lg py-2 pr-3 transition">
-                                            <span><span x-show="item.parent_id" class="mr-1 text-gray-300">└</span><span x-text="item.name"></span></span>
+                                            <span><span x-show="item.depth > 0" class="mr-1 text-gray-300">└</span><span x-text="item.name"></span></span>
                                             <span class="text-xs opacity-60" x-text="item.product_count"></span>
                                         </a>
                                     </li>
