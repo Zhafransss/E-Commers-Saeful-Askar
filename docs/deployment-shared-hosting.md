@@ -40,3 +40,21 @@ Pertama kali (folder di server belum berupa repo Git): `git init -b deployment`,
 - Job tertunda hingga ±1 menit (email, sinkronisasi Jubelio, pembatalan). Retry/backoff dan `failed_jobs` tetap bekerja.
 - Lokal: `composer dev` sudah menjalankan `queue:listen`; worker dari scheduler hanya menambah, tidak merusak.
 - Cek `php artisan queue:failed` berkala.
+
+## Hosting dengan document root tetap (cPanel, mis. Rumahweb)
+
+Bila document root domain tidak bisa diarahkan ke `public/`, simpan aplikasi di luar `public_html` (mis. `~/saefulaskar-app`)
+dan salin isi `public/` ke folder domain (mis. `~/public_html/domain`), dengan `index.php` yang `$base`-nya diarahkan ke
+folder aplikasi (`__DIR__.'/../../saefulaskar-app'`). Tambahkan di `.env` server:
+
+    DEPLOY_WEB_ROOT=/home/AKUN/public_html/domain
+
+`bash scripts/deploy.sh` lalu ikut menyalin `public/build`, `images`, dan favicon ke folder itu setiap rilis; `index.php` dan
+`.htaccess` di sana tidak disentuh. Folder aplikasi dijadikan salinan Git sekali saja: `git init -b deployment`,
+`git remote add origin <repo>`, `git fetch origin deployment`, `git reset --hard origin/deployment`.
+
+Server tanpa `composer`: pasang `composer.phar` di folder home (sekali), dan `deploy.sh` memakainya otomatis:
+
+    cd ~ && php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" && php composer-setup.php && rm composer-setup.php
+
+Tanpa composer sama sekali, `deploy.sh` tetap jalan selama `composer.lock` tidak berubah; kalau berubah, skrip berhenti dan meminta composer dipasang.

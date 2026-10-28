@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Support\UserSessions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Contract: docs/api/admin.md ADM-25 – ADM-28. The store's own admin accounts; customers are ADM-18 / ADM-19.
@@ -59,13 +60,27 @@ class AdminAccountController extends Controller
     public function update(UpdateAdminRequest $request, int $id): JsonResponse
     {
         $admin = $this->find($id);
+
+        // An admin editing their own account must change the very object the session guard holds: after the
+        // response it stores that object's password hash in the session, and a stale copy would sign them out.
+        $own = $admin->is($request->user());
+        $admin = $own ? $request->user() : $admin;
+
         $data = $request->safe()->only(['name', 'email', 'password']);
 
         $admin->fill(array_filter($data, fn ($value) => $value !== null))->save();
 
         // A new password signs the account out everywhere else; the admin who changed their own stays logged in.
         if (isset($data['password'])) {
-            UserSessions::endAll($admin, $admin->is($request->user()) && $request->hasSession() ? $request->session()->getId() : null);
+            $guard = Auth::guard('web');
+            $remembered = $own && $request->cookies->has($guard->getRecallerName());
+
+            UserSessions::endAll($admin, $own && $request->hasSession() ? $request->session()->getId() : null);
+
+            // The remember token just rotated: hand this device a fresh cookie.
+            if ($remembered) {
+                $guard->login($admin, remember: true);
+            }
         }
 
         return (new AdminAccountResource($admin))->response();

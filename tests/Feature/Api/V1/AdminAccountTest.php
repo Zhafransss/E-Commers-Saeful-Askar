@@ -110,3 +110,24 @@ it('keeps customers and guests out', function () {
     $this->actingAs(User::factory()->create())->getJson('/api/v1/admin/admins')->assertForbidden();
     $this->actingAs(User::factory()->create())->postJson('/api/v1/admin/admins', [])->assertForbidden();
 });
+
+it('keeps an admin signed in after they change their own password, as the browser does', function () {
+    config(['session.driver' => 'database']);
+    User::factory()->admin()->create(['email' => 'sendiri@example.com', 'password' => 'rahasia123']);
+
+    $login = fromFrontend()->postJson('/api/v1/auth/login', ['email' => 'sendiri@example.com', 'password' => 'rahasia123'])->assertOk();
+    $session = $login->getCookie(config('session.cookie'))->getValue();
+    $id = User::where('email', 'sendiri@example.com')->value('id');
+
+    $update = fromFrontend()->withCookie(config('session.cookie'), $session)->putJson("/api/v1/admin/admins/{$id}", [
+        'password' => 'rahasiaBaru456', 'password_confirmation' => 'rahasiaBaru456',
+    ])->assertOk();
+
+    // A browser's next request is a new process; inside a test the guard would still hold the old user.
+    app('auth')->forgetGuards();
+
+    // The session cookie may be reissued; the next request is the one the page makes right after saving.
+    $next = $update->getCookie(config('session.cookie'))?->getValue() ?? $session;
+
+    fromFrontend()->withCookie(config('session.cookie'), $next)->getJson('/api/v1/admin/admins')->assertOk();
+});
