@@ -61,9 +61,9 @@ test('the admin menu names every page and the sync page is called Riwayat Sinkro
     config(['app.api_mock' => false]);
     $this->actingAs(User::factory()->admin()->create());
 
-    $this->get('/admin/orders')->assertSeeInOrder(['Pesanan', 'Manajemen Resi', 'Produk', 'Manajemen User', 'Riwayat Sinkronisasi', 'Keluar']);
+    $this->get('/admin/orders')->assertSeeInOrder(['Pesanan', 'Manajemen Resi', 'Produk', 'Manajemen User', 'Manajemen Admin', 'Riwayat Sinkronisasi', 'Keluar']);
     $this->get('/admin/sync')->assertSee('Riwayat Sinkronisasi')->assertDontSee('Sinkron semua produk');
-    $this->get('/admin/products')->assertSee('Sinkron semua produk')->assertSee('Sinkronisasi dengan Jubelio');
+    $this->get('/admin/products')->assertSee('Sinkronisasi dengan Jubelio')->assertDontSee('Sinkron semua produk');
 });
 
 test('the return page from DANA opens for a guest, who is asked to log in from the page itself', function () {

@@ -2,7 +2,7 @@
 
 Semua endpoint di file ini wajib login dengan `role = admin` (middleware `EnsureUserIsAdmin`). Customer yang memanggilnya mendapat `403 FORBIDDEN`. Produk, harga, dan stok **tidak** dikelola di sini karena sumbernya Jubelio. Konvensi umum ada di `README.md`.
 
-Versi 1 memuat ADM-09 – ADM-14 dan ADM-18 – ADM-23 (revisi client 22 Okt 2026). Pengelolaan artikel (ADM-02 – ADM-08) dihapus dari lingkup produk. ADM-01, ADM-15, ADM-16, dan ADM-17 ditunda ke v1.1 (PRD §9); di v1, order bermasalah ditangani lewat ADM-09 – ADM-12, dan webhook gagal diperiksa langsung di tabel `webhook_events` / log server.
+Versi 1 memuat ADM-09 – ADM-14 dan ADM-18 – ADM-28 (ADM-18 – ADM-24 dari revisi client 22 Okt 2026, ADM-25 – ADM-28 untuk akun admin). Pengelolaan artikel (ADM-02 – ADM-08) dihapus dari lingkup produk. ADM-01, ADM-15, ADM-16, dan ADM-17 ditunda ke v1.1 (PRD §9); di v1, order bermasalah ditangani lewat ADM-09 – ADM-12, dan webhook gagal diperiksa langsung di tabel `webhook_events` / log server.
 
 Error yang berlaku untuk semua endpoint admin:
 
@@ -430,6 +430,77 @@ Sebagai admin yang baru mengubah produk di Jubelio, saya ingin menjalankan sinkr
 ## ADM-19 · Detail pelanggan
 
 `GET /api/v1/admin/users/{id}` · **Admin**. Isinya seperti ADM-18, ditambah `email_verified_at`, `addresses` (objek Address) dan `recent_orders` (10 terbaru: `order_number`, `status`, `status_label`, `grand_total`, `created_at`). `404 USER_NOT_FOUND` untuk id yang tidak ada, atau milik admin.
+
+## ADM-25 · Daftar admin
+
+`GET /api/v1/admin/admins` · **Admin**. Akun dengan `role = admin`, yang lama dulu. Pelanggan tidak ikut (lihat ADM-18).
+
+| Query | Tipe | Wajib | Keterangan |
+| --- | --- | --- | --- |
+| `q` | string | Tidak | Cari di nama dan email |
+| `page`, `per_page` | integer | Tidak | Default 20, maks 100 |
+
+### Response Success
+
+`200 OK`. `is_you` bernilai `true` untuk akun yang sedang login. Password dan token tidak pernah dikirim.
+
+```json
+{
+  "data": [
+    { "id": 1, "name": "Admin Saeful Askar", "email": "admin@saefulaskar.com", "is_you": true, "created_at": "2026-10-15T09:00:00+07:00" }
+  ],
+  "meta": { "current_page": 1, "per_page": 20, "total": 1, "last_page": 1 }
+}
+```
+
+## ADM-26 · Tambah admin
+
+`POST /api/v1/admin/admins` · **Admin**.
+
+| Field | Tipe | Wajib | Keterangan |
+| --- | --- | --- | --- |
+| `name` | string | Ya | 2 – 100 karakter |
+| `email` | string | Ya | Unik di semua akun (pelanggan juga); ditulis huruf kecil |
+| `password` | string | Ya | Minimal 8 karakter, ada huruf dan angka |
+| `password_confirmation` | string | Ya | Sama dengan `password` |
+
+### Response Success
+
+`201 Created`: objek admin seperti ADM-25. Email dianggap terverifikasi, jadi admin baru langsung bisa login. `422 VALIDATION_ERROR` untuk isian yang tidak sah atau email yang sudah dipakai.
+
+```json
+{
+  "data": { "id": 2, "name": "Budi Santoso", "email": "budi@saefulaskar.com", "is_you": false, "created_at": "2026-10-28T16:00:00+07:00" }
+}
+```
+
+## ADM-27 · Ubah admin
+
+`PUT /api/v1/admin/admins/{id}` · **Admin**. Semua field opsional; yang dikirim saja yang diubah. Password hanya berubah bila `password` diisi (bersama `password_confirmation`), dan sesi admin itu di perangkat lain berakhir (sesi admin yang mengubah akunnya sendiri tetap hidup). `404 ADMIN_NOT_FOUND` untuk id yang tidak ada, atau milik pelanggan.
+
+### Response Success
+
+`200 OK`: objek admin seperti ADM-25.
+
+```json
+{
+  "data": { "id": 2, "name": "Budi Santoso", "email": "budi@saefulaskar.com", "is_you": false, "created_at": "2026-10-28T16:00:00+07:00" }
+}
+```
+
+## ADM-28 · Hapus admin
+
+`DELETE /api/v1/admin/admins/{id}` · **Admin**. Menghapus akun dan mengakhiri semua sesinya. Admin tidak bisa menghapus akunnya sendiri (`409 CANNOT_DELETE_SELF`), sehingga selalu ada minimal satu admin yang bisa login. `404 ADMIN_NOT_FOUND` untuk id yang tidak ada, atau milik pelanggan.
+
+### Response Success
+
+`200 OK`.
+
+```json
+{
+  "message": "Admin dihapus."
+}
+```
 
 ## ADM-20 · Daftar produk dan varian
 

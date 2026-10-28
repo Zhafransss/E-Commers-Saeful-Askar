@@ -443,7 +443,7 @@ ID wilayah mengikuti endpoint Region Jubelio (string). Response REG-04 (keluraha
 
 ## Indeks endpoint
 
-Total **56 endpoint** milik website: 51 dipanggil frontend dan 5 webhook masuk. Empat endpoint admin bertanda **(v1.1)** — ADM-01, ADM-15, ADM-16, ADM-17 — ditunda sesuai PRD §9, sehingga versi 1 berisi **51 endpoint** (47 frontend + 5 webhook). ADM-18 – ADM-24 (pelanggan, produk, resi, dan periksa semua pembayaran) ditambah dari revisi client 22 Okt 2026; invoice PDF adalah halaman web `/admin/orders/{order_number}/invoice`, bukan endpoint API. Kontraknya tetap disimpan di `admin.md` sebagai acuan v1.1. Fitur artikel (blog) dihapus dari lingkup: ART-01, ART-02, dan ADM-02 – ADM-08 tidak ada lagi, dan kode ADM-09 dan seterusnya tidak dinomori ulang. Ditambah 18 kelompok panggilan keluar (INT-JB-01 – INT-JB-14, INT-JS-01, INT-GP-01 – INT-GP-03) dan aturan umumnya (INT-HDL) di `integrations.md`.
+Total **60 endpoint** milik website: 55 dipanggil frontend dan 5 webhook masuk. Empat endpoint admin bertanda **(v1.1)** — ADM-01, ADM-15, ADM-16, ADM-17 — ditunda sesuai PRD §9, sehingga versi 1 berisi **56 endpoint** (51 frontend + 5 webhook). ADM-18 – ADM-24 (pelanggan, produk, resi, dan periksa semua pembayaran) ditambah dari revisi client 22 Okt 2026, dan ADM-25 – ADM-28 (akun admin) menyusul agar admin tidak perlu diatur lewat `.env`; invoice PDF adalah halaman web `/admin/orders/{order_number}/invoice`, bukan endpoint API. Kontraknya tetap disimpan di `admin.md` sebagai acuan v1.1. Fitur artikel (blog) dihapus dari lingkup: ART-01, ART-02, dan ADM-02 – ADM-08 tidak ada lagi, dan kode ADM-09 dan seterusnya tidak dinomori ulang. Ditambah 18 kelompok panggilan keluar (INT-JB-01 – INT-JB-14, INT-JS-01, INT-GP-01 – INT-GP-03) dan aturan umumnya (INT-HDL) di `integrations.md`.
 
 ### Untuk frontend (`/api/v1`, kecuali CSRF)
 
@@ -497,6 +497,10 @@ Total **56 endpoint** milik website: 51 dipanggil frontend dan 5 webhook masuk. 
 | ADM-22 | POST | `/admin/shipments/refresh` | Admin | admin.md | F-16 |
 | ADM-23 | POST | `/admin/orders/refresh-payments` | Admin | admin.md | F-16 |
 | ADM-24 | POST | `/admin/orders/{order_number}/send-invoice` | Admin | admin.md | F-16 |
+| ADM-25 | GET | `/admin/admins` | Admin | admin.md | F-16 |
+| ADM-26 | POST | `/admin/admins` | Admin | admin.md | F-16 |
+| ADM-27 | PUT | `/admin/admins/{id}` | Admin | admin.md | F-16 |
+| ADM-28 | DELETE | `/admin/admins/{id}` | Admin | admin.md | F-16 |
 | ADM-15 (v1.1) | GET | `/admin/webhook-events` | Admin | admin.md | F-16 |
 | ADM-16 (v1.1) | POST | `/admin/webhook-events/{id}/retry` | Admin | admin.md | F-16 |
 | ADM-17 (v1.1) | GET | `/admin/settings/integrations` | Admin | admin.md | F-16 |
@@ -545,6 +549,8 @@ Total **56 endpoint** milik website: 51 dipanggil frontend dan 5 webhook masuk. 
 | `DUPLICATE_REQUEST` | 409 | ORD-01 |
 | `ORDER_NOT_FOUND` | 404 | ORD-03 – ORD-05, ADM-10 – ADM-12 |
 | `USER_NOT_FOUND` | 404 | ADM-19 |
+| `ADMIN_NOT_FOUND` | 404 | ADM-27, ADM-28 |
+| `CANNOT_DELETE_SELF` | 409 | ADM-28 |
 | `ORDER_NOT_PAID` | 409 | ADM-24 |
 | `ADMIN_CANNOT_SHOP` | 403 | CART-01 – CART-05, SHIP-01, ORD-01 (akun admin tidak memakai keranjang dan checkout) |
 | `ORDER_NOT_PAYABLE` | 409 | ORD-04 |

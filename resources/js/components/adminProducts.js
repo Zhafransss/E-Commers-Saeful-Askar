@@ -28,12 +28,12 @@ export default () => ({
     },
 
     // ADM-13
-    async start(type, full = false) {
+    async start(type) {
         this.starting = type;
         this.notice = null;
         this.actionError = null;
         try {
-            const { message } = await api.post(endpoints.admin.sync, type === 'products' && full ? { type, full: true } : { type });
+            const { message } = await api.post(endpoints.admin.sync, { type });
             this.notice = message;
         } catch (error) {
             this.actionError = error.message;

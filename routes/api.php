@@ -85,6 +85,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('users', [Admin\UserController::class, 'index']);                      // ADM-18
         Route::get('users/{id}', [Admin\UserController::class, 'show']);                  // ADM-19
+        Route::get('admins', [Admin\AdminAccountController::class, 'index']);            // ADM-25
+        Route::post('admins', [Admin\AdminAccountController::class, 'store']);           // ADM-26
+        Route::put('admins/{id}', [Admin\AdminAccountController::class, 'update']);      // ADM-27
+        Route::delete('admins/{id}', [Admin\AdminAccountController::class, 'destroy']);  // ADM-28
         Route::get('products', [Admin\ProductController::class, 'index']);                // ADM-20
         Route::get('shipments', [Admin\ShipmentController::class, 'index']);              // ADM-21
         Route::post('shipments/refresh', [Admin\ShipmentController::class, 'refresh']);   // ADM-22

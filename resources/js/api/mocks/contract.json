@@ -1264,5 +1264,94 @@
         "last_page": 5
       }
     }
+  },
+  "GET /api/v1/admin/users": {
+    "code": "ADM-18",
+    "status": 200,
+    "body": null
+  },
+  "GET /api/v1/admin/users/{id}": {
+    "code": "ADM-19",
+    "status": 200,
+    "body": null
+  },
+  "GET /api/v1/admin/products": {
+    "code": "ADM-20",
+    "status": 200,
+    "body": null
+  },
+  "GET /api/v1/admin/shipments": {
+    "code": "ADM-21",
+    "status": 200,
+    "body": null
+  },
+  "POST /api/v1/admin/shipments/refresh": {
+    "code": "ADM-22",
+    "status": 200,
+    "body": null
+  },
+  "POST /api/v1/admin/orders/refresh-payments": {
+    "code": "ADM-23",
+    "status": 200,
+    "body": null
+  },
+  "POST /api/v1/admin/orders/{order_number}/send-invoice": {
+    "code": "ADM-24",
+    "status": 200,
+    "body": null
+  },
+  "GET /api/v1/admin/admins": {
+    "code": "ADM-25",
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": 1,
+          "name": "Admin Saeful Askar",
+          "email": "admin@saefulaskar.com",
+          "is_you": true,
+          "created_at": "2026-10-15T09:00:00+07:00"
+        }
+      ],
+      "meta": {
+        "current_page": 1,
+        "per_page": 20,
+        "total": 1,
+        "last_page": 1
+      }
+    }
+  },
+  "POST /api/v1/admin/admins": {
+    "code": "ADM-26",
+    "status": 201,
+    "body": {
+      "data": {
+        "id": 2,
+        "name": "Budi Santoso",
+        "email": "budi@saefulaskar.com",
+        "is_you": false,
+        "created_at": "2026-10-28T16:00:00+07:00"
+      }
+    }
+  },
+  "PUT /api/v1/admin/admins/{id}": {
+    "code": "ADM-27",
+    "status": 200,
+    "body": {
+      "data": {
+        "id": 2,
+        "name": "Budi Santoso",
+        "email": "budi@saefulaskar.com",
+        "is_you": false,
+        "created_at": "2026-10-28T16:00:00+07:00"
+      }
+    }
+  },
+  "DELETE /api/v1/admin/admins/{id}": {
+    "code": "ADM-28",
+    "status": 200,
+    "body": {
+      "message": "Admin dihapus."
+    }
   }
 }

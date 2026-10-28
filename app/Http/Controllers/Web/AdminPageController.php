@@ -29,6 +29,11 @@ class AdminPageController extends Controller
         return view('admin.users.index');
     }
 
+    public function admins(): View
+    {
+        return view('admin.admins.index');
+    }
+
     public function products(): View
     {
         return view('admin.products.index');

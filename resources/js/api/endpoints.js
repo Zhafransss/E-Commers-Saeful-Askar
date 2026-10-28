@@ -60,6 +60,8 @@ export const endpoints = {
         syncLogs: '/admin/sync-logs', // ADM-14
         users: '/admin/users', // ADM-18
         user: (id) => `/admin/users/${seg(id)}`, // ADM-19
+        admins: '/admin/admins', // ADM-25 list, ADM-26 create
+        admin: (id) => `/admin/admins/${seg(id)}`, // ADM-27 update, ADM-28 delete
         products: '/admin/products', // ADM-20
         shipments: '/admin/shipments', // ADM-21
         refreshShipments: '/admin/shipments/refresh', // ADM-22
