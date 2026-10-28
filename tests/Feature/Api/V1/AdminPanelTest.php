@@ -292,9 +292,9 @@ test('an admin is sent back to the panel from the shop pages and sees no cart in
 })->with(['/cart', '/checkout', '/account/orders']);
 
 test('the storefront header shows the cart to customers and guests but not to an admin', function () {
-    $this->get('/')->assertOk()->assertSee('aria-label="Keranjang"', false);
-    $this->actingAs($this->customer)->get('/')->assertSee('aria-label="Keranjang"', false);
-    $this->actingAs($this->admin)->get('/')->assertOk()->assertDontSee('aria-label="Keranjang"', false);
+    $this->get('/products')->assertOk()->assertSee('aria-label="Keranjang"', false);
+    $this->actingAs($this->customer)->get('/products')->assertSee('aria-label="Keranjang"', false);
+    $this->actingAs($this->admin)->get('/products')->assertOk()->assertDontSee('aria-label="Keranjang"', false);
 });
 
 // --- Invoice by email (ADM-24 and the automatic one) ---------------------------------------------

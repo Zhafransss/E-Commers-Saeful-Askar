@@ -10,11 +10,11 @@
 @endphp
 <x-json-ld :data="[
     '@type' => 'BikeStore',
-    '@id' => route('home').'#store',
+    '@id' => route('products.index').'#store',
     'name' => $store['name'],
     'alternateName' => $store['site_name'],
     'description' => 'Toko sepeda listrik dan motor listrik di Tambun Utara, Bekasi. Jual sepeda listrik, baterai, sparepart, dan jasa service di rumah maupun di toko.',
-    'url' => route('home'),
+    'url' => route('products.index'),
     'image' => asset('images/banner.webp'),
     'logo' => asset('favicon.png'),
     'telephone' => $store['phone_e164'],

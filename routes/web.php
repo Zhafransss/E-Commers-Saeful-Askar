@@ -11,7 +11,9 @@ use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', Web\HomeController::class)->name('home');
+// The product list is the front page: the shop has no separate home page. `home` stays as the name of
+// the root so the logo and breadcrumb links keep working.
+Route::redirect('/', '/products')->name('home');
 
 Route::get('/products', [Web\ProductPageController::class, 'index'])->name('products.index');
 Route::get('/products/{slug}', [Web\ProductPageController::class, 'show'])->name('products.show');
@@ -20,8 +22,7 @@ Route::get('/products/{slug}', [Web\ProductPageController::class, 'show'])->name
 Route::get('/sitemap.xml', fn () => response()
     ->view('seo.sitemap', [
         'pages' => [
-            [route('home'), '1.0', 'daily'],
-            [route('products.index'), '0.9', 'daily'],
+            [route('products.index'), '1.0', 'daily'],
             ...Category::where('is_active', true)
                 ->whereHas('products', fn ($products) => $products->visible())
                 ->pluck('slug')

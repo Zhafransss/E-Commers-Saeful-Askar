@@ -29,6 +29,19 @@
     $categoryName ? [$categoryName, route('products.index', ['category' => $slug])] : null,
 ])" />
 
+{{-- The product list is the front page, so it carries the store's structured data (was on the home page). --}}
+@include('seo.local-business')
+<x-json-ld :data="[
+    '@type' => 'WebSite',
+    'name' => 'Saeful Askar',
+    'url' => route('products.index'),
+    'potentialAction' => [
+        '@type' => 'SearchAction',
+        'target' => ['@type' => 'EntryPoint', 'urlTemplate' => route('products.index').'?q={search_term_string}'],
+        'query-input' => 'required name=search_term_string',
+    ],
+]" />
+
 @section('content')
     <div x-data="productList(@js(['content' => $content]))"
          @keydown.window.slash="if (! ['INPUT', 'TEXTAREA', 'SELECT'].includes($event.target.tagName)) { $event.preventDefault(); $refs.search.focus() }"
@@ -267,7 +280,8 @@
         </div>
 
         {{-- Category copy for search engines and shoppers (resources/content/categories.php). --}}
-        <section class="border-t border-gray-200 bg-white">
+        {{-- Shown only when the category has copy; the full catalog has none. --}}
+        <section class="border-t border-gray-200 bg-white" x-show="pageContent.body" @unless ($current['body']) style="display: none" @endunless>
             <div class="rich-text mx-auto max-w-3xl px-4 py-14 md:px-8" x-html="pageContent.body">{!! $current['body'] !!}</div>
         </section>
     </div>
