@@ -154,3 +154,35 @@ test('sync-logs:prune deletes logs older than 90 days and keeps the rest', funct
 
     expect(SyncLog::pluck('id')->all())->toBe([$recent->id]);
 });
+
+test('a manual sync waits on the long queue that no web request works', function () {
+    Queue::fake();
+
+    ($this->start)(['type' => 'products'])->assertStatus(202);
+
+    Queue::assertPushed(RunManualSyncJob::class, fn ($job) => $job->connection === 'database-long' && $job->queue === 'sync');
+    expect(config('queue.connections.database-long.retry_after'))->toBeGreaterThan((new RunManualSyncJob('products', false, 1, []))->timeout);
+});
+
+test('a catalog sync still running after 30 minutes is closed as failed, a younger one and an order push are left', function () {
+    $stuck = SyncLog::start(SyncType::Products, SyncTrigger::Manual);
+    $stuck->update(['started_at' => now()->subMinutes(31)]);
+    $young = SyncLog::start(SyncType::Products, SyncTrigger::Manual);
+    $young->update(['started_at' => now()->subMinutes(10)]);
+    $push = SyncLog::start(SyncType::OrderPush, SyncTrigger::Manual, 1);
+    $push->update(['started_at' => now()->subHours(2)]);
+
+    expect(SyncLog::failStale())->toBe(1)
+        ->and($stuck->fresh())->status->toBe(SyncStatus::Failed)->finished_at->not->toBeNull()
+        ->and($young->fresh()->status)->toBe(SyncStatus::Running)
+        ->and($push->fresh()->status)->toBe(SyncStatus::Running);
+});
+
+test('ADM-14 closes a stuck sync before listing, and ADM-13 lets the admin start again', function () {
+    Queue::fake();
+    $stuck = SyncLog::start(SyncType::Products, SyncTrigger::Manual);
+    $stuck->update(['started_at' => now()->subMinutes(45)]);
+
+    $this->actingAs($this->admin)->getJson('/api/v1/admin/sync-logs')->assertOk()->assertJsonPath('data.0.status', 'failed');
+    ($this->start)(['type' => 'products'])->assertStatus(202);
+});

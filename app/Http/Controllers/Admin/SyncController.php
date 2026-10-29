@@ -33,6 +33,8 @@ class SyncController extends Controller
         ]);
         $type = $input['type'];
 
+        SyncLog::failStale();
+
         // One sync of each kind at a time; `full` needs all three kinds free.
         $kinds = $type === 'full' ? ['categories', 'products', 'stock'] : [$type];
         $locks = [];
@@ -74,6 +76,8 @@ class SyncController extends Controller
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
+
+        SyncLog::failStale();
 
         $logs = SyncLog::query()
             ->when($filters['type'] ?? null, fn ($q, $v) => $q->where('type', $v))

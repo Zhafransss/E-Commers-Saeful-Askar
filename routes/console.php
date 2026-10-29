@@ -13,6 +13,7 @@
 | The nightly times are a proposal (docs/roadmap-backend.md Fase 2), not fixed by the contract.
 */
 
+use App\Models\SyncLog;
 use App\Support\ScheduleKicker;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -31,6 +32,9 @@ Schedule::command('jubelio:reconcile-stock')->everyFifteenMinutes()->withoutOver
 // Drop sync logs older than 90 days (ADM-14).
 Schedule::command('sync-logs:prune')->daily();
 
+// A catalog sync whose process the host killed would stay `running`; close it after 30 minutes (ADM-14).
+Schedule::call(fn () => SyncLog::failStale())->name('sync-logs:fail-stale')->everyFiveMinutes();
+
 // Backup for a Finish Notify that never arrived (WH-01): ask Gapura about orders past their deadline.
 Schedule::command('orders:expire-unpaid')->everyFiveMinutes()->withoutOverlapping();
 
@@ -43,4 +47,11 @@ Schedule::command('orders:expire-unpaid')->everyFiveMinutes()->withoutOverlappin
 Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')
     ->everyMinute()
     ->withoutOverlapping(2)
+    ->skip(fn () => ScheduleKicker::inKick());
+
+// Manual syncs of the admin (ADM-13) wait on the `sync` queue of the `database-long` connection: they run for
+// minutes, so only this CLI worker takes them, never a web request. The cron must run `schedule:run` every minute.
+Schedule::command('queue:work database-long --queue=sync --stop-when-empty --tries=1')
+    ->everyMinute()
+    ->withoutOverlapping(35)
     ->skip(fn () => ScheduleKicker::inKick());

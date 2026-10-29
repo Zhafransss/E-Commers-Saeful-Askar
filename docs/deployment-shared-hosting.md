@@ -58,3 +58,15 @@ Server tanpa `composer`: pasang `composer.phar` di folder home (sekali), dan `de
     cd ~ && php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" && php composer-setup.php && rm composer-setup.php
 
 Tanpa composer sama sekali, `deploy.sh` tetap jalan selama `composer.lock` tidak berubah; kalau berubah, skrip berhenti dan meminta composer dipasang.
+
+## Sinkron produk butuh cron
+
+Sinkron produk (manual dari admin, harian 02.30, dan tiap 30 menit) berjalan beberapa menit. Server hosting
+menghentikan proses PHP dari request web sebelum selesai, sehingga riwayatnya menggantung di `running`. Karena itu:
+
+- Tombol sinkron di admin hanya memasukkan pekerjaan ke antrean `sync` (koneksi `database-long`). Pekerjaan itu hanya
+  dikerjakan worker cron, tidak pernah oleh request web.
+- `ScheduleKicker` (pemicu dari request web) melewati `jubelio:sync-products`.
+- **Wajib ada cron tiap menit**: `cd <folder-app> && php artisan schedule:run >> /dev/null 2>&1`
+  (hPanel → Advanced → Cron Jobs). Tanpa cron, sinkron manual tidak akan berjalan.
+- Riwayat `running` lebih dari 30 menit otomatis ditutup sebagai `failed` (`SyncLog::failStale()`).

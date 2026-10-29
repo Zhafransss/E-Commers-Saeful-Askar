@@ -65,6 +65,25 @@ class SyncLog extends Model
         return $log;
     }
 
+    /**
+     * A catalog sync whose process was killed (the host stops a long PHP process without letting it close its log)
+     * stays `running` for ever. Past $minutes (the sync lock lasts 30) it is closed as failed so the admin can start
+     * it again. Order pushes are left alone: the queue retries those itself.
+     *
+     * @return int Logs closed
+     */
+    public static function failStale(int $minutes = 30): int
+    {
+        return self::where('status', SyncStatus::Running->value)
+            ->whereIn('type', [SyncType::Categories->value, SyncType::Products->value, SyncType::Stock->value])
+            ->where('started_at', '<', now()->subMinutes($minutes))
+            ->update([
+                'status' => SyncStatus::Failed->value,
+                'message' => 'Proses sinkron terhenti sebelum selesai (kemungkinan dihentikan server). Jalankan ulang.',
+                'finished_at' => now(),
+            ]);
+    }
+
     public function markSucceeded(int $itemsProcessed = 0, ?string $message = null): void
     {
         $this->update([

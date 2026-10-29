@@ -117,6 +117,12 @@ class ScheduleKicker
             return;
         }
 
+        // The product sync takes minutes and the host stops a PHP process of a web request before that, leaving its
+        // log `running`. It is left to the cron (`schedule:run` in the console).
+        if (str_starts_with($match[1], 'jubelio:sync-products')) {
+            return;
+        }
+
         if ($event->withoutOverlapping && ! $event->mutex->create($event)) {
             return;
         }

@@ -56,6 +56,16 @@ return [
             'after_commit' => false,
         ],
 
+        // Long jobs (manual Jubelio sync): retry_after above the job timeout so a running job is not handed to a second worker.
+        'database-long' => [
+            'driver' => 'database',
+            'connection' => env('DB_QUEUE_CONNECTION'),
+            'table' => env('DB_QUEUE_TABLE', 'jobs'),
+            'queue' => 'sync',
+            'retry_after' => 1860,
+            'after_commit' => false,
+        ],
+
         'beanstalkd' => [
             'driver' => 'beanstalkd',
             'host' => env('BEANSTALKD_QUEUE_HOST', 'localhost'),

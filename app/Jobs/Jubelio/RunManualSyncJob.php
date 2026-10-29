@@ -30,7 +30,13 @@ class RunManualSyncJob implements ShouldQueue
     /**
      * @param  list<array{name: string, owner: string}>  $locks
      */
-    public function __construct(public string $type, public bool $fullProducts, public int $syncLogId, public array $locks) {}
+    public function __construct(public string $type, public bool $fullProducts, public int $syncLogId, public array $locks)
+    {
+        // A sync takes minutes. A web request cannot run it: the host stops that PHP process and the log stays
+        // `running`. So it waits on its own queue and connection (retry_after longer than the timeout), which only
+        // the cron worker works (routes/console.php), never QueueKicker.
+        $this->onConnection('database-long')->onQueue('sync');
+    }
 
     public function handle(ProductSyncService $products, StockSyncService $stock): void
     {
