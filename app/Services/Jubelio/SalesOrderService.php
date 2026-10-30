@@ -142,7 +142,7 @@ class SalesOrderService
 
         return [
             'salesorder_id' => 0,
-            'salesorder_no' => '[auto]',
+            'salesorder_no' => config('jubelio.use_order_number') ? $order->order_number : '[auto]',
             'contact_id' => $order->user->jubelio_contact_id,
             'customer_name' => $order->user->name,
             'transaction_date' => $order->created_at->clone()->utc()->format('Y-m-d\TH:i:s.v\Z'),

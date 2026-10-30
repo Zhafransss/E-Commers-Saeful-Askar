@@ -201,6 +201,17 @@ test('a profile change never rewrites a contact that was matched by phone and is
 
 // --- Sales order (INT-JB-10, INT-JB-13) ------------------------------------------------
 
+test('the sales order number is sent as the order number only when JUBELIO_USE_ORDER_NUMBER is on', function () {
+    $this->user->forceFill(['jubelio_contact_id' => 5512])->save();
+    $order = orderWithItems($this->user);
+
+    expect(app(SalesOrderService::class)->payload($order)['salesorder_no'])->toBe('[auto]');
+
+    config(['jubelio.use_order_number' => true]);
+
+    expect(app(SalesOrderService::class)->payload($order)['salesorder_no'])->toBe('WEB-000123');
+});
+
 test('the payload follows the contract and the order snapshot', function () {
     $this->user->forceFill(['jubelio_contact_id' => 5512])->save();
     $order = orderWithItems($this->user);

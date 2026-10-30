@@ -32,6 +32,11 @@ return [
     // header names it arrived with in webhook_events.error, in case it changes.
     'webhook_signature_header' => env('JUBELIO_WEBHOOK_SIGNATURE_HEADER') ?: 'sign',
 
+    // false: Jubelio numbers the sales order itself (`SO-000981`, sent as "[auto]"). true: the website's own order
+    // number (`WS-000123`, see ORDER_NUMBER_PREFIX) is sent as the sales order number, since the prefix cannot be
+    // changed in the Jubelio account. Jubelio may refuse a number of its own; try it with one order first.
+    'use_order_number' => (bool) env('JUBELIO_USE_ORDER_NUMBER', false),
+
     'timeout' => (int) env('JUBELIO_TIMEOUT', 15),
 
     // Token lives 12 hours; cached slightly shorter (INT-JB-01).
