@@ -100,7 +100,7 @@ test('a failing Jubelio call fails the command and keeps Jubelio\'s message in s
 
 test('the catalog schedule matches PRD §4', function () {
     $events = collect(app(Schedule::class)->events())
-        ->mapWithKeys(fn (Event $event) => [trim(preg_replace('/^.*artisan.? /', '', $event->command)) => $event->expression]);
+        ->mapWithKeys(fn (Event $event) => [(string) $event->description => $event->expression]);
 
     expect($events->all())->toMatchArray([
         'jubelio:sync-categories' => '0 2 * * *',

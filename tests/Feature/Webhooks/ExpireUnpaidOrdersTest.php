@@ -122,7 +122,7 @@ test('a paid answer with a different amount changes nothing', function () {
 
 test('the job runs every five minutes without overlapping', function () {
     $event = collect(app(Schedule::class)->events())
-        ->first(fn ($event) => str_contains($event->command, 'orders:expire-unpaid'));
+        ->first(fn ($event) => $event->description === 'orders:expire-unpaid');
 
     expect($event)->not->toBeNull()->and($event->expression)->toBe('*/5 * * * *')->and($event->withoutOverlapping)->toBeTrue();
 });

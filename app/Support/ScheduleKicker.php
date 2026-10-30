@@ -111,15 +111,15 @@ class ScheduleKicker
      */
     private static function runEvent(Event $event): void
     {
-        if (! preg_match("/'artisan'\\s+(.+)$/s", (string) $event->command, $match)) {
-            $event->run(app());
-
+        // The product sync takes minutes and the host stops a PHP process of a web request before that, leaving its
+        // log `running`. It is left to the cron (`schedule:run` in the console).
+        if (str_starts_with((string) $event->description, 'jubelio:sync-products')) {
             return;
         }
 
-        // The product sync takes minutes and the host stops a PHP process of a web request before that, leaving its
-        // log `running`. It is left to the cron (`schedule:run` in the console).
-        if (str_starts_with($match[1], 'jubelio:sync-products')) {
+        if (! preg_match("/'artisan'\\s+(.+)$/s", (string) $event->command, $match)) {
+            $event->run(app());
+
             return;
         }
 

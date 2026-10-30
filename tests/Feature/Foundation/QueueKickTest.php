@@ -228,7 +228,7 @@ test('the scheduler kick can be switched off, and never runs in the console', fu
 });
 
 test('the queue task of the scheduler skips itself during a kick, since the queue is already worked', function () {
-    $event = collect(app(Schedule::class)->events())->first(fn ($e) => str_contains($e->command, 'queue:work'));
+    $event = collect(app(Schedule::class)->events())->first(fn ($e) => str_starts_with((string) $e->description, 'queue:work --stop-when-empty --max-time=50'));
     $inKick = new ReflectionProperty(ScheduleKicker::class, 'inKick');
 
     expect($event)->not->toBeNull()->and($event->filtersPass(app()))->toBeTrue();
