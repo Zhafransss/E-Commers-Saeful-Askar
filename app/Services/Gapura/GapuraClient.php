@@ -309,7 +309,12 @@ class GapuraClient extends IntegrationClient
         // the SDK, production needs DANA's production public key from our own file.
         $this->exportEnvironment();
 
-        return $this->parser = WebhookParser::create(null, $this->config['dana_public_key_path'] ?: null);
+        // The SDK checks the file against the working directory of PHP, which on the web is the document root,
+        // so a path relative to the project is resolved here like the private key's.
+        $publicKey = (string) $this->config['dana_public_key_path'];
+        $publicKey = $publicKey === '' || str_starts_with($publicKey, '/') ? $publicKey : base_path($publicKey);
+
+        return $this->parser = WebhookParser::create(null, $publicKey ?: null);
     }
 
     /**

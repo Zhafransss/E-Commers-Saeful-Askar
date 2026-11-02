@@ -233,3 +233,20 @@ test('webhook intake runs without session cookies', function () {
 
     expect($response->headers->getCookies())->toBeEmpty();
 });
+
+test('a DANA public key path relative to the project is found although PHP runs from another folder', function () {
+    // On the web the working directory is the document root, not the project; the SDK would not find the file.
+    $relative = 'storage/framework/gapura-relative-key-test.pem';
+    copy(gapuraKeys('dana')['public'], base_path($relative));
+    $previous = getcwd();
+    chdir(sys_get_temp_dir());
+
+    try {
+        app()->instance(GapuraClient::class, new GapuraClient(['env' => 'production', 'dana_public_key_path' => $relative] + config('gapura')));
+
+        postGapura(fixtureContent('gapura/finish-notify-paid.json'))->assertOk();
+    } finally {
+        chdir($previous);
+        @unlink(base_path($relative));
+    }
+});
