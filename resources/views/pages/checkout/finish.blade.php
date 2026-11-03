@@ -5,11 +5,12 @@
 
 {{--
     Return page from DANA (Gapura): /checkout/finish?order=WEB-000123 (INT-GP-01, PAY_RETURN).
-    Polls ORD-03 every 3 s (max 60 s) until the order leaves pending_payment; "Lanjutkan pembayaran" is ORD-04.
+    Polls ORD-03 every 3 s (max 60 s) until the order leaves pending_payment; "Lanjutkan pembayaran" is ORD-04,
+    "Cek status pembayaran" is ORD-06, and "Hubungi admin" opens WhatsApp with the order written out.
     Behaviour lives in resources/js/components/finishPage.js.
 --}}
 @section('content')
-    <div x-data="finishPage(@js($orderNumber), @js($failed))" class="bg-gray-50">
+    <div x-data="finishPage(@js($orderNumber), @js($failed), @js(config('shop.whatsapp')))" class="bg-gray-50">
         <div class="mx-auto max-w-3xl px-4 py-12 md:py-16">
             {{-- Status card --}}
             <section class="overflow-hidden rounded-3xl border border-gray-200 bg-white text-center">
@@ -85,6 +86,27 @@
                         <a href="{{ $orderNumber ? route('account.orders.show', $orderNumber) : route('account.orders') }}"
                            class="rounded-full border-2 border-ink px-7 py-3 text-sm font-semibold transition hover:bg-ink hover:text-brand">Lihat pesanan</a>
                         <a href="{{ route('products.index') }}" class="rounded-full px-5 py-3.5 text-sm font-semibold text-gray-600 transition hover:text-ink">Lanjut belanja</a>
+                    </div>
+
+                    {{-- Paid but still waiting: ask DANA now (ORD-06), or report it to the admin on WhatsApp. --}}
+                    <div x-cloak x-show="(state === 'pending' || state === 'failed') && order?.status === 'pending_payment'">
+                        <div class="mx-auto mt-8 max-w-xl rounded-2xl border border-gray-200 bg-gray-50 p-5 text-left">
+                            <p class="text-sm font-semibold">Sudah membayar, tetapi status belum berubah?</p>
+                            <p class="mt-1 text-sm text-gray-600">Periksa langsung ke DANA. Bila masih belum berubah, hubungi admin; pesannya sudah kami isi.</p>
+                            <div class="mt-3 flex flex-wrap justify-center sm:justify-start gap-3">
+                                <button type="button" @click="checkPayment()" :disabled="checkingPayment"
+                                        class="inline-flex items-center gap-2 rounded-full border-2 border-ink px-5 py-2.5 text-sm font-semibold transition hover:bg-ink hover:text-brand disabled:opacity-60">
+                                    <svg class="h-4 w-4" :class="checkingPayment && 'animate-spin'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M3 21v-5h5" /></svg>
+                                    <span x-text="checkingPayment ? 'Memeriksa…' : 'Cek status pembayaran'"></span>
+                                </button>
+                                <a :href="reportUrl()" target="_blank" rel="noopener"
+                                   class="inline-flex items-center gap-2 rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1ebe5b]">
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.2-.2-.5-.3Z" /></svg>
+                                    Hubungi admin
+                                </a>
+                            </div>
+                            <p x-cloak x-show="paymentNotice" class="mt-3 rounded-xl p-3 text-sm" :class="paymentNoticeError ? 'bg-yellow-50 text-yellow-800' : 'bg-green-50 text-green-700'" x-text="paymentNotice"></p>
+                        </div>
                     </div>
                 </div>
             </section>

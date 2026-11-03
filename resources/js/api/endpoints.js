@@ -51,6 +51,7 @@ export const endpoints = {
         show: (orderNumber) => `/orders/${seg(orderNumber)}`, // ORD-03
         payment: (orderNumber) => `/orders/${seg(orderNumber)}/payment`, // ORD-04
         cancel: (orderNumber) => `/orders/${seg(orderNumber)}/cancel`, // ORD-05
+        refreshPayment: (orderNumber) => `/orders/${seg(orderNumber)}/refresh-payment`, // ORD-06
     },
     admin: {
         orders: '/admin/orders', // ADM-09

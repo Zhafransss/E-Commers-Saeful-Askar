@@ -10,6 +10,7 @@ use App\Http\Resources\Api\V1\OrderSummaryResource;
 use App\Models\Order;
 use App\Services\Shop\OrderCancellationService;
 use App\Services\Shop\OrderPaymentService;
+use App\Services\Shop\PaymentOutcome;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -84,6 +85,34 @@ class OrderController extends Controller
             'expires_at' => $payment->expires_at->toIso8601String(),
             'seconds_left' => (int) now()->diffInSeconds($payment->expires_at),
         ]]);
+    }
+
+    /**
+     * ORD-06 · Periksa ulang status pembayaran. The customer says they paid but the order still waits: ask DANA
+     * now instead of waiting for the notification, with the same rules as the webhook (OrderPaymentService). An
+     * order that no longer waits is answered as it is, without asking DANA.
+     */
+    public function refreshPayment(Request $request, string $orderNumber, OrderPaymentService $payments): JsonResponse
+    {
+        $order = $this->find($request, $orderNumber);
+        $outcome = null;
+
+        if ($order->status === OrderStatus::PendingPayment && $order->payment()->exists()) {
+            $outcome = $payments->check($order)['outcome'];
+            $order->refresh();
+        }
+
+        $message = match (true) {
+            $outcome === PaymentOutcome::TooLate => 'DANA mencatat pembayaran Anda, tetapi pesanan ini sudah dibatalkan. Silakan hubungi admin untuk pengembalian dana.',
+            $outcome === PaymentOutcome::AmountMismatch => 'Jumlah yang dibayar berbeda dengan tagihan, jadi pembayaran perlu dicek admin. Silakan hubungi admin.',
+            in_array($order->status, [OrderStatus::Paid, OrderStatus::Processing, OrderStatus::Shipped, OrderStatus::Completed], true) => 'Pembayaran sudah diterima. Terima kasih!',
+            $order->status === OrderStatus::PendingPayment => 'DANA belum mencatat pembayaran untuk pesanan ini. Bila Anda sudah membayar, tunggu beberapa menit lalu periksa lagi, atau hubungi admin.',
+            default => "Pesanan ini sudah {$order->status->label()}.",
+        };
+
+        return (new OrderDetailResource($order->load(['items', 'payment', 'statusHistories'])))
+            ->additional(['message' => $message])
+            ->response();
     }
 
     /**

@@ -1,11 +1,14 @@
 import { api, ApiError } from '../api/client.js';
 import { endpoints } from '../api/endpoints.js';
+import { paymentHelp } from './paymentHelp.js';
 
 /**
  * Alpine.data('orderPage'): /account/orders/{order_number}
- * (docs/api/checkout-orders.md ORD-03 detail, ORD-04 continue paying, ORD-05 cancel).
+ * (docs/api/checkout-orders.md ORD-03 detail, ORD-04 continue paying, ORD-05 cancel, ORD-06 check the payment with
+ * DANA, plus "Hubungi admin" on WhatsApp from paymentHelp).
  */
-export default (orderNumber) => ({
+export default (orderNumber, whatsapp = '') => ({
+    ...paymentHelp(whatsapp),
     orderNumber,
     order: null,
     loading: true,

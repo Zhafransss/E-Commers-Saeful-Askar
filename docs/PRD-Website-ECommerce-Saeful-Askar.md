@@ -48,7 +48,8 @@ Ada dua peran di website: customer yang membeli dan admin toko yang mengelola ko
 9. Sebagai customer, saya bisa membatalkan pesanan yang belum saya bayar, agar tagihan ditutup dan stok kembali untuk pembeli lain.
 10. Sebagai admin, saya bisa melihat order website beserta status sinkron ke Jubelio dan menjalankan sinkron katalog manual.
 11. Sebagai customer, saya mendapat potongan ongkir dari voucher yang aktif saat checkout, dan bisa memilih voucher lain atau tidak memakai voucher.
-12. Sebagai admin, saya bisa membuat voucher gratis ongkir atau potongan ongkir dengan minimal belanja, periode, kuota, dan batas per pembeli.
+12. Sebagai customer yang sudah membayar tetapi statusnya belum berubah, saya bisa memeriksa ulang ke DANA atau menghubungi admin lewat WhatsApp dengan detail pesanan yang sudah terisi.
+13. Sebagai admin, saya bisa membuat voucher gratis ongkir atau potongan ongkir dengan minimal belanja, periode, kuota, dan batas per pembeli.
 
 ## 3. Kebutuhan fungsional
 
@@ -65,7 +66,7 @@ Kebutuhan dibagi per modul; kode di kolom pertama dipakai sebagai acuan di API C
 | F-07 | Keranjang | Tambah, ubah jumlah, hapus item; jumlah dibatasi stok tersedia dan min/max pembelian | Wajib |
 | F-08 | Ongkir | Tarif kurir dari RajaOngkir berdasarkan gudang Tambun Utara, alamat tujuan, dan total berat varian | Wajib |
 | F-09 | Checkout | Cek ulang stok, buat sales order belum bayar di Jubelio, buat order Gapura dengan batas waktu | Wajib |
-| F-10 | Pembayaran | Webhook PAID menandai order lunas di website dan Jubelio (set-as-paid) | Wajib |
+| F-10 | Pembayaran | Webhook PAID menandai order lunas di website dan Jubelio (set-as-paid). Customer juga bisa memeriksa ulang ke DANA (ORD-06) dan, bila status belum berubah, menghubungi admin lewat WhatsApp dengan detail pesanan terisi (3 Nov 2026) | Wajib |
 | F-11 | Pembayaran | Webhook EXPIRED (atau job cadangan) membatalkan sales order Jubelio dan order website | Wajib |
 | F-12 | Pesanan | Riwayat pesanan, detail, status, nomor resi, dan riwayat status | Wajib |
 | F-13 | Sinkron | Sinkron kategori, produk, varian, gambar, harga, stok dari Jubelio (terjadwal + webhook) | Wajib |

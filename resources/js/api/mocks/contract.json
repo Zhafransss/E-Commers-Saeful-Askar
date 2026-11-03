@@ -1090,6 +1090,11 @@
       "message": "Pesanan dibatalkan."
     }
   },
+  "POST /api/v1/orders/{order_number}/refresh-payment": {
+    "code": "ORD-06",
+    "status": 200,
+    "body": null
+  },
   "GET /api/v1/admin/orders": {
     "code": "ADM-09",
     "status": 200,

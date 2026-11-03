@@ -92,5 +92,8 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('shipping', fn (Request $request) => Limit::perMinute(20)->by($byUserOrIp($request)));
 
         RateLimiter::for('checkout', fn (Request $request) => Limit::perMinute(5)->by($byUserOrIp($request)));
+
+        // ORD-06 asks DANA each time; a customer pressing the button repeatedly must not flood it.
+        RateLimiter::for('payment-check', fn (Request $request) => Limit::perMinute(6)->by($byUserOrIp($request)));
     }
 }

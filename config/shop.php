@@ -17,4 +17,10 @@ return [
     */
     'hidden_categories' => ['jasa-service'],
 
+    /*
+    | The store's WhatsApp number (country code, digits only), the same one the product pages use. "Hubungi admin" on
+    | an unpaid order opens a chat with it, with the order already written in the message.
+    */
+    'whatsapp' => env('SHOP_WHATSAPP_NUMBER', '6282227222971'),
+
 ];

@@ -542,3 +542,48 @@ Sebagai customer yang berubah pikiran sebelum membayar, saya ingin membatalkan p
 - [ ] Bila DANA menolak karena order sudah dibayar, order **tidak** dibatalkan; backend menjalankan alur bayar dan membalas 409.
 - [ ] Bila pembatalan di Jubelio gagal, order tetap `cancelled` di website, `jubelio_sync_status = failed`, dan tercatat di `sync_logs` untuk dikirim ulang (ADM-11); customer tetap mendapat 200.
 - [ ] Stok varian di Jubelio kembali bertambah setelah sales order dibatalkan (diverifikasi lewat webhook `update-qty` berikutnya).
+
+---
+
+## ORD-06 · Periksa ulang status pembayaran
+
+### Endpoint
+
+`POST /api/v1/orders/{order_number}/refresh-payment` · **Customer** (pemilik order) · rate limit 6/menit per user. Ditambah 3 Nov 2026 (PRD F-10).
+
+### User Story
+
+Sebagai customer yang sudah membayar tetapi statusnya masih "Menunggu pembayaran", saya ingin memeriksa langsung ke DANA, dan bila tetap belum berubah, menghubungi admin lewat WhatsApp dengan detail pesanan yang sudah terisi.
+
+### Request Body
+
+Tidak ada.
+
+### Response Success
+
+`200 OK`: objek **OrderDetail** (seperti ORD-03) dalam `data`, ditambah `message` untuk ditampilkan.
+
+Hanya order `pending_payment` yang punya order pembayaran yang ditanyakan ke DANA (INT-GP-02), dengan aturan yang sama seperti webhook WH-01 (`OrderPaymentService`): lunas → `paid` (lalu sales order Jubelio ditandai lunas), tertutup/kedaluwarsa → `expired`, jumlah berbeda → tidak diubah. Order dengan status lain dijawab apa adanya tanpa bertanya ke DANA.
+
+| Keadaan | `message` |
+| --- | --- |
+| Lunas (sekarang atau sebelumnya) | "Pembayaran sudah diterima. Terima kasih!" |
+| Masih menunggu | "DANA belum mencatat pembayaran untuk pesanan ini. Bila Anda sudah membayar, tunggu beberapa menit lalu periksa lagi, atau hubungi admin." |
+| Jumlah dibayar ≠ tagihan | "Jumlah yang dibayar berbeda dengan tagihan, jadi pembayaran perlu dicek admin. Silakan hubungi admin." |
+| Dibayar setelah order batal | "DANA mencatat pembayaran Anda, tetapi pesanan ini sudah dibatalkan. Silakan hubungi admin untuk pengembalian dana." |
+| Lainnya | "Pesanan ini sudah {label status}." |
+
+### Response Failed
+
+| HTTP | `code` | Kapan |
+| --- | --- | --- |
+| 401 | `UNAUTHENTICATED` | Belum login |
+| 404 | `ORDER_NOT_FOUND` | Order tidak ada atau milik user lain |
+| 429 | `TOO_MANY_REQUESTS` | Lebih dari 6/menit |
+| 502 | `INTEGRATION_ERROR` | DANA tidak bisa dihubungi; order tidak diubah |
+
+### Acceptance Criteria
+
+- [x] Tombol "Cek status pembayaran" dan "Hubungi admin" tampil di halaman selesai bayar (setelah pengecekan otomatis 60 detik selesai) dan di detail pesanan, selama order `pending_payment`.
+- [x] "Hubungi admin" membuka WhatsApp toko (`SHOP_WHATSAPP_NUMBER`, default nomor toko yang sama dengan halaman produk) dengan pesan berisi nomor pesanan, tanggal, total, nama penerima, dan daftar produk; customer tinggal mengirim dan melampirkan bukti bayar.
+- [x] Pembayaran yang ditemukan diterapkan dengan aturan yang sama seperti webhook; jumlah yang berbeda tidak diterapkan.

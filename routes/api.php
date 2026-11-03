@@ -74,6 +74,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('orders/{orderNumber}', [V1\OrderController::class, 'show']);      // ORD-03
     Route::get('orders/{orderNumber}/payment', [V1\OrderController::class, 'payment']); // ORD-04
     Route::post('orders/{orderNumber}/cancel', [V1\OrderController::class, 'cancel']);  // ORD-05
+    Route::post('orders/{orderNumber}/refresh-payment', [V1\OrderController::class, 'refreshPayment'])
+        ->middleware('throttle:payment-check');                                                 // ORD-06
 
     // --- Admin --------------------------------------------------------------
 

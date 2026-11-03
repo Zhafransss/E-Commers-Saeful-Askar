@@ -3,9 +3,9 @@
 @section('title', 'Detail Pesanan')
 @section('robots', 'noindex, nofollow')
 
-{{-- ORD-03 detail, ORD-04 "Bayar sekarang", ORD-05 "Batalkan pesanan". Behaviour: resources/js/components/orderPage.js --}}
+{{-- ORD-03 detail, ORD-04 "Bayar sekarang", ORD-05 "Batalkan pesanan", ORD-06 "Cek status pembayaran". Behaviour: resources/js/components/orderPage.js --}}
 @section('content')
-    <div x-data="orderPage(@js($orderNumber))" class="bg-gray-50">
+    <div x-data="orderPage(@js($orderNumber), @js(config('shop.whatsapp')))" class="bg-gray-50">
         <div class="mx-auto max-w-4xl px-4 py-10 md:py-14">
             <a href="{{ route('account.orders') }}" class="text-sm font-semibold text-gray-500 hover:text-ink">← Semua pesanan</a>
 
@@ -37,6 +37,27 @@
                             </div>
                             <button type="button" x-show="order.can_pay" @click="pay()" :disabled="busy"
                                     class="rounded-full bg-brand px-7 py-3.5 text-sm font-semibold text-ink transition hover:bg-brand-hover disabled:opacity-60">Bayar sekarang</button>
+                        </div>
+
+                        {{-- Paid but still waiting: ask DANA now (ORD-06), or report it to the admin on WhatsApp. --}}
+                        <div x-show="order.status === 'pending_payment'">
+                            <div class="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-5">
+                            <p class="text-sm font-semibold">Sudah membayar, tetapi status belum berubah?</p>
+                            <p class="mt-1 text-sm text-gray-600">Periksa langsung ke DANA. Bila masih belum berubah, hubungi admin; pesannya sudah kami isi.</p>
+                            <div class="mt-3 flex flex-wrap  gap-3">
+                                <button type="button" @click="checkPayment()" :disabled="checkingPayment"
+                                        class="inline-flex items-center gap-2 rounded-full border-2 border-ink px-5 py-2.5 text-sm font-semibold transition hover:bg-ink hover:text-brand disabled:opacity-60">
+                                    <svg class="h-4 w-4" :class="checkingPayment && 'animate-spin'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M3 21v-5h5" /></svg>
+                                    <span x-text="checkingPayment ? 'Memeriksa…' : 'Cek status pembayaran'"></span>
+                                </button>
+                                <a :href="reportUrl()" target="_blank" rel="noopener"
+                                   class="inline-flex items-center gap-2 rounded-full bg-[#25D366] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1ebe5b]">
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.2-.2-.5-.3Z" /></svg>
+                                    Hubungi admin
+                                </a>
+                            </div>
+                            <p x-cloak x-show="paymentNotice" class="mt-3 rounded-xl p-3 text-sm" :class="paymentNoticeError ? 'bg-yellow-50 text-yellow-800' : 'bg-green-50 text-green-700'" x-text="paymentNotice"></p>
+                        </div>
                         </div>
 
                         <p x-cloak x-show="actionError" class="mt-4 rounded-2xl bg-red-50 p-3 text-sm text-red-700" x-text="actionError"></p>

@@ -1,5 +1,6 @@
 import { api, ApiError } from '../api/client.js';
 import { endpoints } from '../api/endpoints.js';
+import { paymentHelp } from './paymentHelp.js';
 
 const POLL_MS = 3000;
 const POLL_MAX_MS = 60000;
@@ -7,9 +8,11 @@ const POLL_MAX_MS = 60000;
 /**
  * Alpine.data('finishPage'): /checkout/finish?order=WEB-000123, where DANA brings the customer back
  * (docs/api/checkout-orders.md ORD-03, ORD-04). The result of the payment reaches us by webhook, so
- * the page asks ORD-03 every 3 s for up to 60 s until the order leaves pending_payment.
+ * the page asks ORD-03 every 3 s for up to 60 s until the order leaves pending_payment. After that the customer can
+ * ask DANA again (ORD-06) or report the payment to the admin on WhatsApp (paymentHelp).
  */
-export default (orderNumber, failed = false) => ({
+export default (orderNumber, failed = false, whatsapp = '') => ({
+    ...paymentHelp(whatsapp),
     orderNumber,
     failed,
     order: null,
@@ -52,6 +55,12 @@ export default (orderNumber, failed = false) => ({
             }
             // Any other error: keep checking until the time is up.
         }
+    },
+
+    /** ORD-06 answered: a paid or closed order changes the page; one still waiting keeps it as it is. */
+    onPaymentChecked() {
+        const state = this.stateOf(this.order.status);
+        if (state !== 'checking') this.state = state;
     },
 
     stateOf(status) {
