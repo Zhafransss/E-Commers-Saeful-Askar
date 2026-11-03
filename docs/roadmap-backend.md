@@ -234,7 +234,7 @@ WH-02 – WH-04 (Jubelio) dan WH-01 (Gapura) sudah aktif penuh: WH-01 memverifik
 
 > **Status: selesai kecuali WH-05 (20 Okt 2026).** WH-01, `orders:expire-unpaid`, ORD-02–05, `OrderPaymentService`, `OrderCancellationService`, dan email "Pembayaran diterima" / "Pesanan dibatalkan" sudah jalan; pembayaran sandbox (BRI VA) menandai order lunas di website dan Jubelio. **Ditunda:** WH-05 (nomor resi, status dikirim/selesai) dan email "Pesanan dikirim" (template `OrderShippedMail` sudah ada, belum dipanggil).
 >
-> **Pembaruan 3 Nov 2026:** WH-05 dikerjakan dengan cakupan yang diputuskan client: selesai di Jubelio (`marked_as_complete` + `invoice_no`) → `shipped`; `completed` diubah admin lewat ADM-29; tanpa email; cadangan `orders:check-shipped` setiap 10 menit. Pembatalan dari Jubelio, status `processing`, dan email "Pesanan dikirim" tetap ditunda.
+> **Pembaruan 3 Nov 2026:** WH-05 dikerjakan dengan cakupan yang diputuskan client: selesai di Jubelio (`marked_as_complete` + `invoice_no`) → `shipped`; `completed` diubah admin lewat ADM-29; tanpa email; cadangan `orders:check-shipped` setiap 10 menit, lalu setiap menit karena akun Jubelio tidak bisa mendaftarkan webhook sales order dari halaman pengaturan. Pembatalan dari Jubelio, status `processing`, dan email "Pesanan dikirim" tetap ditunda.
 > **Catatan sandbox DANA:** batas bayar dipotong jadi 30 menit; metode "DANA" (dompet) butuh akun uji, jadi uji dengan Virtual Account. Pembayaran VA disimulasikan lewat menu uji di dashboard DANA sandbox.
 
 **Tujuan.** Status order selalu mengikuti Gapura dan Jubelio. Order lunas diteruskan ke gudang; order yang kedaluwarsa atau dibatalkan mengembalikan stok; customer bisa melihat riwayat, status, dan nomor resi.

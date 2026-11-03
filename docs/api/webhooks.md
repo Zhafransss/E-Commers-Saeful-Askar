@@ -305,7 +305,7 @@ Sebagai sistem, saya ingin memperbarui stok setiap kali stok berubah di Jubelio 
 
 `POST /webhooks/jubelio/salesorder` · **Webhook (Jubelio)** · action `update-salesorder`
 
-Header sama dengan WH-02. URL ini ikut didaftarkan oleh `php artisan jubelio:setup --register-webhooks` (INT-JB-14), atau diisi manual di Jubelio (Pengaturan → Developer → Webhook, bagian Sales Order).
+Header sama dengan WH-02. Halaman pengaturan webhook Jubelio di akun toko tidak punya bagian Sales Order, jadi webhook ini belum pernah datang; status `shipped` saat ini selalu datang dari `orders:check-shipped` (setiap menit, jeda sekitar 1–2 menit; WS-000028 berubah 3 menit setelah dibayar). URL ini ikut didaftarkan oleh `php artisan jubelio:setup --register-webhooks` (INT-JB-14), atau diisi manual di Jubelio (Pengaturan → Developer → Webhook, bagian Sales Order).
 
 ### User Story
 
@@ -364,5 +364,5 @@ Sales order dari channel lain (Shopee, dll.) juga dijawab `200` tetapi **tidak d
 - [x] Belum selesai di Jubelio → event `processed` tanpa perubahan status.
 - [x] Perubahan dicatat di `order_status_histories` (`source = jubelio`, catatan "Diselesaikan di Jubelio, faktur INV-…"). `tracking_no` dan kurir ikut disimpan bila Jubelio mengisinya dan order belum punya.
 - [x] Status hanya bergerak maju (`OrderStatusRecorder`); event berulang tidak mengubah apa pun.
-- [x] Cadangan bila webhook tidak sampai: `orders:check-shipped` setiap 10 menit menanyakan paling banyak 30 pesanan `paid`/`processing` berumur ≤ 60 hari, yang paling lama tidak ditanyakan lebih dulu.
+- [x] Cadangan bila webhook tidak sampai: `orders:check-shipped` setiap menit (sejak 3 Nov 2026; sebelumnya 10 menit) menanyakan paling banyak 30 pesanan `paid`/`processing` berumur ≤ 60 hari, yang paling lama tidak ditanyakan lebih dulu.
 - [ ] Belum dipakai: `processing` dari status picking/packing, pembatalan dari Jubelio (`is_canceled`), dan email "Pesanan dikirim" (`OrderShippedMail`, template sudah ada).

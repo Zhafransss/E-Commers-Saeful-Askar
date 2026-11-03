@@ -46,8 +46,10 @@ Schedule::call(fn () => SyncLog::failStale())->name('sync-logs:fail-stale')->eve
 // Backup for a Finish Notify that never arrived (WH-01): ask Gapura about orders past their deadline.
 $task('orders:expire-unpaid')->everyFiveMinutes();
 
-// Backup for a WH-05 webhook that never arrived: paid orders whose sales order was finished in Jubelio become shipped.
-$task('orders:check-shipped')->everyTenMinutes();
+// Paid orders whose sales order was finished in Jubelio become shipped. Every minute, because the Jubelio account cannot
+// register the WH-05 webhook in its settings, so this is the main path (decided 3 Nov 2026). Load: one call per waiting
+// order, at most 30 a run, against Jubelio's limit of 600 a minute.
+$task('orders:check-shipped')->everyMinute();
 
 // Shared hosting (branch `deployment`): no long-running worker is possible, so the minutely cron
 // that runs `schedule:run` also drains the queue. --max-time stays below retry_after (90 s) and
