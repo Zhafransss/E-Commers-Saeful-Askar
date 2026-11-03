@@ -2,7 +2,7 @@
 
 15 Oktober 2026 · Status: **Draft untuk direview** · Disusun dari API Contract v1 (`docs/api/*.md`) dan PRD §6
 
-Dokumen ini menjabarkan 13 tabel aplikasi sampai level kolom, sebagai acuan migrasi di `database/migrations/`. Setiap kolom bisa ditelusuri ke field response, request, atau acceptance criteria di API Contract. Bila kontrak berubah, dokumen ini ikut diperbarui di commit yang sama.
+Dokumen ini menjabarkan 14 tabel aplikasi sampai level kolom, sebagai acuan migrasi di `database/migrations/`. Setiap kolom bisa ditelusuri ke field response, request, atau acceptance criteria di API Contract. Bila kontrak berubah, dokumen ini ikut diperbarui di commit yang sama.
 
 ## Konvensi
 
@@ -38,6 +38,7 @@ erDiagram
   orders ||--o{ payments : "ditagih"
   orders ||--|{ order_status_histories : "riwayat"
   orders |o--o{ sync_logs : "reference_id"
+  shipping_vouchers |o--o{ orders : "potongan ongkir"
 
   users {
     bigint id PK
@@ -313,7 +314,9 @@ Acuan: objek OrderDetail, ORD-01 – ORD-05, WH-01, WH-05, ADM-09 – ADM-12. Al
 | `subtotal` | BIGINT UNSIGNED | Tidak | — | |
 | `shipping_cost` | BIGINT UNSIGNED | Tidak | 0 | |
 | `insurance_cost` | BIGINT UNSIGNED | Tidak | 0 | |
-| `discount` | BIGINT UNSIGNED | Tidak | 0 | Selalu 0 di v1 (tanpa voucher) |
+| `discount` | BIGINT UNSIGNED | Tidak | 0 | Potongan voucher ongkir (PRD F-20); 0 tanpa voucher. Dikirim sebagai `add_disc` ke Jubelio |
+| `shipping_voucher_id` | BIGINT UNSIGNED | Ya | NULL | FK `shipping_vouchers.id`, ON DELETE SET NULL |
+| `shipping_voucher_name` | VARCHAR(100) | Ya | NULL | Salinan nama voucher saat checkout |
 | `tax` | BIGINT UNSIGNED | Tidak | 0 | Selalu 0 (tanpa PPN) |
 | `grand_total` | BIGINT UNSIGNED | Tidak | — | = order Gapura = `grand_total` sales order |
 | **Status & waktu** | | | | |
@@ -396,6 +399,25 @@ Acuan: `status_history` di OrderDetail, ADM-10 (`source`).
 
 Index: (`order_id`, `created_at`).
 
+### `shipping_vouchers`
+
+Acuan: SHIP-02, ORD-01 (`shipping_voucher_id`), ADM-30 – ADM-33. Ditambah lewat revisi scope 3 Nov 2026 (PRD F-20). Pemakaian tidak disimpan sebagai angka: dihitung dari `orders` yang statusnya bukan `expired`/`cancelled`.
+
+| Kolom | Tipe | Null | Default | Keterangan |
+| --- | --- | --- | --- | --- |
+| `id` | BIGINT UNSIGNED | — | auto | PK |
+| `name` | VARCHAR(100) | Tidak | — | Tampil ke pembeli |
+| `type` | VARCHAR(20) | Tidak | — | `free_shipping`, `shipping_discount` |
+| `amount` | BIGINT UNSIGNED | Ya | NULL | Potongan Rp untuk `shipping_discount` |
+| `min_subtotal` | BIGINT UNSIGNED | Tidak | 0 | Minimal subtotal produk |
+| `starts_at` | TIMESTAMP | Tidak | — | |
+| `ends_at` | TIMESTAMP | Ya | NULL | NULL = tanpa batas waktu |
+| `quota` | INT UNSIGNED | Ya | NULL | NULL = tanpa batas |
+| `per_user_limit` | INT UNSIGNED | Ya | NULL | NULL = tanpa batas |
+| `created_at`, `updated_at` | TIMESTAMP | Ya | — | |
+
+Index: (`starts_at`, `ends_at`).
+
 ## Kelompok Integrasi
 
 ### `webhook_events`
@@ -439,7 +461,7 @@ Acuan: ADM-11, ADM-13, ADM-14, INT-HDL.
 
 Index: (`type`, `status`, `started_at`); `reference_id`. Log > 90 hari dihapus job terjadwal (ADM-14).
 
-## Tabel bawaan Laravel (di luar 13 tabel)
+## Tabel bawaan Laravel (di luar 14 tabel)
 
 | Tabel | Dipakai untuk |
 | --- | --- |

@@ -2,6 +2,8 @@
 
 Checkout membuat order website, sales order **belum bayar** di Jubelio (agar stok terkunci di semua channel termasuk Shopee), dan order Gapura (DANA) dengan batas waktu bayar. Status order lalu berubah lewat webhook (lihat `webhooks.md`). Konvensi umum, objek **OrderSummary**/**OrderDetail**, dan tabel status ada di `README.md`.
 
+**Voucher ongkir (PRD F-20, revisi 3 Nov 2026).** `discount` = potongan dari voucher ongkir: gratis ongkir = seluruh `shipping_cost`; potongan ongkir = `min(amount, shipping_cost)`. Asuransi dan harga produk tidak pernah dipotong. `grand_total = subtotal + shipping_cost + insurance_cost − discount`, dan angka ini yang ditagih DANA. Nama voucher disalin ke `orders.shipping_voucher_name`. Kuota dikunci di transaksi yang sama dengan pembuatan order (baris voucher di-*lock*), jadi pemakaian terakhir tidak bisa diambil dua pembeli. Order yang kemudian `expired`/`cancelled` (termasuk checkout gagal) mengembalikan kuotanya.
+
 Konfigurasi yang dipakai:
 
 | Kunci | Nilai awal | Keterangan |
@@ -35,7 +37,8 @@ Sebagai customer, saya ingin menekan "Bayar" setelah memilih alamat dan kurir, l
 | `rate_id` | string | Ya | Dari SHIP-01, belum kedaluwarsa, dibuat untuk user + alamat + isi keranjang yang sama |
 | `note` | string | Tidak | Catatan untuk toko, maks 255 karakter |
 | `item_ids` | integer[] | Tidak | ID baris keranjang yang dibeli (yang dicentang customer); tanpa field ini seluruh keranjang. Hanya baris ini yang masuk pesanan dan dihapus dari keranjang; baris lain tetap. Tidak ada yang cocok → `CART_EMPTY` |
-| `expected_grand_total` | integer | Ya | Total yang dilihat customer di layar (subtotal + ongkir); dipakai mendeteksi perubahan harga |
+| `shipping_voucher_id` | integer | Tidak | Voucher ongkir dari SHIP-02. Kosong/`null` = tanpa voucher. Diperiksa ulang saat checkout (periode, minimal belanja dari subtotal produk, kuota, batas per pembeli); gagal → `VOUCHER_UNAVAILABLE` |
+| `expected_grand_total` | integer | Ya | Total yang dilihat customer di layar (subtotal + ongkir + asuransi − potongan voucher); dipakai mendeteksi perubahan harga |
 
 Item pesanan diambil dari keranjang user, tidak dikirim frontend.
 
@@ -96,6 +99,7 @@ Item pesanan diambil dari keranjang user, tidak dikirim frontend.
         "shipping_cost": 185000,
         "insurance_cost": 0,
         "discount": 0,
+        "shipping_voucher_name": null,
         "tax": 0,
         "grand_total": 6935000
       },
@@ -131,6 +135,7 @@ Item pesanan diambil dari keranjang user, tidak dikirim frontend.
 | 409 | `OUT_OF_STOCK` | Cek stok langsung ke Jubelio menunjukkan stok sudah habis/kurang | `items` (varian + stok terbaru) |
 | 409 | `RATE_EXPIRED` | `rate_id` lewat 30 menit, tidak dikenal, atau isi keranjang/alamat berubah sejak tarif dihitung | — |
 | 409 | `PRICE_CHANGED` | `expected_grand_total` ≠ total yang dihitung server | `amounts` terbaru |
+| 409 | `VOUCHER_UNAVAILABLE` | Voucher ongkir tidak ada, belum mulai/sudah berakhir, minimal belanja tidak tercapai, kuota habis, atau batas per pembeli tercapai. Pesan menyebut alasannya | — |
 | 409 | `DUPLICATE_REQUEST` | `Idempotency-Key` sama sedang diproses | — |
 | 422 | `CART_EMPTY` | Keranjang kosong | — |
 | 422 | `PROFILE_INCOMPLETE` | User belum punya nomor HP | — |

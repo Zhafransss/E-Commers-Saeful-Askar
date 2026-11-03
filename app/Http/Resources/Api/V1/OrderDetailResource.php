@@ -66,6 +66,8 @@ class OrderDetailResource extends ApiResource
                 'shipping_cost' => $this->shipping_cost,
                 'insurance_cost' => $this->insurance_cost,
                 'discount' => $this->discount,
+                // The shipping voucher behind `discount` (SHIP-02), as it was named when the order was placed.
+                'shipping_voucher_name' => $this->shipping_voucher_name,
                 'tax' => $this->tax,
                 'grand_total' => $this->grand_total,
             ],

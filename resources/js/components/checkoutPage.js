@@ -3,7 +3,10 @@ import { endpoints } from '../api/endpoints.js';
 
 /**
  * Alpine.data('checkoutPage'): the /checkout page (docs/api/checkout-orders.md ORD-01,
- * shipping.md SHIP-01, addresses-regions.md ADDR-01/02 and REG-01 … REG-04, cart.md CART-01).
+ * shipping.md SHIP-01 and SHIP-02, addresses-regions.md ADDR-01/02 and REG-01 … REG-04, cart.md CART-01).
+ *
+ * Shipping vouchers (SHIP-02): the one that takes the most off the chosen rate is used by default; the customer
+ * may pick another one they qualify for, or none.
  *
  * The cart lives in Alpine.store('cart'); only the lines ticked on /cart are bought, so `cart` here is
  * those lines and their summary, and `item_ids` tells SHIP-01 and ORD-01 which ones. Addresses, regions, shipping rates, and the order
@@ -70,6 +73,10 @@ export default () => ({
     ratesExpireAt: null,
     rateId: null,
 
+    // SHIP-02. `voucherChoice`: 'auto' = the best one, null = none, otherwise the id the customer picked.
+    vouchers: [],
+    voucherChoice: 'auto',
+
     note: '',
     paying: false,
     payError: null,
@@ -92,6 +99,7 @@ export default () => ({
         }
 
         if (this.formOpen) this.loadProvinces();
+        this.loadVouchers();
     },
 
     /**
@@ -127,7 +135,7 @@ export default () => ({
         return this.rates.find((r) => r.rate_id === this.rateId) ?? null;
     },
 
-    // Kept apart like orders.shipping_cost / orders.insurance_cost; discount and tax are always 0 in v1.
+    // Kept apart like orders.shipping_cost / orders.insurance_cost / orders.discount; tax is always 0 in v1.
     get shippingCost() {
         return this.rate?.cost ?? 0;
     },
@@ -136,8 +144,13 @@ export default () => ({
         return this.rate?.insurance_cost ?? 0;
     },
 
+    /** What the voucher in use takes off the shipping cost (orders.discount). */
+    get shippingDiscount() {
+        return this.voucher ? this.voucherDiscount(this.voucher) : 0;
+    },
+
     get grandTotal() {
-        return this.cart.summary.subtotal + this.shippingCost + this.insuranceCost;
+        return this.cart.summary.subtotal + this.shippingCost + this.insuranceCost - this.shippingDiscount;
     },
 
     /** Why "Bayar" is disabled, mirroring ORD-01's 4xx checks; null when ready. */
@@ -294,6 +307,55 @@ export default () => ({
         return SERVICE_TYPES[type] ?? type;
     },
 
+    // --- Shipping vouchers (SHIP-02) ----------------------------------------------
+
+    /** A failure only hides the vouchers; paying without one still works. */
+    async loadVouchers() {
+        try {
+            const { data } = await api.get(endpoints.shipping.vouchers);
+            this.vouchers = data;
+        } catch (error) {
+            if (!(error instanceof ApiError)) throw error;
+            this.vouchers = [];
+        }
+    },
+
+    /** How much more the customer has to buy before the voucher applies; 0 when it already does. */
+    voucherShortfall(voucher) {
+        return Math.max(0, voucher.min_subtotal - this.cart.summary.subtotal);
+    },
+
+    /** Same rule as the server: never more than the shipping cost of the chosen rate. */
+    voucherDiscount(voucher) {
+        if (!this.rate) return 0;
+        return voucher.type === 'free_shipping' ? this.rate.cost : Math.min(voucher.amount, this.rate.cost);
+    },
+
+    get eligibleVouchers() {
+        return this.vouchers.filter((v) => this.voucherShortfall(v) === 0);
+    },
+
+    /** The biggest saving on the chosen rate; before a rate is chosen, free shipping, then the biggest amount. */
+    get bestVoucher() {
+        const worth = (v) => (this.rate ? this.voucherDiscount(v) : v.type === 'free_shipping' ? Infinity : v.amount);
+        return this.eligibleVouchers.reduce((best, v) => (best === null || worth(v) > worth(best) ? v : best), null);
+    },
+
+    /** The voucher in use. A picked one the cart no longer qualifies for falls back to the best one. */
+    get voucher() {
+        if (this.voucherChoice === null) return null;
+        if (this.voucherChoice === 'auto') return this.bestVoucher;
+        return this.eligibleVouchers.find((v) => v.id === this.voucherChoice) ?? this.bestVoucher;
+    },
+
+    voucherTerms(voucher) {
+        const format = this.$format;
+        const benefit = voucher.type === 'free_shipping' ? 'Gratis ongkir' : `Potongan ongkir ${format.formatRupiah(voucher.amount)}`;
+        const minimum = voucher.min_subtotal > 0 ? `min. belanja ${format.formatRupiah(voucher.min_subtotal)}` : 'tanpa minimal belanja';
+        const until = voucher.ends_at ? ` · s.d. ${new Date(voucher.ends_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}` : '';
+        return `${benefit} · ${minimum}${until}`;
+    },
+
     // --- Pay (ORD-01) -----------------------------------------------------------
 
     /**
@@ -308,7 +370,16 @@ export default () => ({
             return;
         }
 
-        const body = { item_ids: this.$store.cart.selectedIds, address_id: this.addressId, rate_id: this.rateId, note: this.note.trim() || null, expected_grand_total: this.grandTotal };
+        // A voucher that saves nothing on this rate (shipping already free) is not sent, so it does not use up a quota.
+        const voucherId = this.shippingDiscount > 0 ? this.voucher.id : null;
+        const body = {
+            item_ids: this.$store.cart.selectedIds,
+            address_id: this.addressId,
+            rate_id: this.rateId,
+            shipping_voucher_id: voucherId,
+            note: this.note.trim() || null,
+            expected_grand_total: this.grandTotal,
+        };
         const bodyKey = JSON.stringify(body);
         if (this.payKeyBody !== bodyKey) {
             this.payKey = uuid();
@@ -338,5 +409,9 @@ export default () => ({
             await this.$store.cart.load().catch(() => {});
         }
         if (['RATE_EXPIRED', 'PRICE_CHANGED'].includes(error.code)) await this.loadRates();
+        if (['VOUCHER_UNAVAILABLE', 'PRICE_CHANGED'].includes(error.code)) {
+            this.voucherChoice = 'auto';
+            await this.loadVouchers();
+        }
     },
 });

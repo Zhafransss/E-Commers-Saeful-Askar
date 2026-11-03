@@ -130,3 +130,73 @@ Angka di contoh adalah ilustrasi; nilai nyata berasal dari RajaOngkir.
 - [ ] Response dengan alamat + berat yang sama dalam 30 menit diambil dari cache (tidak memanggil RajaOngkir lagi), karena paket gratis RajaOngkir dibatasi sekitar 100 pengecekan per hari.
 - [ ] Timeout ke RajaOngkir 10 detik; gagal → `502 INTEGRATION_ERROR`, tanpa pesan teknis ke customer.
 - [ ] `SHIPPING_DRIVER=stub` mengembalikan tarif contoh dengan bentuk response yang sama, agar frontend dan test tetap bisa bekerja tanpa API key.
+
+---
+
+## SHIP-02 · Voucher ongkir yang bisa dipakai
+
+### Endpoint
+
+`GET /api/v1/shipping/vouchers` · **Customer** (akun admin → `403 ADMIN_CANNOT_SHOP`). Ditambah lewat revisi scope 3 Nov 2026 (PRD F-20).
+
+### User Story
+
+Sebagai customer di halaman checkout, saya ingin melihat voucher ongkir yang sedang berlaku dan langsung mendapat potongan terbesar, agar ongkir yang saya bayar lebih murah.
+
+### Request Body
+
+Tidak ada.
+
+### Response Success
+
+`200 OK`. Voucher yang sudah mulai dan belum berakhir, yang kuota totalnya belum habis dan batas per pembelinya belum tercapai untuk user ini. Urutan: gratis ongkir dulu, lalu potongan terbesar. Minimal belanja **tidak** disaring di sini: frontend menampilkan voucher yang belum tercapai sebagai abu-abu ("Belanja RpX lagi").
+
+```json
+{
+  "data": [
+    {
+      "id": 3,
+      "name": "Gratis Ongkir November",
+      "type": "free_shipping",
+      "type_label": "Gratis ongkir",
+      "amount": null,
+      "min_subtotal": 0,
+      "ends_at": "2026-11-30T23:59:00+07:00",
+      "remaining_quota": 120
+    },
+    {
+      "id": 4,
+      "name": "Potongan Ongkir 5rb",
+      "type": "shipping_discount",
+      "type_label": "Potongan ongkir",
+      "amount": 5000,
+      "min_subtotal": 100000,
+      "ends_at": null,
+      "remaining_quota": null
+    }
+  ]
+}
+```
+
+| Field | Keterangan |
+| --- | --- |
+| `type` | `free_shipping` (seluruh ongkir) atau `shipping_discount` (potongan `amount`, tidak melebihi ongkir) |
+| `amount` | Rupiah; `null` untuk `free_shipping` |
+| `min_subtotal` | Minimal subtotal produk (sebelum ongkir); 0 = tanpa minimal |
+| `ends_at` | `null` = tanpa batas waktu |
+| `remaining_quota` | Sisa kuota untuk semua pembeli; `null` = tanpa batas |
+
+### Response Failed
+
+| HTTP | `code` | Kapan |
+| --- | --- | --- |
+| 401 | `UNAUTHENTICATED` | Belum login |
+| 403 | `ADMIN_CANNOT_SHOP` | Akun admin |
+
+### Acceptance Criteria
+
+- [x] Hanya voucher yang berjalan, dengan sisa kuota dan sisa batas per pembeli.
+- [x] Checkout memakai voucher dengan potongan terbesar untuk kurir yang dipilih secara otomatis; customer bisa memilih voucher lain yang memenuhi syarat atau "Tanpa voucher".
+- [x] Potongan = seluruh ongkir (`free_shipping`) atau `min(amount, ongkir)`; asuransi tidak dipotong.
+- [x] Voucher yang tidak menghemat apa pun (ongkir Rp0) tidak dikirim ke ORD-01, jadi tidak memakai kuota.
+- [x] Gagal memuat voucher tidak menghalangi checkout tanpa voucher.

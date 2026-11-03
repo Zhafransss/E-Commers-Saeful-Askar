@@ -187,6 +187,34 @@
                             </template>
                             <p class="text-xs text-gray-500">Ongkir berlaku 30 menit. Sepeda listrik umumnya dikirim dengan layanan kargo.</p>
                         </div>
+
+                        {{-- Shipping vouchers (SHIP-02): the best one is used by default; the customer may change it or use none. --}}
+                        <div x-cloak x-show="vouchers.length" class="mt-6 border-t border-gray-100 pt-5">
+                            <h3 class="font-semibold">Voucher ongkir</h3>
+                            <p class="mt-1 text-xs text-gray-500">Voucher dengan potongan terbesar langsung dipakai. Anda bisa menggantinya atau tidak memakai voucher.</p>
+                            <div class="mt-3 grid gap-2" role="radiogroup" aria-label="Pilih voucher ongkir">
+                                <template x-for="v in vouchers" :key="v.id">
+                                    <label class="flex items-center gap-3 rounded-xl border-2 p-3 text-sm transition"
+                                           :class="voucherShortfall(v) > 0 ? 'cursor-not-allowed border-dashed border-gray-200 opacity-60' : (voucher?.id === v.id ? 'cursor-pointer border-ink bg-gray-50' : 'cursor-pointer border-gray-200 hover:border-gray-400')">
+                                        <input type="radio" name="voucher" class="h-4 w-4 shrink-0 accent-ink" :value="v.id" :disabled="voucherShortfall(v) > 0" :checked="voucher?.id === v.id" @change="voucherChoice = v.id">
+                                        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brand-soft text-ink" aria-hidden="true">
+                                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4zM15 9l-6 6M9 9h.01M15 15h.01" /></svg>
+                                        </span>
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block font-semibold" x-text="v.name"></span>
+                                            <span class="block text-xs text-gray-500" x-text="voucherTerms(v)"></span>
+                                            <span x-show="voucherShortfall(v) > 0" class="block text-xs font-medium text-amber-700" x-text="'Belanja ' + $format.formatRupiah(voucherShortfall(v)) + ' lagi untuk memakai voucher ini'"></span>
+                                        </span>
+                                        <span x-show="rate && voucherShortfall(v) === 0" class="shrink-0 font-semibold tabular-nums text-green-700" x-text="'−' + $format.formatRupiah(voucherDiscount(v))"></span>
+                                    </label>
+                                </template>
+                                <label class="flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 text-sm transition"
+                                       :class="voucher === null ? 'border-ink bg-gray-50' : 'border-gray-200 hover:border-gray-400'">
+                                    <input type="radio" name="voucher" class="h-4 w-4 shrink-0 accent-ink" value="" :checked="voucher === null" @change="voucherChoice = null">
+                                    <span class="font-medium">Tanpa voucher</span>
+                                </label>
+                            </div>
+                        </div>
                     </section>
 
                     {{-- 3. Note --}}
@@ -249,6 +277,10 @@
                             <div x-cloak x-show="insuranceCost > 0" class="flex justify-between gap-4">
                                 <dt class="text-gray-400">Asuransi pengiriman</dt>
                                 <dd class="font-semibold tabular-nums" x-text="$format.formatRupiah(insuranceCost)"></dd>
+                            </div>
+                            <div x-cloak x-show="shippingDiscount > 0" class="flex justify-between gap-4">
+                                <dt class="text-gray-400">Voucher ongkir <span class="block text-xs" x-text="voucher?.name ?? ''"></span></dt>
+                                <dd class="font-semibold tabular-nums text-green-400" x-text="'−' + $format.formatRupiah(shippingDiscount)"></dd>
                             </div>
                         </dl>
                         <div class="mt-5 flex items-baseline justify-between gap-4 border-t border-ink-line pt-5">

@@ -95,7 +95,7 @@
         <tr><td>Subtotal</td><td class="right">{{ $rp($order->subtotal) }}</td></tr>
         <tr><td>Ongkos kirim ({{ $order->courier_name }} {{ $order->service_name }})</td><td class="right">{{ $rp($order->shipping_cost) }}</td></tr>
         @if ($order->insurance_cost > 0)<tr><td>Asuransi pengiriman</td><td class="right">{{ $rp($order->insurance_cost) }}</td></tr>@endif
-        @if ($order->discount > 0)<tr><td>Diskon</td><td class="right">-{{ $rp($order->discount) }}</td></tr>@endif
+        @if ($order->discount > 0)<tr><td>Voucher ongkir{{ $order->shipping_voucher_name ? " ({$order->shipping_voucher_name})" : '' }}</td><td class="right">-{{ $rp($order->discount) }}</td></tr>@endif
         @if ($order->tax > 0)<tr><td>Pajak</td><td class="right">{{ $rp($order->tax) }}</td></tr>@endif
         <tr class="grand"><td>Total</td><td class="right">{{ $rp($order->grand_total) }}</td></tr>
     </table>

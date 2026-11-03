@@ -10,6 +10,9 @@ Halo {{ $order->shipping_recipient_name }}, terima kasih! Pembayaran pesanan **{
 | {{ $item->product_name }}@if ($item->variant_name) ({{ $item->variant_name }})@endif | {{ $item->qty }} | Rp{{ number_format($item->subtotal, 0, ',', '.') }} |
 @endforeach
 | Ongkos kirim ({{ $order->service_name }}) | | Rp{{ number_format($order->shipping_cost + $order->insurance_cost, 0, ',', '.') }} |
+@if ($order->discount > 0)
+| Voucher ongkir{{ $order->shipping_voucher_name ? " ({$order->shipping_voucher_name})" : '' }} | | −Rp{{ number_format($order->discount, 0, ',', '.') }} |
+@endif
 | **Total dibayar** | | **Rp{{ number_format($order->grand_total, 0, ',', '.') }}** |
 </x-mail::table>
 

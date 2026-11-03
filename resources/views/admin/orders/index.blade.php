@@ -199,6 +199,7 @@
                             </ul>
                             <dl class="mt-2 space-y-1 border-t border-gray-100 pt-2">
                                 <div class="flex justify-between"><dt class="text-gray-500">Ongkos kirim</dt><dd class="tabular-nums" x-text="$format.formatRupiah(detail.amounts.shipping_cost + detail.amounts.insurance_cost)"></dd></div>
+                                <div x-show="detail.amounts.discount > 0" class="flex justify-between"><dt class="text-gray-500" x-text="'Voucher ongkir' + (detail.amounts.shipping_voucher_name ? ' (' + detail.amounts.shipping_voucher_name + ')' : '')"></dt><dd class="tabular-nums text-green-700" x-text="'−' + $format.formatRupiah(detail.amounts.discount)"></dd></div>
                                 <div class="flex justify-between font-bold"><dt>Total</dt><dd class="tabular-nums" x-text="$format.formatRupiah(detail.amounts.grand_total)"></dd></div>
                             </dl>
                         </section>

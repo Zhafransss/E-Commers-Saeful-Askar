@@ -6,7 +6,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * ORD-01 (docs/api/checkout-orders.md). The items come from the customer's cart, so only what the
- * customer chose is sent: the cart lines to buy (`item_ids`, the whole cart when left out), address, rate (from SHIP-01), a note, and the total they saw. The
+ * customer chose is sent: the cart lines to buy (`item_ids`, the whole cart when left out), address, rate (from SHIP-01), the shipping
+ * voucher (from SHIP-02, optional), a note, and the total they saw. The
  * `Idempotency-Key` header, a fresh UUID per click on "Bayar", is validated as a field of its own.
  */
 class CheckoutRequest extends FormRequest
@@ -29,6 +30,7 @@ class CheckoutRequest extends FormRequest
             'rate_id' => ['required', 'string', 'max:50'],
             'note' => ['nullable', 'string', 'max:255'],
             'expected_grand_total' => ['required', 'integer', 'min:0'],
+            'shipping_voucher_id' => ['nullable', 'integer'],
         ];
     }
 

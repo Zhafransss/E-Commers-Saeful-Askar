@@ -575,7 +575,7 @@ Header (nilai pada sales order):
 | `sub_total`\* | Ya | Jumlah `items[].amount` |
 | `total_disc`\* | Ya | `0` |
 | `total_tax`\* | Ya | `0` (tanpa PPN) |
-| `grand_total`\* | Ya | `sub_total + shipping_cost + insurance_cost` |
+| `grand_total`\* | Ya | `sub_total + shipping_cost + insurance_cost − add_disc` = `orders.grand_total` = jumlah tagihan DANA |
 | `ref_no` | Tidak | `orders.order_number` (kunci anti-duplikat) |
 | `location_id`\* | Ya | `JUBELIO_LOCATION_ID` |
 | `source`\* | Ya | `1` (Internal) |
@@ -583,11 +583,11 @@ Header (nilai pada sales order):
 | `is_paid` | Tidak | `false` |
 | `channel_status` | Tidak (wajib bagi kita) | `"Pending"`. Tanpa ini Jubelio memberi `wms_status` `UNKNOWN` yang tidak bisa diubah `set-as-paid`, sehingga pesanan tidak masuk antrean gudang (WS-000024). Dengan `"Pending"`: `wms_status` `PENDING`, lalu `PAID` setelah INT-JB-11 (diuji di akun asli 3 Nov 2026) |
 | `payment_method` | Tidak | `"DANA Gapura"` |
-| `shipping_cost` | Tidak | Ongkir dari rate yang dipilih |
+| `shipping_cost` | Tidak | Ongkir penuh dari rate yang dipilih, juga bila memakai voucher ongkir |
 | `insurance_cost` | Tidak | Asuransi dari rate (0 bila tidak ada) |
 | `shipping_full_name`, `shipping_phone`, `shipping_address`, `shipping_area`, `shipping_city`, `shipping_subdistrict`, `shipping_province`, `shipping_post_code`, `shipping_country` | Tidak | Salinan alamat order; `shipping_country = "Indonesia"` |
 | `shipping_province_id` (maks 2 karakter), `shipping_city_id`, `shipping_district_id`, `shipping_subdistrict_id` | Tidak | ID Region Jubelio |
-| `add_disc`\* | Ya | `0` |
+| `add_disc`\* | Ya | `orders.discount`: potongan voucher ongkir (PRD F-20), 0 tanpa voucher. Ongkir tetap dicatat penuh di `shipping_cost` agar laporan ongkir sama dengan tagihan kurir. Diuji di akun asli 3 Nov 2026 (SO uji 193468, lalu dibatalkan): `shipping_cost` 5000, `add_disc` 5000, `grand_total` 1500 tersimpan apa adanya; `wms_status` PENDING lalu PAID setelah INT-JB-11 |
 | `add_fee`\* | Ya | `0` |
 | `service_fee`\* | Ya | `0` |
 | `items`\* | Ya | Lihat tabel item |

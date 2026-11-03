@@ -47,6 +47,8 @@ Ada dua peran di website: customer yang membeli dan admin toko yang mengelola ko
 8. Sebagai customer, saya diberi tahu bila pesanan dibatalkan karena batas bayar habis.
 9. Sebagai customer, saya bisa membatalkan pesanan yang belum saya bayar, agar tagihan ditutup dan stok kembali untuk pembeli lain.
 10. Sebagai admin, saya bisa melihat order website beserta status sinkron ke Jubelio dan menjalankan sinkron katalog manual.
+11. Sebagai customer, saya mendapat potongan ongkir dari voucher yang aktif saat checkout, dan bisa memilih voucher lain atau tidak memakai voucher.
+12. Sebagai admin, saya bisa membuat voucher gratis ongkir atau potongan ongkir dengan minimal belanja, periode, kuota, dan batas per pembeli.
 
 ## 3. Kebutuhan fungsional
 
@@ -71,6 +73,7 @@ Kebutuhan dibagi per modul; kode di kolom pertama dipakai sebagai acuan di API C
 | F-17 | Admin | Tombol sinkron katalog manual dan log sinkron | Sebaiknya |
 | F-18 | Notifikasi | Email konfirmasi order, pembayaran diterima, dan pembatalan | Sebaiknya |
 | F-19 | Pesanan | Customer membatalkan pesanan yang belum dibayar: order Gapura dibatalkan, sales order Jubelio dibatalkan, stok kembali (ORD-05) | Wajib |
+| F-20 | Voucher ongkir | Admin mengelola voucher yang hanya memotong ongkir (gratis ongkir atau potongan Rp tertentu) dengan minimal belanja, periode, kuota total, dan batas per pembeli; voucher aktif tampil di checkout, yang potongannya terbesar langsung dipakai, customer boleh mengganti atau tidak memakai voucher (SHIP-02, ORD-01, ADM-30 – ADM-33). Ditambah lewat revisi scope 3 Nov 2026 | Wajib |
 
 **Aturan bisnis.**
 
@@ -79,6 +82,7 @@ Kebutuhan dibagi per modul; kode di kolom pertama dipakai sebagai acuan di API C
 - Toko tidak memakai PPN: pajak setiap item 0.
 - Semua order diambil dari satu gudang: Jl. Raya Pisangan No.1, RT.02/RW.02, Satriajaya, Kec. Tambun Utara, Kab. Bekasi, Jawa Barat 17566.
 - Nomor order website berformat WEB-xxxxxx dan dikirim sebagai `ref_no` ke Jubelio.
+- Voucher ongkir (F-20) hanya memotong ongkos kirim, tidak pernah harga produk atau asuransi, dan potongannya tidak melebihi ongkir. Minimal belanja dihitung dari subtotal produk. Satu voucher per pesanan. Kuota dan batas per pembeli dihitung dari pesanan yang belum kedaluwarsa atau dibatalkan, jadi pesanan yang belum dibayar ikut menghitung dan kuotanya kembali bila pesanan itu batal. Di Jubelio, `shipping_cost` tetap ongkir penuh dan potongan dicatat sebagai `add_disc`.
 
 ## 4. Integrasi dan alur bisnis
 
@@ -417,4 +421,4 @@ Ongkir memakai RajaOngkir (menggantikan Jubelio Shipment sejak 20 Okt 2026); yan
 - [x] Toko internal dibuat di Jubelio dengan nama "Website" (`store_id` -102, dari `GET /locations/store/`).
 - [ ] Metode pembayaran Gapura yang diaktifkan di akun (VA, e-wallet, QRIS, kartu) dan biaya per metode; `mcc` toko; public key produksi DANA.
 
-**Di luar lingkup versi 1.** Checkout tanpa login, voucher dan promo website, COD, multi-gudang, ulasan produk, wishlist, aplikasi mobile, chat penjual, dan pengelolaan produk atau stok dari website. Endpoint admin berikut juga ditunda ke versi 1.1: ADM-01 (dashboard ringkasan), ADM-15 (daftar webhook masuk), ADM-16 (proses ulang webhook), dan ADM-17 (status konfigurasi integrasi); pemeriksaan order dan pemulihan tetap memakai ADM-09 – ADM-12, rekonsiliasi stok terjadwal, dan perintah `php artisan jubelio:setup`.
+**Di luar lingkup versi 1.** Checkout tanpa login, voucher dan promo website selain voucher ongkir (F-20, masuk lingkup lewat revisi 3 Nov 2026; diskon harga produk tetap di luar lingkup), COD, multi-gudang, ulasan produk, wishlist, aplikasi mobile, chat penjual, dan pengelolaan produk atau stok dari website. Endpoint admin berikut juga ditunda ke versi 1.1: ADM-01 (dashboard ringkasan), ADM-15 (daftar webhook masuk), ADM-16 (proses ulang webhook), dan ADM-17 (status konfigurasi integrasi); pemeriksaan order dan pemulihan tetap memakai ADM-09 – ADM-12, rekonsiliasi stok terjadwal, dan perintah `php artisan jubelio:setup`.

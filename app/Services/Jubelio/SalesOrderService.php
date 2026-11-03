@@ -176,7 +176,9 @@ class SalesOrderService
             'shipping_subdistrict_id' => $order->shipping_subdistrict_id,
             'shipping_post_code' => $order->shipping_post_code,
             'shipping_country' => 'Indonesia',
-            'add_disc' => 0,
+            // A shipping voucher (orders.discount): shipping_cost stays the courier's full price and the voucher is
+            // a discount of its own, so grand_total equals what DANA charged.
+            'add_disc' => $order->discount,
             'add_fee' => 0,
             'service_fee' => 0,
             'items' => $items,

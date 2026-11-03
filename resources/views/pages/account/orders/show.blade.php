@@ -74,6 +74,7 @@
                             <div class="flex justify-between"><dt class="text-gray-500">Subtotal</dt><dd class="tabular-nums" x-text="$format.formatRupiah(order.amounts.subtotal)"></dd></div>
                             <div class="flex justify-between"><dt class="text-gray-500">Ongkos kirim</dt><dd class="tabular-nums" x-text="$format.formatRupiah(order.amounts.shipping_cost)"></dd></div>
                             <div x-show="order.amounts.insurance_cost > 0" class="flex justify-between"><dt class="text-gray-500">Asuransi pengiriman</dt><dd class="tabular-nums" x-text="$format.formatRupiah(order.amounts.insurance_cost)"></dd></div>
+                            <div x-show="order.amounts.discount > 0" class="flex justify-between"><dt class="text-gray-500">Voucher ongkir <span class="block text-xs" x-text="order.amounts.shipping_voucher_name ?? ''"></span></dt><dd class="tabular-nums text-green-700" x-text="'−' + $format.formatRupiah(order.amounts.discount)"></dd></div>
                             <div class="flex justify-between border-t border-gray-100 pt-2 text-base font-bold"><dt>Total</dt><dd class="tabular-nums" x-text="$format.formatRupiah(order.amounts.grand_total)"></dd></div>
                         </dl>
                     </section>

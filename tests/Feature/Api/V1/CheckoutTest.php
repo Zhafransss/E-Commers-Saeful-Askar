@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\ShippingVoucher;
 use App\Models\User;
 use App\Services\Gapura\GapuraClient;
 use GuzzleHttp\Client;
@@ -138,7 +139,7 @@ test('ORD-01 creates the order, the Jubelio sales order, and the Gapura order, a
             'note' => 'Tolong dibungkus kardus tebal', 'can_pay' => true, 'can_cancel' => true,
         ])
         ->and($data['order']['amounts'])->toBe([
-            'subtotal' => 6750000, 'shipping_cost' => $rate['cost'], 'insurance_cost' => 0, 'discount' => 0, 'tax' => 0, 'grand_total' => 6750000 + $rate['cost'],
+            'subtotal' => 6750000, 'shipping_cost' => $rate['cost'], 'insurance_cost' => 0, 'discount' => 0, 'shipping_voucher_name' => null, 'tax' => 0, 'grand_total' => 6750000 + $rate['cost'],
         ])
         ->and($data['order']['payment'])->toMatchArray(['status' => 'PENDING', 'checkout_url' => $data['redirect_url']])
         ->and($data['order']['items'][0])->toMatchArray([
@@ -480,4 +481,118 @@ test('an order number is never reused after a failed checkout', function () {
     checkout($this, ['rate' => quotedRate($this)])->assertCreated();
 
     expect(Order::count())->toBe(2)->and(Order::orderByDesc('id')->first()->order_number)->not->toBe($failed->order_number);
+});
+
+// --- Shipping vouchers (SHIP-02) ---------------------------------------------------------
+
+/** checkout() with a shipping voucher; the expected total already has the discount taken off. */
+function checkoutWithVoucher($test, ShippingVoucher $voucher, int $discount, ?array $rate = null)
+{
+    $rate ??= quotedRate($test);
+
+    return checkout($test, [
+        'rate' => $rate,
+        'shipping_voucher_id' => $voucher->id,
+        'expected_grand_total' => 6750000 + $rate['cost'] - $discount,
+    ]);
+}
+
+test('ORD-01 with a free-shipping voucher takes the whole shipping cost off, here and in Jubelio and DANA', function () {
+    $voucher = ShippingVoucher::factory()->freeShipping()->create(['name' => 'Gratis Ongkir November']);
+    $rate = quotedRate($this);
+
+    checkoutWithVoucher($this, $voucher, $rate['cost'], $rate)
+        ->assertCreated()
+        ->assertJsonPath('data.order.amounts.discount', $rate['cost'])
+        ->assertJsonPath('data.order.amounts.shipping_voucher_name', 'Gratis Ongkir November')
+        ->assertJsonPath('data.order.amounts.grand_total', 6750000);
+
+    $order = Order::sole();
+    $jubelio = jubelioPosts('/sales/orders/')[0]->data();
+    $gapura = json_decode((string) $this->gapuraSent[0]->getBody(), true);
+
+    expect($order)->shipping_voucher_id->toBe($voucher->id)->shipping_voucher_name->toBe('Gratis Ongkir November')
+        ->discount->toBe($rate['cost'])->shipping_cost->toBe($rate['cost'])->grand_total->toBe(6750000)
+        // Jubelio keeps the courier's full price and the voucher as a discount of its own.
+        ->and($jubelio)->toMatchArray(['shipping_cost' => $rate['cost'], 'add_disc' => $rate['cost'], 'grand_total' => 6750000])
+        ->and($gapura['amount']['value'])->toBe('6750000.00')
+        ->and($voucher->usedCount())->toBe(1);
+});
+
+test('ORD-01 with a shipping discount takes at most its amount, and never more than the shipping cost', function (int $amount, Closure $expected) {
+    $voucher = ShippingVoucher::factory()->create(['amount' => $amount]);
+    $rate = quotedRate($this);
+    $discount = $expected($rate['cost']);
+
+    checkoutWithVoucher($this, $voucher, $discount, $rate)->assertCreated();
+
+    expect(Order::sole())->discount->toBe($discount)->grand_total->toBe(6750000 + $rate['cost'] - $discount);
+})->with([
+    'Rp5.000 off' => [5000, fn (int $cost) => 5000],
+    'more than the shipping cost' => [99000000, fn (int $cost) => $cost],
+]);
+
+test('ORD-01 refuses a voucher the order does not qualify for, and makes nothing', function (Closure $make, string $message) {
+    $voucher = $make($this);
+    $before = Order::count();
+
+    $response = checkoutWithVoucher($this, $voucher, 5000);
+
+    assertApiError($response, 409, 'VOUCHER_UNAVAILABLE')->assertJsonPath('message', $message);
+    expect(Order::count())->toBe($before)
+        ->and(jubelioPosts('/sales/orders/'))->toBeEmpty()
+        ->and($this->gapuraSent)->toBeEmpty();
+})->with([
+    'below the minimum spend' => [fn () => ShippingVoucher::factory()->create(['name' => 'Ongkir 5rb', 'min_subtotal' => 10000000]),
+        'Voucher Ongkir 5rb berlaku untuk belanja minimal Rp10.000.000.'],
+    'ended' => [fn () => ShippingVoucher::factory()->create(['starts_at' => now()->subWeek(), 'ends_at' => now()->subMinute()]),
+        'Voucher ongkir ini sudah tidak berlaku. Pilih voucher lain atau lanjut tanpa voucher.'],
+    'not started' => [fn () => ShippingVoucher::factory()->create(['starts_at' => now()->addHour()]),
+        'Voucher ongkir ini sudah tidak berlaku. Pilih voucher lain atau lanjut tanpa voucher.'],
+    'quota used up by someone else' => [function () {
+        $voucher = ShippingVoucher::factory()->create(['name' => 'Ongkir 5rb', 'quota' => 1]);
+        Order::factory()->create(['shipping_voucher_id' => $voucher->id, 'status' => OrderStatus::Paid]);
+
+        return $voucher;
+    }, 'Kuota voucher Ongkir 5rb sudah habis. Pilih voucher lain atau lanjut tanpa voucher.'],
+    'own limit reached' => [function ($test) {
+        $voucher = ShippingVoucher::factory()->create(['name' => 'Ongkir 5rb', 'per_user_limit' => 1]);
+        Order::factory()->for($test->user)->create(['shipping_voucher_id' => $voucher->id, 'status' => OrderStatus::PendingPayment]);
+
+        return $voucher;
+    }, 'Anda sudah memakai voucher Ongkir 5rb sebanyak batas yang diizinkan.'],
+    'unknown' => [fn () => (new ShippingVoucher)->forceFill(['id' => 999]),
+        'Voucher ongkir ini sudah tidak berlaku. Pilih voucher lain atau lanjut tanpa voucher.'],
+]);
+
+test('orders that expired or were cancelled give their voucher use back', function () {
+    $voucher = ShippingVoucher::factory()->create(['quota' => 1, 'per_user_limit' => 1]);
+    Order::factory()->for($this->user)->create(['shipping_voucher_id' => $voucher->id, 'status' => OrderStatus::Expired]);
+    Order::factory()->create(['shipping_voucher_id' => $voucher->id, 'status' => OrderStatus::Cancelled]);
+
+    checkoutWithVoucher($this, $voucher, 5000)->assertCreated();
+
+    expect($voucher->usedCount())->toBe(1);
+});
+
+test('a checkout that fails at DANA gives the voucher use back', function () {
+    $voucher = ShippingVoucher::factory()->create(['quota' => 1]);
+    useGapura($this, array_fill(0, 2, new Response(500, [], '{"responseCode":"5005401","responseMessage":"Internal Server Error"}')));
+
+    assertApiError(checkoutWithVoucher($this, $voucher, 5000), 502, 'INTEGRATION_ERROR');
+
+    expect(Order::sole()->status)->toBe(OrderStatus::Cancelled)
+        ->and($voucher->usedCount())->toBe(0);
+});
+
+test('ORD-01 with a voucher but the total without it answers PRICE_CHANGED with the discounted amounts', function () {
+    $voucher = ShippingVoucher::factory()->create();
+    $rate = quotedRate($this);
+
+    $response = checkout($this, ['rate' => $rate, 'shipping_voucher_id' => $voucher->id]);
+
+    assertApiError($response, 409, 'PRICE_CHANGED')
+        ->assertJsonPath('amounts.discount', 5000)
+        ->assertJsonPath('amounts.grand_total', 6750000 + $rate['cost'] - 5000);
+    expect(Order::count())->toBe(0);
 });

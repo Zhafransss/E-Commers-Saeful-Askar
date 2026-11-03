@@ -414,6 +414,7 @@ ID wilayah mengikuti endpoint Region Jubelio (string). Response REG-04 (keluraha
     "shipping_cost": 185000,
     "insurance_cost": 0,
     "discount": 0,
+    "shipping_voucher_name": null,
     "tax": 0,
     "grand_total": 6935000
   },
@@ -443,7 +444,7 @@ ID wilayah mengikuti endpoint Region Jubelio (string). Response REG-04 (keluraha
 
 ## Indeks endpoint
 
-Total **61 endpoint** milik website: 56 dipanggil frontend dan 5 webhook masuk. Empat endpoint admin bertanda **(v1.1)** — ADM-01, ADM-15, ADM-16, ADM-17 — ditunda sesuai PRD §9, sehingga versi 1 berisi **57 endpoint** (52 frontend + 5 webhook). ADM-18 – ADM-24 (pelanggan, produk, resi, dan periksa semua pembayaran) ditambah dari revisi client 22 Okt 2026, ADM-25 – ADM-28 (akun admin) menyusul agar admin tidak perlu diatur lewat `.env`, dan ADM-29 (tandai pesanan selesai) ditambah 3 Nov 2026 bersama WH-05; invoice PDF adalah halaman web `/admin/orders/{order_number}/invoice`, bukan endpoint API. Kontraknya tetap disimpan di `admin.md` sebagai acuan v1.1. Fitur artikel (blog) dihapus dari lingkup: ART-01, ART-02, dan ADM-02 – ADM-08 tidak ada lagi, dan kode ADM-09 dan seterusnya tidak dinomori ulang. Ditambah 18 kelompok panggilan keluar (INT-JB-01 – INT-JB-14, INT-JS-01, INT-GP-01 – INT-GP-03) dan aturan umumnya (INT-HDL) di `integrations.md`.
+Total **66 endpoint** milik website: 61 dipanggil frontend dan 5 webhook masuk. Empat endpoint admin bertanda **(v1.1)** — ADM-01, ADM-15, ADM-16, ADM-17 — ditunda sesuai PRD §9, sehingga versi 1 berisi **62 endpoint** (57 frontend + 5 webhook). ADM-18 – ADM-24 (pelanggan, produk, resi, dan periksa semua pembayaran) ditambah dari revisi client 22 Okt 2026, ADM-25 – ADM-28 (akun admin) menyusul agar admin tidak perlu diatur lewat `.env`, ADM-29 (tandai pesanan selesai) ditambah 3 Nov 2026 bersama WH-05, dan SHIP-02 serta ADM-30 – ADM-33 (voucher ongkir, PRD F-20) ditambah lewat revisi scope 3 Nov 2026; invoice PDF adalah halaman web `/admin/orders/{order_number}/invoice`, bukan endpoint API. Kontraknya tetap disimpan di `admin.md` sebagai acuan v1.1. Fitur artikel (blog) dihapus dari lingkup: ART-01, ART-02, dan ADM-02 – ADM-08 tidak ada lagi, dan kode ADM-09 dan seterusnya tidak dinomori ulang. Ditambah 18 kelompok panggilan keluar (INT-JB-01 – INT-JB-14, INT-JS-01, INT-GP-01 – INT-GP-03) dan aturan umumnya (INT-HDL) di `integrations.md`.
 
 ### Untuk frontend (`/api/v1`, kecuali CSRF)
 
@@ -478,6 +479,7 @@ Total **61 endpoint** milik website: 56 dipanggil frontend dan 5 webhook masuk. 
 | ADDR-05 | DELETE | `/addresses/{id}` | Customer | addresses-regions.md | F-06 |
 | ADDR-06 | PATCH | `/addresses/{id}/default` | Customer | addresses-regions.md | F-06 |
 | SHIP-01 | POST | `/shipping/rates` | Customer | shipping.md | F-08 |
+| SHIP-02 | GET | `/shipping/vouchers` | Customer | shipping.md | F-20 |
 | ORD-01 | POST | `/checkout` | Customer | checkout-orders.md | F-09 |
 | ORD-02 | GET | `/orders` | Customer | checkout-orders.md | F-12 |
 | ORD-03 | GET | `/orders/{order_number}` | Customer | checkout-orders.md | F-12 |
@@ -502,6 +504,10 @@ Total **61 endpoint** milik website: 56 dipanggil frontend dan 5 webhook masuk. 
 | ADM-27 | PUT | `/admin/admins/{id}` | Admin | admin.md | F-16 |
 | ADM-28 | DELETE | `/admin/admins/{id}` | Admin | admin.md | F-16 |
 | ADM-29 | POST | `/admin/orders/{order_number}/complete` | Admin | admin.md | F-16 |
+| ADM-30 | GET | `/admin/shipping-vouchers` | Admin | admin.md | F-20 |
+| ADM-31 | POST | `/admin/shipping-vouchers` | Admin | admin.md | F-20 |
+| ADM-32 | PUT | `/admin/shipping-vouchers/{id}` | Admin | admin.md | F-20 |
+| ADM-33 | DELETE | `/admin/shipping-vouchers/{id}` | Admin | admin.md | F-20 |
 | ADM-15 (v1.1) | GET | `/admin/webhook-events` | Admin | admin.md | F-16 |
 | ADM-16 (v1.1) | POST | `/admin/webhook-events/{id}/retry` | Admin | admin.md | F-16 |
 | ADM-17 (v1.1) | GET | `/admin/settings/integrations` | Admin | admin.md | F-16 |
@@ -554,6 +560,9 @@ Total **61 endpoint** milik website: 56 dipanggil frontend dan 5 webhook masuk. 
 | `CANNOT_DELETE_SELF` | 409 | ADM-28 |
 | `ORDER_NOT_PAID` | 409 | ADM-24 |
 | `ORDER_NOT_SHIPPED` | 409 | ADM-29 |
+| `VOUCHER_UNAVAILABLE` | 409 | ORD-01 (voucher berakhir, minimal belanja kurang, kuota habis, atau batas per pembeli tercapai) |
+| `VOUCHER_NOT_FOUND` | 404 | ADM-32, ADM-33 |
+| `VOUCHER_IN_USE` | 409 | ADM-33 |
 | `ADMIN_CANNOT_SHOP` | 403 | CART-01 – CART-05, SHIP-01, ORD-01 (akun admin tidak memakai keranjang dan checkout) |
 | `ORDER_NOT_PAYABLE` | 409 | ORD-04 |
 | `ORDER_NOT_CANCELLABLE` | 409 | ORD-05 |

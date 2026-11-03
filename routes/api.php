@@ -64,6 +64,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('shipping/rates', [V1\ShippingRateController::class, 'store'])
         ->middleware(['customer', 'throttle:shipping']);                                        // SHIP-01
+    Route::get('shipping/vouchers', [V1\ShippingVoucherController::class, 'index'])
+        ->middleware('customer');                                                               // SHIP-02
 
     Route::post('checkout', [V1\CheckoutController::class, 'store'])
         ->middleware(['customer', 'throttle:checkout']);                                        // ORD-01
@@ -90,6 +92,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('admins', [Admin\AdminAccountController::class, 'store']);           // ADM-26
         Route::put('admins/{id}', [Admin\AdminAccountController::class, 'update']);      // ADM-27
         Route::delete('admins/{id}', [Admin\AdminAccountController::class, 'destroy']);  // ADM-28
+
+        Route::get('shipping-vouchers', [Admin\ShippingVoucherController::class, 'index']);            // ADM-30
+        Route::post('shipping-vouchers', [Admin\ShippingVoucherController::class, 'store']);           // ADM-31
+        Route::put('shipping-vouchers/{id}', [Admin\ShippingVoucherController::class, 'update']);      // ADM-32
+        Route::delete('shipping-vouchers/{id}', [Admin\ShippingVoucherController::class, 'destroy']);  // ADM-33
         Route::get('products', [Admin\ProductController::class, 'index']);                // ADM-20
         Route::get('shipments', [Admin\ShipmentController::class, 'index']);              // ADM-21
         Route::post('shipments/refresh', [Admin\ShipmentController::class, 'refresh']);   // ADM-22

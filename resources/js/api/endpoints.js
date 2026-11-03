@@ -43,6 +43,7 @@ export const endpoints = {
     },
     shipping: {
         rates: '/shipping/rates', // SHIP-01
+        vouchers: '/shipping/vouchers', // SHIP-02
     },
     checkout: '/checkout', // ORD-01 (needs Idempotency-Key header)
     orders: {
@@ -68,5 +69,7 @@ export const endpoints = {
         refreshPayments: '/admin/orders/refresh-payments', // ADM-23
         sendInvoice: (orderNumber) => `/admin/orders/${seg(orderNumber)}/send-invoice`, // ADM-24
         completeOrder: (orderNumber) => `/admin/orders/${seg(orderNumber)}/complete`, // ADM-29
+        vouchers: '/admin/shipping-vouchers', // ADM-30 list, ADM-31 create
+        voucher: (id) => `/admin/shipping-vouchers/${seg(id)}`, // ADM-32 update, ADM-33 delete
     },
 };

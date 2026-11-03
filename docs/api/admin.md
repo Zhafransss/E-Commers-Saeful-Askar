@@ -555,6 +555,112 @@ Hanya untuk pesanan `shipped` (Dikirim), yaitu pesanan yang sales order-nya suda
 
 Di panel admin, tombol "Tandai selesai" hanya muncul di detail pesanan berstatus Dikirim dan meminta konfirmasi sekali lagi, karena status tidak bisa dikembalikan.
 
+## ADM-30 · Daftar voucher ongkir
+
+### Endpoint
+
+`GET /api/v1/admin/shipping-vouchers` · **Admin**. Ditambah lewat revisi scope 3 Nov 2026 (PRD F-20). Halaman: `/admin/vouchers` ("Voucher Ongkir").
+
+| Query | Tipe | Wajib | Keterangan |
+| --- | --- | --- | --- |
+| `q` | string | Tidak | Cari nama voucher |
+| `page` | integer | Tidak | Default 1 |
+| `per_page` | integer | Tidak | Default 20, maks 100 |
+
+### User Story
+
+Sebagai admin, saya ingin melihat semua voucher ongkir beserta pemakaian dan statusnya, agar tahu voucher mana yang masih berjalan.
+
+### Request Body
+
+Tidak ada.
+
+### Response Success
+
+`200 OK`. Urut dari waktu mulai terbaru. `used_count` = pesanan yang memakai voucher dan tidak `expired`/`cancelled` (termasuk yang belum dibayar). `status`: `scheduled` (belum mulai), `running`, `exhausted` (kuota habis), `ended`.
+
+```json
+{
+  "data": [
+    {
+      "id": 4,
+      "name": "Potongan Ongkir 5rb",
+      "type": "shipping_discount",
+      "type_label": "Potongan ongkir",
+      "amount": 5000,
+      "min_subtotal": 100000,
+      "starts_at": "2026-11-04T00:00:00+07:00",
+      "ends_at": "2026-11-30T23:59:00+07:00",
+      "quota": 100,
+      "per_user_limit": 1,
+      "used_count": 12,
+      "status": "running",
+      "status_label": "Aktif",
+      "created_at": "2026-11-03T16:20:00+07:00"
+    }
+  ],
+  "meta": { "current_page": 1, "per_page": 20, "total": 1, "last_page": 1 }
+}
+```
+
+## ADM-31 · Tambah voucher ongkir
+
+### Endpoint
+
+`POST /api/v1/admin/shipping-vouchers` · **Admin**
+
+### User Story
+
+Sebagai admin, saya ingin membuat voucher gratis ongkir atau potongan ongkir, agar pembeli terdorong berbelanja di website.
+
+### Request Body
+
+| Field | Tipe | Wajib | Aturan |
+| --- | --- | --- | --- |
+| `name` | string | Ya | 3–100 karakter, tampil ke pembeli |
+| `type` | string | Ya | `free_shipping` atau `shipping_discount` |
+| `amount` | integer | Untuk `shipping_discount` | 1 – 10.000.000. Diabaikan (disimpan `null`) untuk `free_shipping` |
+| `min_subtotal` | integer | Ya | ≥ 0, dari subtotal produk sebelum ongkir |
+| `starts_at` | datetime | Ya | Waktu toko (WIB), mis. `2026-11-04T00:00` |
+| `ends_at` | datetime | Tidak | Setelah `starts_at`; kosong = tanpa batas waktu |
+| `quota` | integer | Tidak | ≥ 1; kosong = tanpa batas |
+| `per_user_limit` | integer | Tidak | ≥ 1; kosong = tanpa batas |
+
+```json
+{
+  "name": "Potongan Ongkir 5rb",
+  "type": "shipping_discount",
+  "amount": 5000,
+  "min_subtotal": 100000,
+  "starts_at": "2026-11-04T00:00",
+  "ends_at": "2026-11-30T23:59",
+  "quota": 100,
+  "per_user_limit": 1
+}
+```
+
+### Response Success
+
+`201 Created`: objek voucher seperti satu baris ADM-30, dalam `data`.
+
+### Response Failed
+
+| HTTP | `code` | Kapan |
+| --- | --- | --- |
+| 422 | `VALIDATION_ERROR` | Aturan di atas tidak terpenuhi |
+
+## ADM-32 · Ubah voucher ongkir
+
+`PUT /api/v1/admin/shipping-vouchers/{id}` · **Admin**. Body sama dengan ADM-31 (seluruh voucher dikirim). Perubahan hanya berlaku untuk pesanan berikutnya: pesanan yang sudah dibuat menyimpan nama voucher dan potongannya sendiri. Untuk menghentikan voucher, ubah `ends_at` ke waktu sekarang.
+
+`200 OK`: objek voucher dalam `data`. `404 VOUCHER_NOT_FOUND` untuk id yang tidak ada, `422 VALIDATION_ERROR` seperti ADM-31.
+
+## ADM-33 · Hapus voucher ongkir
+
+`DELETE /api/v1/admin/shipping-vouchers/{id}` · **Admin**. Hanya voucher yang belum pernah dipakai pesanan mana pun (termasuk yang kedaluwarsa/dibatalkan), agar catatan pemakaiannya tetap ada.
+
+`200 OK`: `{ "message": "Voucher dihapus." }`. `409 VOUCHER_IN_USE` bila sudah dipakai (hentikan dengan mengubah `ends_at`), `404 VOUCHER_NOT_FOUND` untuk id yang tidak ada.
+
 ## ADM-23 · Periksa pembayaran semua pesanan menunggu
 
 `POST /api/v1/admin/orders/refresh-payments` · **Admin**. Tanpa body. Menanyakan ke DANA (aturan yang sama dengan ADM-12) untuk pesanan `pending_payment` yang punya order pembayaran, terbaru dulu, paling banyak 40 sekali panggil.

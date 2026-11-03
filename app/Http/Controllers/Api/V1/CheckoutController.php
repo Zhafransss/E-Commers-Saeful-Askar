@@ -31,6 +31,7 @@ class CheckoutController extends Controller
                 'redirect_url' => $order->payment->checkout_url,
             ],
             $request->validated('item_ids'),
+            $request->validated('shipping_voucher_id') === null ? null : $request->integer('shipping_voucher_id'),
         );
 
         return response()->json(['data' => $data], 201);

@@ -34,6 +34,11 @@ class AdminPageController extends Controller
         return view('admin.admins.index');
     }
 
+    public function vouchers(): View
+    {
+        return view('admin.vouchers.index');
+    }
+
     public function products(): View
     {
         return view('admin.products.index');

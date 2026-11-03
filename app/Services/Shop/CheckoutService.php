@@ -15,6 +15,7 @@ use App\Models\Address;
 use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\ShippingVoucher;
 use App\Models\User;
 use App\Services\Gapura\GapuraClient;
 use App\Services\Jubelio\ContactService;
@@ -28,8 +29,9 @@ use Illuminate\Support\Facades\DB;
 use Throwable;
 
 /**
- * ORD-01 (docs/api/checkout-orders.md), in the contract's order: validate → rate → price → live stock
- * → Jubelio contact → order → Jubelio sales order → Gapura order → remove the bought lines from the cart.
+ * ORD-01 (docs/api/checkout-orders.md), in the contract's order: validate → rate → shipping voucher → price
+ * → live stock → Jubelio contact → order → Jubelio sales order → Gapura order → remove the bought lines from
+ * the cart.
  *
  * Nothing here may happen twice. One checkout per customer runs at a time (a second click while the
  * first is still working gets `DUPLICATE_REQUEST`), and the answer to an `Idempotency-Key` is kept for
@@ -53,15 +55,17 @@ class CheckoutService
         private readonly GapuraClient $gapura,
         private readonly OrderNumberGenerator $numbers,
         private readonly OrderStatusRecorder $status,
+        private readonly ShippingVoucherService $vouchers,
     ) {}
 
     /**
      * @param  Closure(Order): array<string, mixed>  $respond  Builds the response data of a placed order; the
      *                                                         result is kept for the idempotency key
      * @param  list<int>|null  $itemIds  The cart lines being bought; null means the whole cart
+     * @param  int|null  $voucherId  The shipping voucher the customer chose (SHIP-02); null means none
      * @return array<string, mixed> The response data (a replay returns the stored one)
      */
-    public function handle(User $user, string $idempotencyKey, int $addressId, string $rateId, ?string $note, int $expectedTotal, Closure $respond, ?array $itemIds = null): array
+    public function handle(User $user, string $idempotencyKey, int $addressId, string $rateId, ?string $note, int $expectedTotal, Closure $respond, ?array $itemIds = null, ?int $voucherId = null): array
     {
         $storedKey = "checkout:response:{$user->id}:{$idempotencyKey}";
 
@@ -81,7 +85,7 @@ class CheckoutService
                 return $stored;
             }
 
-            $response = $respond($this->place($user, $addressId, $rateId, $note, $expectedTotal, $itemIds));
+            $response = $respond($this->place($user, $addressId, $rateId, $note, $expectedTotal, $itemIds, $voucherId));
             Cache::put($storedKey, $response, now()->addHours(self::RESPONSE_TTL_HOURS));
 
             return $response;
@@ -93,7 +97,7 @@ class CheckoutService
     /**
      * @param  list<int>|null  $itemIds
      */
-    private function place(User $user, int $addressId, string $rateId, ?string $note, int $expectedTotal, ?array $itemIds): Order
+    private function place(User $user, int $addressId, string $rateId, ?string $note, int $expectedTotal, ?array $itemIds, ?int $voucherId): Order
     {
         $address = $user->addresses()->find($addressId)
             ?? throw new ApiException('Alamat tidak ditemukan.', 'ADDRESS_NOT_FOUND', 404);
@@ -107,13 +111,18 @@ class CheckoutService
         $rate = $this->rates->resolve($rateId, $user, $address, $itemIds);
 
         $subtotal = (int) $lines->sum(fn (CartItem $line) => $line->variant->price * $line->qty);
+
+        // The voucher only lowers the shipping cost; the insurance and the products keep their price.
+        $voucher = $voucherId === null ? null : $this->vouchers->usable($voucherId, $user, $subtotal);
+        $discount = $voucher?->discountFor($rate['cost']) ?? 0;
+
         $amounts = [
             'subtotal' => $subtotal,
             'shipping_cost' => $rate['cost'],
             'insurance_cost' => $rate['insurance_cost'],
-            'discount' => 0,
+            'discount' => $discount,
             'tax' => 0,
-            'grand_total' => $subtotal + $rate['cost'] + $rate['insurance_cost'],
+            'grand_total' => $subtotal + $rate['cost'] + $rate['insurance_cost'] - $discount,
         ];
 
         if ($amounts['grand_total'] !== $expectedTotal) {
@@ -127,7 +136,7 @@ class CheckoutService
         // Before the order exists: a Jubelio failure here must leave nothing behind.
         $this->contacts->ensure($user, $address);
 
-        $order = $this->createOrder($user, $address, $lines, $rate, $amounts, $note);
+        $order = $this->createOrder($user, $address, $lines, $rate, $amounts, $note, $voucher);
 
         $this->createSalesOrder($order);
         $this->createGapuraOrder($order, $lines);
@@ -215,9 +224,14 @@ class CheckoutService
      * @param  array<string, mixed>  $rate
      * @param  array<string, int>  $amounts
      */
-    private function createOrder(User $user, Address $address, Collection $lines, array $rate, array $amounts, ?string $note): Order
+    private function createOrder(User $user, Address $address, Collection $lines, array $rate, array $amounts, ?string $note, ?ShippingVoucher $voucher): Order
     {
-        return DB::transaction(function () use ($user, $address, $lines, $rate, $amounts, $note): Order {
+        return DB::transaction(function () use ($user, $address, $lines, $rate, $amounts, $note, $voucher): Order {
+            // Checked again with the voucher row locked until this order is saved, so its last use is taken once.
+            if ($voucher !== null) {
+                $this->vouchers->usable($voucher->id, $user, $amounts['subtotal'], lock: true);
+            }
+
             $order = Order::create([
                 'user_id' => $user->id,
                 'address_id' => $address->id,
@@ -243,6 +257,8 @@ class CheckoutService
                 'note' => filled($note) ? trim($note) : null,
                 'payment_expires_at' => now()->addSeconds((int) config('gapura.payment_duration')),
                 'jubelio_sync_status' => JubelioSyncStatus::Pending,
+                'shipping_voucher_id' => $voucher?->id,
+                'shipping_voucher_name' => $voucher?->name,
             ] + $amounts);
 
             $this->numbers->assign($order);

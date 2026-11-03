@@ -67,5 +67,6 @@ Route::middleware('page.role:admin')->prefix('admin')->name('admin.')->group(fun
     Route::get('/products', [Web\AdminPageController::class, 'products'])->name('products.index');
     Route::get('/users', [Web\AdminPageController::class, 'users'])->name('users.index');
     Route::get('/admins', [Web\AdminPageController::class, 'admins'])->name('admins.index');
+    Route::get('/vouchers', [Web\AdminPageController::class, 'vouchers'])->name('vouchers.index');
     Route::get('/sync', [Web\AdminPageController::class, 'sync'])->name('sync.index');
 });

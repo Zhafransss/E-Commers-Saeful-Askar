@@ -74,6 +74,11 @@ class Order extends Model
         return $this->hasOne(Payment::class)->latestOfMany();
     }
 
+    public function shippingVoucher(): BelongsTo
+    {
+        return $this->belongsTo(ShippingVoucher::class);
+    }
+
     public function statusHistories(): HasMany
     {
         return $this->hasMany(OrderStatusHistory::class)->orderBy('created_at');
