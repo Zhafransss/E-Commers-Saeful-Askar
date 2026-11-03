@@ -157,6 +157,9 @@ class SalesOrderService
             'source' => 1,
             'store_id' => (string) config('jubelio.store_id'),
             'is_paid' => false,
+            // Without it Jubelio gives the order wms_status UNKNOWN, which set-as-paid cannot leave, so the warehouse
+            // never sees it. "Pending" starts it at PENDING, and set-as-paid then moves it to PAID (tested 3 Nov 2026).
+            'channel_status' => 'Pending',
             'payment_method' => 'DANA Gapura',
             'shipping_cost' => $order->shipping_cost,
             'insurance_cost' => $order->insurance_cost,

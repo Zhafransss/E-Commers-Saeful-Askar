@@ -222,7 +222,7 @@ test('the payload follows the contract and the order snapshot', function () {
         'salesorder_id' => 0, 'salesorder_no' => '[auto]', 'contact_id' => 5512, 'customer_name' => 'Budi Santoso',
         'note' => 'Tolong dibungkus kardus tebal', 'sub_total' => 6750000, 'total_disc' => 0, 'total_tax' => 0, 'grand_total' => 6935000,
         'ref_no' => 'WEB-000123', 'location_id' => -1, 'source' => 1, 'store_id' => '-102', 'is_paid' => false,
-        'payment_method' => 'DANA Gapura', 'shipping_cost' => 185000, 'insurance_cost' => 0,
+        'channel_status' => 'Pending', 'payment_method' => 'DANA Gapura', 'shipping_cost' => 185000, 'insurance_cost' => 0,
         'shipping_full_name' => $order->shipping_recipient_name, 'shipping_address' => 'Jl. Melati No. 12, RT 03/RW 05',
         'shipping_area' => 'TAMBUN UTARA', 'shipping_city' => 'KAB. BEKASI', 'shipping_subdistrict' => 'Satriajaya',
         'shipping_province' => 'JAWA BARAT', 'shipping_province_id' => '32', 'shipping_city_id' => '3216',

@@ -581,6 +581,7 @@ Header (nilai pada sales order):
 | `source`\* | Ya | `1` (Internal) |
 | `store_id` | Tidak | `JUBELIO_STORE_ID` (toko "Website Saeful Askar") |
 | `is_paid` | Tidak | `false` |
+| `channel_status` | Tidak (wajib bagi kita) | `"Pending"`. Tanpa ini Jubelio memberi `wms_status` `UNKNOWN` yang tidak bisa diubah `set-as-paid`, sehingga pesanan tidak masuk antrean gudang (WS-000024). Dengan `"Pending"`: `wms_status` `PENDING`, lalu `PAID` setelah INT-JB-11 (diuji di akun asli 3 Nov 2026) |
 | `payment_method` | Tidak | `"DANA Gapura"` |
 | `shipping_cost` | Tidak | Ongkir dari rate yang dipilih |
 | `insurance_cost` | Tidak | Asuransi dari rate (0 bila tidak ada) |
@@ -627,6 +628,7 @@ Item (`items[]`):
   "source": 1,
   "store_id": "-1043",
   "is_paid": false,
+  "channel_status": "Pending",
   "payment_method": "DANA Gapura",
   "shipping_cost": 185000,
   "insurance_cost": 0,
