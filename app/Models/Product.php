@@ -33,6 +33,7 @@ class Product extends Model
         'variations',
         'thumbnail_url',
         'is_active',
+        'is_hidden',
         'jubelio_last_modified',
         'synced_at',
     ];
@@ -42,17 +43,19 @@ class Product extends Model
         return [
             'variations' => 'array',
             'is_active' => 'boolean',
+            'is_hidden' => 'boolean',
             'jubelio_last_modified' => 'datetime',
             'synced_at' => 'datetime',
         ];
     }
 
     /**
-     * Visible on the storefront: active, with at least one active variant (catalog.md), and not in a hidden category (config/shop.php).
+     * Visible on the storefront: active, not hidden by the admin, with at least one active variant (catalog.md), and not in a hidden category (config/shop.php).
      */
     public function scopeVisible(Builder $query): void
     {
         $query->where('is_active', true)
+            ->where('is_hidden', false)
             ->whereHas('variants', fn (Builder $variants) => $variants->where('is_active', true))
             ->where(fn (Builder $products) => $products->whereNull('category_id')
                 ->orWhereDoesntHave('category', fn (Builder $category) => $category->whereIn('slug', config('shop.hidden_categories'))));
@@ -75,6 +78,14 @@ class Product extends Model
             'total_available_qty' => $active('COALESCE(SUM(GREATEST(available_qty, 0)), 0)'),
             'variant_count' => $active('COUNT(*)'),
         ]);
+    }
+
+    /**
+     * Whether a customer can buy it: Jubelio sells it and the admin has not hidden it.
+     */
+    public function isSellable(): bool
+    {
+        return $this->is_active && ! $this->is_hidden;
     }
 
     public function category(): BelongsTo

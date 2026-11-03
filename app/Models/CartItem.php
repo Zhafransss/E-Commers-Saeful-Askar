@@ -38,7 +38,7 @@ class CartItem extends Model
         $variant = $this->variant;
 
         return match (true) {
-            ! $variant->is_active || ! $variant->product->is_active => self::ISSUE_PRODUCT_INACTIVE,
+            ! $variant->is_active || ! $variant->product->isSellable() => self::ISSUE_PRODUCT_INACTIVE,
             $variant->sellableQty() === 0 => self::ISSUE_OUT_OF_STOCK,
             $this->qty > $variant->sellableQty() => self::ISSUE_QTY_EXCEEDS_STOCK,
             default => null,

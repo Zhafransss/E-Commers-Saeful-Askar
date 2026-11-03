@@ -111,7 +111,7 @@ class CartService
             ->join('products', 'products.id', '=', 'product_variants.product_id')
             ->where('cart_items.user_id', $user->id)
             ->selectRaw('COALESCE(SUM(cart_items.qty), 0) AS total_qty')
-            ->selectRaw('COALESCE(MAX(product_variants.is_active = 0 OR products.is_active = 0
+            ->selectRaw('COALESCE(MAX(product_variants.is_active = 0 OR products.is_active = 0 OR products.is_hidden = 1
                 OR cart_items.qty > GREATEST(product_variants.available_qty, 0)), 0) AS has_issue')
             ->toBase()
             ->first();
@@ -131,7 +131,7 @@ class CartService
 
     private function assertSellable(ProductVariant $variant): void
     {
-        if (! $variant->is_active || ! $variant->product->is_active) {
+        if (! $variant->is_active || ! $variant->product->isSellable()) {
             throw new ApiException('Produk ini sudah tidak dijual.', 'VARIANT_INACTIVE', 422);
         }
     }

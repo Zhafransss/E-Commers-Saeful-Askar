@@ -1437,5 +1437,10 @@
     "code": "ADM-33",
     "status": 200,
     "body": null
+  },
+  "PATCH /api/v1/admin/products/{id}/visibility": {
+    "code": "ADM-34",
+    "status": 200,
+    "body": null
   }
 }

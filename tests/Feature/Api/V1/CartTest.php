@@ -71,6 +71,7 @@ test('CART-01 marks issues and keeps problem lines in the cart', function (Closu
     'stok negatif' => [fn ($t) => $t->black->update(['available_qty' => -3]), 'OUT_OF_STOCK'],
     'varian nonaktif' => [fn ($t) => $t->black->update(['is_active' => false]), 'PRODUCT_INACTIVE'],
     'produk nonaktif' => [fn ($t) => $t->bike->update(['is_active' => false]), 'PRODUCT_INACTIVE'],
+    'produk disembunyikan admin' => [fn ($t) => $t->bike->update(['is_hidden' => true]), 'PRODUCT_INACTIVE'],
 ]);
 
 test('CART-01 leaves inactive lines out of the subtotal and the shipping weight', function () {

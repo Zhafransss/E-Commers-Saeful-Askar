@@ -110,5 +110,6 @@ test('missing, inactive, or variant-less products answer 404 PRODUCT_NOT_FOUND',
 })->with([
     'slug tidak ada' => [fn () => null, 'tidak-ada'],
     'produk nonaktif' => [fn ($test) => $test->product->update(['is_active' => false]), 'baterai-lithium-phylion'],
+    'produk disembunyikan admin' => [fn ($test) => $test->product->update(['is_hidden' => true]), 'baterai-lithium-phylion'],
     'semua varian nonaktif' => [fn ($test) => $test->product->variants()->update(['is_active' => false]), 'baterai-lithium-phylion'],
 ]);

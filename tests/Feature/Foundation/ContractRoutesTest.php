@@ -28,10 +28,10 @@ test('every API and webhook route is documented in the contract', function () {
     expect($routed->diff($documented)->values()->all())->toBe([]);
 });
 
-test('the contract index lists 58 frontend endpoints and 5 webhooks for v1', function () {
+test('the contract index lists 59 frontend endpoints and 5 webhooks for v1', function () {
     $codes = array_column(contractEndpoints(), 0);
 
-    expect(array_filter($codes, fn ($code) => ! str_starts_with($code, 'WH-')))->toHaveCount(58)
+    expect(array_filter($codes, fn ($code) => ! str_starts_with($code, 'WH-')))->toHaveCount(59)
         ->and(array_filter($codes, fn ($code) => str_starts_with($code, 'WH-')))->toHaveCount(5);
 });
 

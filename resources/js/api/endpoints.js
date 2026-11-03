@@ -65,6 +65,7 @@ export const endpoints = {
         admins: '/admin/admins', // ADM-25 list, ADM-26 create
         admin: (id) => `/admin/admins/${seg(id)}`, // ADM-27 update, ADM-28 delete
         products: '/admin/products', // ADM-20
+        productVisibility: (id) => `/admin/products/${seg(id)}/visibility`, // ADM-34
         shipments: '/admin/shipments', // ADM-21
         refreshShipments: '/admin/shipments/refresh', // ADM-22
         refreshPayments: '/admin/orders/refresh-payments', // ADM-23

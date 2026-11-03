@@ -30,6 +30,7 @@ class AdminProductResource extends ApiResource
             'category' => $this->category?->name,
             'thumbnail_url' => $this->thumbnail_url,
             'is_active' => $this->is_active,
+            'is_hidden' => $this->is_hidden,
             'price_min' => $active->min('price'),
             'price_max' => $active->max('price'),
             'total_available_qty' => (int) $active->sum(fn (ProductVariant $variant) => $variant->sellableQty()),

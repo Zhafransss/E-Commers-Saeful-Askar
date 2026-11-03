@@ -66,6 +66,14 @@ test('inactive products and products without an active variant are not listed', 
     expect(listedSlugs())->toBe(['tampil']);
 });
 
+test('a product the admin hid is not listed, searched, or found by its SKU', function () {
+    productWith([['sku' => 'SEMBUNYI-1']], ['slug' => 'tampil']);
+    productWith([['sku' => 'SEMBUNYI-2']], ['slug' => 'disembunyikan', 'is_hidden' => true]);
+
+    expect(listedSlugs())->toBe(['tampil']);
+    $this->getJson('/api/v1/products?q=SEMBUNYI-2')->assertOk()->assertJsonCount(0, 'data');
+});
+
 test('a single-variant product has the same min and max price; negative stock counts as 0', function () {
     productWith([['price' => 75000, 'available_qty' => -2]]);
 

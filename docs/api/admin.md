@@ -504,15 +504,16 @@ Sebagai admin yang baru mengubah produk di Jubelio, saya ingin menjalankan sinkr
 
 ## ADM-20 · Daftar produk dan varian
 
-`GET /api/v1/admin/products` · **Admin**. Produk dibaca dari salinan lokal katalog Jubelio, semua varian ikut (termasuk yang nonaktif). Tidak ada endpoint untuk mengubah produk di sini.
+`GET /api/v1/admin/products` · **Admin**. Produk dibaca dari salinan lokal katalog Jubelio, semua varian ikut (termasuk yang nonaktif). Isi produk tidak bisa diubah di sini (ubah di Jubelio); satu-satunya yang diatur admin adalah tampil atau tidaknya produk di toko (ADM-34).
 
 | Query | Tipe | Wajib | Keterangan |
 | --- | --- | --- | --- |
 | `q` | string | Tidak | Cari di nama produk, merek, SKU, dan nama varian |
-| `status` | string | Tidak | `active` atau `inactive` |
+| `status` | string | Tidak | `active` atau `inactive` (status dari Jubelio) |
+| `visibility` | string | Tidak | `shown` atau `hidden` (pilihan admin, ADM-34) |
 | `page`, `per_page` | integer | Tidak | Default 20, maks 100 |
 
-`200 OK`: `{ "data": [{ "id", "jubelio_item_group_id", "name", "slug", "brand_name", "category", "thumbnail_url", "is_active", "price_min", "price_max", "total_available_qty", "variants": [{ "id", "sku", "name", "price", "available_qty", "package_weight", "image_url", "is_active" }], "synced_at" }], "meta": {...} }`. Harga dan stok total hanya menghitung varian aktif.
+`200 OK`: `{ "data": [{ "id", "jubelio_item_group_id", "name", "slug", "brand_name", "category", "thumbnail_url", "is_active", "is_hidden", "price_min", "price_max", "total_available_qty", "variants": [{ "id", "sku", "name", "price", "available_qty", "package_weight", "image_url", "is_active" }], "synced_at" }], "meta": {...} }`. Harga dan stok total hanya menghitung varian aktif.
 
 ## ADM-21 · Daftar pesanan dan resi
 
@@ -660,6 +661,14 @@ Sebagai admin, saya ingin membuat voucher gratis ongkir atau potongan ongkir, ag
 `DELETE /api/v1/admin/shipping-vouchers/{id}` · **Admin**. Hanya voucher yang belum pernah dipakai pesanan mana pun (termasuk yang kedaluwarsa/dibatalkan), agar catatan pemakaiannya tetap ada.
 
 `200 OK`: `{ "message": "Voucher dihapus." }`. `409 VOUCHER_IN_USE` bila sudah dipakai (hentikan dengan mengubah `ends_at`), `404 VOUCHER_NOT_FOUND` untuk id yang tidak ada.
+
+## ADM-34 · Tampilkan atau sembunyikan produk dari pelanggan
+
+`PATCH /api/v1/admin/products/{id}/visibility` · **Admin**. Body: `{ "is_hidden": true }` menyembunyikan produk, `false` menampilkannya lagi.
+
+Produk yang disembunyikan hilang dari katalog, pencarian, halaman detail (`404 PRODUCT_NOT_FOUND`), jumlah per kategori, dan sitemap. Di keranjang pelanggan, barisnya tetap ada tetapi bertanda `PRODUCT_INACTIVE` dan tidak bisa di-checkout; menambahkannya ke keranjang ditolak seperti produk yang tidak dijual. Pesanan yang sudah dibuat tidak terpengaruh. Pilihan ini disimpan di kolom `products.is_hidden`, terpisah dari `is_active`, sehingga sinkron Jubelio tidak pernah membukanya kembali.
+
+`200 OK`: satu objek produk seperti satu baris ADM-20, dalam `data`. `404 PRODUCT_NOT_FOUND` untuk id yang tidak ada, `422 VALIDATION_ERROR` bila `is_hidden` kosong atau bukan boolean.
 
 ## ADM-23 · Periksa pembayaran semua pesanan menunggu
 

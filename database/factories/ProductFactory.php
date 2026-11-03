@@ -33,6 +33,7 @@ class ProductFactory extends Factory
             'variations' => null,
             'thumbnail_url' => null,
             'is_active' => true,
+            'is_hidden' => false,
             'jubelio_last_modified' => now(),
             'synced_at' => now(),
         ];
@@ -41,5 +42,10 @@ class ProductFactory extends Factory
     public function inactive(): static
     {
         return $this->state(fn (array $attributes) => ['is_active' => false]);
+    }
+
+    public function hidden(): static
+    {
+        return $this->state(fn (array $attributes) => ['is_hidden' => true]);
     }
 }

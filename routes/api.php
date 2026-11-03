@@ -100,6 +100,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('shipping-vouchers/{id}', [Admin\ShippingVoucherController::class, 'update']);      // ADM-32
         Route::delete('shipping-vouchers/{id}', [Admin\ShippingVoucherController::class, 'destroy']);  // ADM-33
         Route::get('products', [Admin\ProductController::class, 'index']);                // ADM-20
+        Route::patch('products/{id}/visibility', [Admin\ProductController::class, 'visibility']); // ADM-34
         Route::get('shipments', [Admin\ShipmentController::class, 'index']);              // ADM-21
         Route::post('shipments/refresh', [Admin\ShipmentController::class, 'refresh']);   // ADM-22
 

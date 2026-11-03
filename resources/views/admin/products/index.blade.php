@@ -6,7 +6,7 @@
 @section('content')
     <div x-data="adminProducts">
         <h1 class="text-2xl font-bold">Produk</h1>
-        <p class="mt-1 text-sm text-gray-500">Produk dan variannya, disalin dari Jubelio. Hanya untuk dilihat; ubah produk, harga, dan stok di Jubelio.</p>
+        <p class="mt-1 text-sm text-gray-500">Produk dan variannya, disalin dari Jubelio. Ubah produk, harga, dan stok di Jubelio. Di sini Anda hanya mengatur apakah produk tampil ke pelanggan: produk yang disembunyikan hilang dari toko, pencarian, dan tautannya, tetapi datanya tetap ada dan sinkron Jubelio tidak membukanya lagi.</p>
 
         {{-- Sync from Jubelio --}}
         <h2 class="mt-6 text-sm font-bold uppercase tracking-wide text-gray-500">Sinkronisasi dengan Jubelio</h2>
@@ -37,7 +37,7 @@
             <p class="text-sm text-gray-500"><span x-text="meta.total"></span> produk</p>
         </div>
 
-        <form class="mt-3 grid gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4" @submit.prevent="fetchPage(1)">
+        <form class="mt-3 grid gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-5" @submit.prevent="fetchPage(1)">
             <label class="text-xs font-semibold text-gray-500 lg:col-span-2">Cari
                 <input type="search" x-model="filters.q" @input="search()" placeholder="Nama produk, merek, SKU, atau varian"
                        class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-normal text-gray-900">
@@ -47,6 +47,13 @@
                     <option value="">Semua</option>
                     <option value="active">Aktif</option>
                     <option value="inactive">Nonaktif</option>
+                </select>
+            </label>
+            <label class="text-xs font-semibold text-gray-500">Tampil di toko
+                <select x-model="filters.visibility" @change="fetchPage(1)" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-normal text-gray-900">
+                    <option value="">Semua</option>
+                    <option value="shown">Tampil</option>
+                    <option value="hidden">Disembunyikan</option>
                 </select>
             </label>
             <div class="flex items-end">
@@ -61,17 +68,21 @@
         @php($cols = 'grid grid-cols-[minmax(0,2fr)_1fr_1.2fr_5rem_6rem_5rem] items-center')
         <div class="mt-4 hidden overflow-x-auto rounded-xl border border-gray-200 bg-white xl:block">
             <div class="min-w-[52rem]">
-                <div class="{{ $cols }} border-b border-gray-200 bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    <span class="px-4 py-3">Produk</span><span class="px-4 py-3">Kategori</span><span class="px-4 py-3 text-right">Harga</span>
-                    <span class="px-4 py-3 text-right">Stok</span><span class="px-4 py-3">Status</span><span class="px-4 py-3 text-right">Varian</span>
+                <div class="flex border-b border-gray-200 bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <div class="{{ $cols }} flex-1">
+                        <span class="px-4 py-3">Produk</span><span class="px-4 py-3">Kategori</span><span class="px-4 py-3 text-right">Harga</span>
+                        <span class="px-4 py-3 text-right">Stok</span><span class="px-4 py-3">Status</span><span class="px-4 py-3 text-right">Varian</span>
+                    </div>
+                    <span class="w-36 px-4 py-3">Tampil di toko</span>
                 </div>
 
                 <p x-show="loading" class="px-4 py-8 text-center text-sm text-gray-500">Memuat…</p>
                 <p x-cloak x-show="!loading && items.length === 0" class="px-4 py-8 text-center text-sm text-gray-500">Tidak ada produk yang cocok.</p>
 
                 <template x-for="product in items" :key="product.id">
-                    <div class="border-b border-gray-100 text-sm last:border-b-0">
-                        <button type="button" class="{{ $cols }} w-full text-left hover:bg-gray-50" @click="toggle(product.id)" :aria-expanded="!!expanded[product.id]">
+                    <div class="border-b border-gray-100 text-sm last:border-b-0" :class="product.is_hidden ? 'bg-gray-50/70' : ''">
+                      <div class="flex items-center">
+                        <button type="button" class="{{ $cols }} min-w-0 flex-1 text-left hover:bg-gray-50" @click="toggle(product.id)" :aria-expanded="!!expanded[product.id]">
                             <span class="flex min-w-0 items-center gap-3 px-4 py-3">
                                 <span class="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                                     <img x-show="product.thumbnail_url" :src="product.thumbnail_url" alt="" class="h-full w-full object-cover">
@@ -90,6 +101,15 @@
                             <span class="px-4 py-3"><span class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="product.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'" x-text="product.is_active ? 'Aktif' : 'Nonaktif'"></span></span>
                             <span class="px-4 py-3 text-right text-xs font-semibold text-gray-600"><span x-text="product.variants.length"></span> <span x-text="expanded[product.id] ? '▲' : '▼'"></span></span>
                         </button>
+                        <span class="flex w-36 items-center gap-2 px-4 text-xs font-semibold" :class="product.is_hidden ? 'text-gray-500' : 'text-green-700'">
+                            <button type="button" role="switch" :aria-checked="(!product.is_hidden).toString()" :aria-label="(product.is_hidden ? 'Tampilkan ' : 'Sembunyikan ') + product.name"
+                                @click="setHidden(product, !product.is_hidden)" :disabled="saving[product.id]"
+                                class="relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-50" :class="product.is_hidden ? 'bg-gray-300' : 'bg-green-500'">
+                            <span class="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition" :class="product.is_hidden ? '' : 'translate-x-5'"></span>
+                        </button>
+                            <span x-text="product.is_hidden ? 'Disembunyikan' : 'Tampil'"></span>
+                        </span>
+                      </div>
 
                         <div x-cloak x-show="expanded[product.id]" class="border-t border-gray-100 bg-gray-50 px-4 py-3">
                             <div class="overflow-x-auto">
@@ -140,6 +160,14 @@
                         </span>
                         <span class="shrink-0 self-center text-xs font-semibold text-gray-600"><span x-text="product.variants.length"></span> <span x-text="expanded[product.id] ? '▲' : '▼'"></span></span>
                     </button>
+                    <div class="flex items-center justify-between border-t border-gray-100 px-4 py-2.5 text-xs font-semibold" :class="product.is_hidden ? 'text-gray-500' : 'text-green-700'">
+                        <span x-text="product.is_hidden ? 'Disembunyikan dari pelanggan' : 'Tampil di toko'"></span>
+                        <button type="button" role="switch" :aria-checked="(!product.is_hidden).toString()" :aria-label="(product.is_hidden ? 'Tampilkan ' : 'Sembunyikan ') + product.name"
+                                @click="setHidden(product, !product.is_hidden)" :disabled="saving[product.id]"
+                                class="relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-50" :class="product.is_hidden ? 'bg-gray-300' : 'bg-green-500'">
+                            <span class="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition" :class="product.is_hidden ? '' : 'translate-x-5'"></span>
+                        </button>
+                    </div>
 
                     <ul x-cloak x-show="expanded[product.id]" class="divide-y divide-gray-200 border-t border-gray-100 bg-gray-50 px-4 text-xs">
                         <template x-for="variant in product.variants" :key="variant.id">

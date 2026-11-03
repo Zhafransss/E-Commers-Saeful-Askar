@@ -128,6 +128,59 @@ test('ADM-20 lists products with all their variants, inactive ones too, and filt
     $this->actingAs($this->admin)->getJson('/api/v1/admin/products?status=nope')->assertUnprocessable();
 });
 
+// --- ADM-34 show or hide a product ----------------------------------------------------------------
+
+test('ADM-34 hides a product from customers and shows it again, without changing what Jubelio set', function () {
+    $product = Product::factory()->create(['name' => 'Baterai 48V', 'slug' => 'baterai-48v', 'is_active' => true]);
+    ProductVariant::factory()->for($product)->create(['is_active' => true]);
+
+    $this->getJson('/api/v1/products/baterai-48v')->assertOk();
+
+    $this->actingAs($this->admin)->patchJson("/api/v1/admin/products/{$product->id}/visibility", ['is_hidden' => true])
+        ->assertOk()->assertJsonPath('data.is_hidden', true)->assertJsonPath('data.is_active', true);
+    expect($product->fresh())->is_hidden->toBeTrue()->is_active->toBeTrue();
+    $this->getJson('/api/v1/products/baterai-48v')->assertNotFound();
+
+    $this->actingAs($this->admin)->patchJson("/api/v1/admin/products/{$product->id}/visibility", ['is_hidden' => false])
+        ->assertOk()->assertJsonPath('data.is_hidden', false);
+    $this->getJson('/api/v1/products/baterai-48v')->assertOk();
+});
+
+test('ADM-34 refuses guests and customers, an unknown product, and a missing or wrong flag', function () {
+    $product = Product::factory()->create();
+    $uri = "/api/v1/admin/products/{$product->id}/visibility";
+
+    assertApiError($this->patchJson($uri, ['is_hidden' => true]), 401, 'UNAUTHENTICATED');
+    assertApiError($this->actingAs($this->customer)->patchJson($uri, ['is_hidden' => true]), 403, 'FORBIDDEN');
+    assertApiError($this->actingAs($this->admin)->patchJson('/api/v1/admin/products/999999/visibility', ['is_hidden' => true]), 404, 'PRODUCT_NOT_FOUND');
+    assertApiError($this->actingAs($this->admin)->patchJson($uri, []), 422, 'VALIDATION_ERROR')->assertJsonValidationErrors('is_hidden');
+    assertApiError($this->actingAs($this->admin)->patchJson($uri, ['is_hidden' => 'mungkin']), 422, 'VALIDATION_ERROR');
+    expect($product->fresh()->is_hidden)->toBeFalse();
+});
+
+test('ADM-20 shows the hidden flag and filters by it', function () {
+    Product::factory()->create(['name' => 'Tampil']);
+    Product::factory()->hidden()->create(['name' => 'Tersembunyi']);
+
+    $all = $this->actingAs($this->admin)->getJson('/api/v1/admin/products')->assertOk();
+    expect(collect($all->json('data'))->pluck('is_hidden', 'name')->all())->toBe(['Tersembunyi' => true, 'Tampil' => false]);
+
+    $this->actingAs($this->admin)->getJson('/api/v1/admin/products?visibility=hidden')->assertJsonCount(1, 'data')->assertJsonPath('data.0.name', 'Tersembunyi');
+    $this->actingAs($this->admin)->getJson('/api/v1/admin/products?visibility=shown')->assertJsonCount(1, 'data')->assertJsonPath('data.0.name', 'Tampil');
+    $this->actingAs($this->admin)->getJson('/api/v1/admin/products?visibility=nope')->assertUnprocessable();
+});
+
+test('a Jubelio product sync leaves the hidden flag alone', function () {
+    fakeJubelioCatalog();
+    $this->artisan('jubelio:sync-products --full')->assertSuccessful();
+    $product = Product::firstOrFail();
+    $product->update(['is_hidden' => true]);
+
+    $this->artisan('jubelio:sync-products --full')->assertSuccessful();
+
+    expect($product->fresh()->is_hidden)->toBeTrue();
+});
+
 // --- ADM-21 / ADM-22 shipments -----------------------------------------------------------------
 
 test('ADM-21 lists paid orders with their resi and filters by having one', function () {
