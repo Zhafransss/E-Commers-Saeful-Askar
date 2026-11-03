@@ -86,7 +86,7 @@ class GapuraBukti extends Command
         if ($event === null) {
             $this->components->warn('Belum ada notifikasi dengan tanda tangan valid untuk pesanan ini.');
         } else {
-            $this->line('Diterima: '.$event->received_at.', status pemrosesan: '.$event->status);
+            $this->line('Diterima: '.$event->received_at.', status pemrosesan: '.$event->status->value);
             $this->line('Body Request: '.json_encode($event->payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
             $this->line('Body Response: {"responseCode":"2005600","responseMessage":"Successful"}');
         }
