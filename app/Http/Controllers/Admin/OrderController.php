@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\JubelioSyncStatus;
 use App\Enums\OrderStatus;
+use App\Enums\OrderStatusSource;
 use App\Enums\SyncTrigger;
 use App\Enums\SyncType;
 use App\Exceptions\ApiException;
@@ -17,6 +18,7 @@ use App\Models\Order;
 use App\Models\SyncLog;
 use App\Services\Admin\JubelioResend;
 use App\Services\Shop\OrderPaymentService;
+use App\Services\Shop\OrderStatusRecorder;
 use App\Services\Shop\PaymentOutcome;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -160,6 +162,30 @@ class OrderController extends Controller
             'data' => ['order_number' => $order->order_number, 'sent_to' => $order->user->email],
             'message' => "Invoice dikirim ke {$order->user->email}. Email sampai dalam sekitar satu menit.",
         ], 202);
+    }
+
+    /**
+     * ADM-29 · Tandai pesanan selesai (admin). Only a shipped order: it became shipped when the warehouse finished
+     * it in Jubelio (WH-05), and the admin closes it once the customer has it. Nothing is sent to Jubelio, where
+     * the sales order is already complete.
+     */
+    public function complete(Request $request, string $orderNumber, OrderStatusRecorder $status): JsonResponse
+    {
+        $order = $this->find($orderNumber);
+
+        if ($order->status !== OrderStatus::Shipped
+            || ! $status->transition($order, OrderStatus::Completed, OrderStatusSource::Admin, "Diselesaikan oleh admin {$request->user()->name}")) {
+            throw new ApiException('Hanya pesanan berstatus Dikirim yang bisa ditandai selesai.', 'ORDER_NOT_SHIPPED', 409);
+        }
+
+        return response()->json([
+            'data' => [
+                'order_number' => $order->order_number,
+                'status' => $order->status->value,
+                'status_label' => $order->status->label(),
+            ],
+            'message' => "Pesanan {$order->order_number} ditandai selesai.",
+        ]);
     }
 
     /**

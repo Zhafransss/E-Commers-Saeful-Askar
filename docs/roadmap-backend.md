@@ -15,7 +15,7 @@ Isi teknis setiap fase diringkas dari Acceptance Criteria di API Contract. Bila 
 | 2 | Katalog & sinkron Jubelio | 2 | CAT-01–03, WH-02–04 | 1 | Besar | Selesai (webhook asli pertama belum diterima) |
 | 3 | Akun, alamat, keranjang | 3 | AUTH-02–09, REG-01–04, ADDR-01–06, CART-01–06 | 0 (REG: 1, CART: 2) | Besar | Selesai |
 | 4 | Ongkir & checkout | 4 | SHIP-01, ORD-01 | 2, 3 | Besar | Selesai (ongkir masih driver `stub`) |
-| 5 | Pembayaran & siklus pesanan | 4–5 | WH-01, WH-05, ORD-02–05 | 4 | Besar | Selesai kecuali WH-05 (resi/status dikirim, ditunda) |
+| 5 | Pembayaran & siklus pesanan | 4–5 | WH-01, WH-05, ORD-02–05 | 4 | Besar | Selesai. WH-05 aktif 3 Nov 2026 dengan cakupan terbatas (selesai di Jubelio → Dikirim; Selesai lewat ADM-29) |
 | 6 | Panel admin | 5 | ADM-09–14 | ADM-09–12: 5, ADM-13–14: 2 | Sedang | API selesai (halaman admin belum) |
 | 7 | Uji terpadu & rilis | 6 | — | 1–6 | Sedang | Belum mulai |
 
@@ -99,7 +99,7 @@ Sudah ada di commit `80aca15`:
 | Endpoint webhook WH-xx | Controller: `return $receiver->jubelio($request, 'update-qty', [aturan validasi]);` atau `$receiver->gapura($request, $gapura)`; logika di kelas `WebhookHandler` yang didaftarkan di `config/webhooks.php` | Lempar `WebhookEventIgnored` untuk `ignored`, `WebhookEventRejected` untuk `failed` tanpa retry |
 | Fixture test | `fixture('jubelio/….json')`, `fixtureContent()` untuk body mentah webhook | `Http::preventStrayRequests()` aktif di semua test |
 
-WH-02 – WH-04 (Jubelio) dan WH-01 (Gapura) sudah aktif penuh: WH-01 memverifikasi tanda tangan, menyimpan, membalas `2005600`, lalu `GapuraPaymentNotified` (terdaftar di `config/webhooks.php`) menandai order lunas atau kedaluwarsa. WH-05 (Jubelio, nomor resi dan status dikirim) **ditunda** dan tetap `501`, sampai diputuskan apakah pengiriman memakai Jubelio Shipment.
+WH-02 – WH-04 (Jubelio) dan WH-01 (Gapura) sudah aktif penuh: WH-01 memverifikasi tanda tangan, menyimpan, membalas `2005600`, lalu `GapuraPaymentNotified` (terdaftar di `config/webhooks.php`) menandai order lunas atau kedaluwarsa. WH-05 (Jubelio) aktif sejak 3 Nov 2026: sales order yang diselesaikan di Jubelio (mark-as-complete, faktur terbit) membuat pesanan website `shipped`, dengan `orders:check-shipped` sebagai cadangan. Lihat `api/webhooks.md` WH-05.
 
 **Blocker / pertanyaan terbuka.**
 
@@ -233,6 +233,8 @@ WH-02 – WH-04 (Jubelio) dan WH-01 (Gapura) sudah aktif penuh: WH-01 memverifik
 ## Fase 5 — Pembayaran & siklus pesanan
 
 > **Status: selesai kecuali WH-05 (20 Okt 2026).** WH-01, `orders:expire-unpaid`, ORD-02–05, `OrderPaymentService`, `OrderCancellationService`, dan email "Pembayaran diterima" / "Pesanan dibatalkan" sudah jalan; pembayaran sandbox (BRI VA) menandai order lunas di website dan Jubelio. **Ditunda:** WH-05 (nomor resi, status dikirim/selesai) dan email "Pesanan dikirim" (template `OrderShippedMail` sudah ada, belum dipanggil).
+>
+> **Pembaruan 3 Nov 2026:** WH-05 dikerjakan dengan cakupan yang diputuskan client: selesai di Jubelio (`marked_as_complete` + `invoice_no`) → `shipped`; `completed` diubah admin lewat ADM-29; tanpa email; cadangan `orders:check-shipped` setiap 10 menit. Pembatalan dari Jubelio, status `processing`, dan email "Pesanan dikirim" tetap ditunda.
 > **Catatan sandbox DANA:** batas bayar dipotong jadi 30 menit; metode "DANA" (dompet) butuh akun uji, jadi uji dengan Virtual Account. Pembayaran VA disimulasikan lewat menu uji di dashboard DANA sandbox.
 
 **Tujuan.** Status order selalu mengikuti Gapura dan Jubelio. Order lunas diteruskan ke gudang; order yang kedaluwarsa atau dibatalkan mengembalikan stok; customer bisa melihat riwayat, status, dan nomor resi.

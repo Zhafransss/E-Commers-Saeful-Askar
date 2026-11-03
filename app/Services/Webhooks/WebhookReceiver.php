@@ -10,6 +10,7 @@ use App\Jobs\ProcessJubelioWebhookJob;
 use App\Models\WebhookEvent;
 use App\Services\Gapura\GapuraClient;
 use App\Services\Gapura\GapuraSignatureException;
+use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -71,8 +72,11 @@ class WebhookReceiver
      *
      * @param  string  $action  Jubelio action the route receives, e.g. `update-qty`
      * @param  array<string, mixed>  $rules  Required payload fields from the endpoint's contract
+     * @param  (Closure(array<string, mixed>): bool)|null  $concerns  For a webhook Jubelio sends for every channel (WH-05):
+     *                                                                false answers 200 without recording the event, so
+     *                                                                Shopee orders do not fill webhook_events
      */
-    public function jubelio(Request $request, string $action, array $rules = []): JsonResponse
+    public function jubelio(Request $request, string $action, array $rules = [], ?Closure $concerns = null): JsonResponse
     {
         $raw = $request->getContent();
 
@@ -84,6 +88,10 @@ class WebhookReceiver
         }
 
         $payload = $this->validated($request, $rules);
+
+        if ($concerns !== null && ! $concerns($payload)) {
+            return response()->json(['status' => 'ok']);
+        }
 
         $this->store(
             WebhookProvider::Jubelio,

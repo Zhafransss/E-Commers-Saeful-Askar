@@ -184,9 +184,9 @@ Saat terlampaui: `429 TOO_MANY_REQUESTS` dengan header `Retry-After` (detik).
 | --- | --- | --- |
 | `pending_payment` | Order dibuat, menunggu pembayaran Gapura | Checkout |
 | `paid` | Pembayaran diterima | Webhook Gapura (`00`/`02`) |
-| `processing` | Diproses gudang di Jubelio (picking/packing) | Webhook Jubelio `update-salesorder` |
-| `shipped` | Sudah diserahkan ke kurir, ada nomor resi | Webhook Jubelio `update-salesorder` |
-| `completed` | Diterima customer / ditandai selesai di Jubelio | Webhook Jubelio `update-salesorder` |
+| `processing` | Diproses gudang di Jubelio (picking/packing). Belum dipakai: pesanan langsung dari `paid` ke `shipped` | — |
+| `shipped` | Sales order sudah diselesaikan gudang di Jubelio (mark-as-complete, faktur terbit). Nomor resi boleh belum ada | Webhook Jubelio `update-salesorder` (WH-05) / job cadangan `orders:check-shipped` |
+| `completed` | Pesanan sudah diterima customer | Admin, tombol "Tandai selesai" (ADM-29) |
 | `expired` | Batas waktu bayar habis, order dibatalkan otomatis | Webhook Gapura (`05`) / job cadangan |
 | `cancelled` | Dibatalkan customer (sebelum bayar) atau dibatalkan di Jubelio | `POST /orders/{order_number}/cancel` / webhook Jubelio |
 
@@ -443,7 +443,7 @@ ID wilayah mengikuti endpoint Region Jubelio (string). Response REG-04 (keluraha
 
 ## Indeks endpoint
 
-Total **60 endpoint** milik website: 55 dipanggil frontend dan 5 webhook masuk. Empat endpoint admin bertanda **(v1.1)** — ADM-01, ADM-15, ADM-16, ADM-17 — ditunda sesuai PRD §9, sehingga versi 1 berisi **56 endpoint** (51 frontend + 5 webhook). ADM-18 – ADM-24 (pelanggan, produk, resi, dan periksa semua pembayaran) ditambah dari revisi client 22 Okt 2026, dan ADM-25 – ADM-28 (akun admin) menyusul agar admin tidak perlu diatur lewat `.env`; invoice PDF adalah halaman web `/admin/orders/{order_number}/invoice`, bukan endpoint API. Kontraknya tetap disimpan di `admin.md` sebagai acuan v1.1. Fitur artikel (blog) dihapus dari lingkup: ART-01, ART-02, dan ADM-02 – ADM-08 tidak ada lagi, dan kode ADM-09 dan seterusnya tidak dinomori ulang. Ditambah 18 kelompok panggilan keluar (INT-JB-01 – INT-JB-14, INT-JS-01, INT-GP-01 – INT-GP-03) dan aturan umumnya (INT-HDL) di `integrations.md`.
+Total **61 endpoint** milik website: 56 dipanggil frontend dan 5 webhook masuk. Empat endpoint admin bertanda **(v1.1)** — ADM-01, ADM-15, ADM-16, ADM-17 — ditunda sesuai PRD §9, sehingga versi 1 berisi **57 endpoint** (52 frontend + 5 webhook). ADM-18 – ADM-24 (pelanggan, produk, resi, dan periksa semua pembayaran) ditambah dari revisi client 22 Okt 2026, ADM-25 – ADM-28 (akun admin) menyusul agar admin tidak perlu diatur lewat `.env`, dan ADM-29 (tandai pesanan selesai) ditambah 3 Nov 2026 bersama WH-05; invoice PDF adalah halaman web `/admin/orders/{order_number}/invoice`, bukan endpoint API. Kontraknya tetap disimpan di `admin.md` sebagai acuan v1.1. Fitur artikel (blog) dihapus dari lingkup: ART-01, ART-02, dan ADM-02 – ADM-08 tidak ada lagi, dan kode ADM-09 dan seterusnya tidak dinomori ulang. Ditambah 18 kelompok panggilan keluar (INT-JB-01 – INT-JB-14, INT-JS-01, INT-GP-01 – INT-GP-03) dan aturan umumnya (INT-HDL) di `integrations.md`.
 
 ### Untuk frontend (`/api/v1`, kecuali CSRF)
 
@@ -501,6 +501,7 @@ Total **60 endpoint** milik website: 55 dipanggil frontend dan 5 webhook masuk. 
 | ADM-26 | POST | `/admin/admins` | Admin | admin.md | F-16 |
 | ADM-27 | PUT | `/admin/admins/{id}` | Admin | admin.md | F-16 |
 | ADM-28 | DELETE | `/admin/admins/{id}` | Admin | admin.md | F-16 |
+| ADM-29 | POST | `/admin/orders/{order_number}/complete` | Admin | admin.md | F-16 |
 | ADM-15 (v1.1) | GET | `/admin/webhook-events` | Admin | admin.md | F-16 |
 | ADM-16 (v1.1) | POST | `/admin/webhook-events/{id}/retry` | Admin | admin.md | F-16 |
 | ADM-17 (v1.1) | GET | `/admin/settings/integrations` | Admin | admin.md | F-16 |
@@ -552,6 +553,7 @@ Total **60 endpoint** milik website: 55 dipanggil frontend dan 5 webhook masuk. 
 | `ADMIN_NOT_FOUND` | 404 | ADM-27, ADM-28 |
 | `CANNOT_DELETE_SELF` | 409 | ADM-28 |
 | `ORDER_NOT_PAID` | 409 | ADM-24 |
+| `ORDER_NOT_SHIPPED` | 409 | ADM-29 |
 | `ADMIN_CANNOT_SHOP` | 403 | CART-01 – CART-05, SHIP-01, ORD-01 (akun admin tidak memakai keranjang dan checkout) |
 | `ORDER_NOT_PAYABLE` | 409 | ORD-04 |
 | `ORDER_NOT_CANCELLABLE` | 409 | ORD-05 |

@@ -17,11 +17,12 @@ return [
             'notify' => Handlers\GapuraPaymentNotified::class,
         ],
 
-        // event_type = Jubelio action; 'update-salesorder' → WH-05 (Fase 5)
+        // event_type = Jubelio action
         'jubelio' => [
-            'update-product' => Handlers\JubelioProductUpdated::class,  // WH-02
-            'update-price' => Handlers\JubelioProductUpdated::class,    // WH-03
-            'update-qty' => Handlers\JubelioStockUpdated::class,        // WH-04
+            'update-product' => Handlers\JubelioProductUpdated::class,         // WH-02
+            'update-price' => Handlers\JubelioProductUpdated::class,           // WH-03
+            'update-qty' => Handlers\JubelioStockUpdated::class,               // WH-04
+            'update-salesorder' => Handlers\JubelioSalesOrderUpdated::class,   // WH-05
         ],
 
     ],

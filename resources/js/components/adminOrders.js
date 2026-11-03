@@ -13,7 +13,7 @@ const STATUSES = [
 
 /**
  * Alpine.data('adminOrders'): /admin/orders (docs/api/admin.md ADM-09 list, ADM-10 detail,
- * ADM-11 resend to Jubelio, ADM-12 re-check payment). The detail opens in a side panel and is
+ * ADM-11 resend to Jubelio, ADM-12 re-check payment, ADM-29 mark as completed). The detail opens in a side panel and is
  * linked as ?order=WEB-000123.
  */
 export default () => ({
@@ -29,6 +29,8 @@ export default () => ({
     detail: null,
     detailLoading: false,
     detailError: null,
+    // ADM-29 asks once more before closing an order, since it cannot be undone.
+    confirmingComplete: false,
     busy: false,
     notice: null,
     actionError: null,
@@ -85,6 +87,7 @@ export default () => ({
     async open(orderNumber) {
         this.detail = null;
         this.detailError = null;
+        this.confirmingComplete = false;
         this.notice = null;
         this.actionError = null;
         this.detailLoading = true;
@@ -140,6 +143,16 @@ export default () => ({
         });
     },
 
+    // ADM-29
+    async completeOrder() {
+        this.confirmingComplete = false;
+        await this.act(async () => {
+            const { message } = await api.post(endpoints.admin.completeOrder(this.detail.order_number));
+            this.notice = message;
+            await this.refreshAfterChange();
+        });
+    },
+
     // ADM-12
     async refreshPayment() {
         await this.act(async () => {
@@ -182,6 +195,11 @@ export default () => ({
     /** An invoice goes out only for an order that was paid. */
     get canSendInvoice() {
         return this.detail && ['paid', 'processing', 'shipped', 'completed'].includes(this.detail.status);
+    },
+
+    /** The warehouse finished it in Jubelio (shipped); the admin closes it once the customer has it. */
+    get canComplete() {
+        return this.detail?.status === 'shipped';
     },
 
     get canResend() {

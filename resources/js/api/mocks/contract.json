@@ -1353,5 +1353,10 @@
     "body": {
       "message": "Admin dihapus."
     }
+  },
+  "POST /api/v1/admin/orders/{order_number}/complete": {
+    "code": "ADM-29",
+    "status": 200,
+    "body": null
   }
 }

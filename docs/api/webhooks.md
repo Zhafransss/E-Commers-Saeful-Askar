@@ -299,63 +299,40 @@ Sebagai sistem, saya ingin memperbarui stok setiap kali stok berubah di Jubelio 
 
 ## WH-05 · Sales order berubah di Jubelio
 
-> **Ditunda (20 Okt 2026).** Endpoint masih membalas `501`. Nomor resi dan status dikirim/selesai menunggu keputusan apakah pengiriman memakai Jubelio Shipment. Pesanan yang sudah lunas berhenti di `paid` sampai ini dikerjakan.
+> **Aktif sejak 3 Nov 2026**, dengan cakupan yang diputuskan client: pesanan yang sales order-nya **diselesaikan** di Jubelio (`POST /sales/orders/mark-as-complete`, yang juga menerbitkan faktur) menjadi `shipped` (Dikirim). `completed` (Selesai) diubah admin lewat ADM-29. Tidak ada email ke pelanggan. Status `processing`, pembatalan dari Jubelio, dan email "Pesanan dikirim" belum dipakai.
 
 ### Endpoint
 
 `POST /webhooks/jubelio/salesorder` · **Webhook (Jubelio)** · action `update-salesorder`
 
-Header sama dengan WH-02.
+Header sama dengan WH-02. URL ini ikut didaftarkan oleh `php artisan jubelio:setup --register-webhooks` (INT-JB-14), atau diisi manual di Jubelio (Pengaturan → Developer → Webhook, bagian Sales Order).
 
 ### User Story
 
-Sebagai customer, saya ingin status pesanan dan nomor resi di website ikut berubah saat gudang memproses dan mengirim pesanan di Jubelio, agar saya tahu kapan barang sampai.
+Sebagai customer, saya ingin status pesanan di website menjadi Dikirim saat gudang menyelesaikan pesanan di Jubelio, agar saya tahu pesanan saya sudah diproses.
 
 ### Request Body
 
-Payload sales order lengkap dari Jubelio. Field yang dipakai:
+Payload sales order dari Jubelio (`webhookSalesOrder` di `dist.yaml`). Hanya field berikut yang dipakai, untuk mencari pesanannya:
 
-| Field | Tipe | Keterangan |
-| --- | --- | --- |
-| `salesorder_id` | integer | = `orders.jubelio_salesorder_id` |
-| `salesorder_no` | string | Disimpan ke `orders.jubelio_salesorder_no` |
-| `store_id` | string | Hanya diproses bila = `JUBELIO_STORE_ID` |
-| `ref_no` | string | = `order_number` (cadangan pencocokan) |
-| `is_paid` | boolean | Status lunas di Jubelio |
-| `is_canceled` | boolean | Dibatalkan di Jubelio |
-| `internal_status` | string | mis. `PROCESSING`, `SHIPPED`, `COMPLETED` |
-| `wms_status` | string | mis. `PAID`, `READY_TO_PICK`, `READY_TO_SHIP` |
-| `status` | string | mis. `Created`, `In Progress` |
-| `tracking_no` | string | Nomor resi |
-| `courier` / `shipper` | string | Kurir yang dipakai gudang |
-| `marked_as_complete` | string | Penanda selesai |
-| `last_modified` | string | Dipakai menolak event lama |
+| Field | Tipe | Wajib | Keterangan |
+| --- | --- | --- | --- |
+| `salesorder_id` | integer | Ya | = `orders.jubelio_salesorder_id` |
+| `ref_no` | string | Tidak | = `order_number` (cadangan pencocokan) |
+| `salesorder_no` | string | Tidak | = `order_number` bila `JUBELIO_USE_ORDER_NUMBER=true` (cadangan pencocokan) |
+
+Status tidak dibaca dari payload: website membaca ulang sales order lewat INT-JB-13 (`GET /sales/orders/{id}`), karena payload webhook bisa tidak lengkap atau lebih lama dari keadaan sekarang.
 
 ```json
 {
   "action": "update-salesorder",
-  "salesorder_id": 98112,
-  "salesorder_no": "SO-000981",
-  "source": "INTERNAL",
-  "store_id": "-1043",
-  "store_name": "Website Saeful Askar",
-  "status": "In Progress",
-  "ref_no": "WEB-000123",
-  "contact_id": 5512,
-  "customer_name": "Budi Santoso",
-  "grand_total": 6935000,
+  "salesorder_id": 193460,
+  "salesorder_no": "WS-000027",
+  "ref_no": "WS-000027",
+  "status": "Completed",
+  "invoice_no": "INV-000187421",
   "is_paid": true,
-  "is_canceled": false,
-  "internal_status": "SHIPPED",
-  "wms_status": "READY_TO_SHIP",
-  "courier": "JNE",
-  "shipper": "JNE Trucking",
-  "tracking_no": "JT1234567890",
-  "location_id": 1,
-  "last_modified": "2026-10-15T08:05:00.000Z",
-  "items": [
-    { "salesorder_detail_id": 1, "item_id": 2976, "item_code": "UWF-C1PRO-HTM", "qty_in_base": 1, "price": 6750000, "amount": 6750000 }
-  ]
+  "is_canceled": false
 }
 ```
 
@@ -369,29 +346,23 @@ Payload sales order lengkap dari Jubelio. Field yang dipakai:
 }
 ```
 
+Sales order dari channel lain (Shopee, dll.) juga dijawab `200` tetapi **tidak dicatat** di `webhook_events`: Jubelio mengirim webhook ini untuk semua channel, dan tabel itu akan penuh oleh pesanan yang bukan milik website.
+
 ### Response Failed
 
 | HTTP | `code` | Kapan |
 | --- | --- | --- |
 | 401 | `INVALID_SIGNATURE` | Signature tidak cocok |
-| 422 | `VALIDATION_ERROR` | `salesorder_id` tidak ada |
+| 422 | `VALIDATION_ERROR` | `salesorder_id` tidak ada atau bukan angka |
 | 500 | `SERVER_ERROR` | Gagal menyimpan event |
 
 ### Acceptance Criteria
 
-- [ ] Order dari toko lain (Shopee, dll.) → event `ignored`.
-- [ ] Order dicari lewat `salesorder_id`, cadangan `ref_no`; tidak ketemu → event `failed` dan dicatat di log (daftar di ADM-15 menyusul di v1.1).
-- [ ] Event dengan `last_modified` lebih lama dari yang terakhir diproses untuk order itu → `ignored`.
-- [ ] Pemetaan status (urutan pengecekan dari atas; nilai pasti dikonfirmasi dengan contoh webhook asli saat uji coba):
-
-    | Kondisi di payload | Status website |
-    | --- | --- |
-    | `is_canceled = true` | `cancelled` (bila sebelumnya `paid`/`processing`, admin diberi tanda untuk refund) |
-    | `marked_as_complete` terisi atau `internal_status = COMPLETED` | `completed` |
-    | `tracking_no` terisi atau `internal_status = SHIPPED` | `shipped` |
-    | `wms_status`/`internal_status` menunjukkan picking/packing | `processing` |
-    | Lainnya | status tidak berubah |
-
-- [ ] Status hanya bergerak maju (`paid` → `processing` → `shipped` → `completed`); event yang akan memundurkan status diabaikan.
-- [ ] `tracking_no`, `courier`/`shipper`, dan `salesorder_no` disimpan ke order; setiap perubahan status dicatat di `order_status_histories` (`source = jubelio`).
-- [ ] Email "Pesanan dikirim" (berisi nomor resi) dikirim saat status pertama kali menjadi `shipped`.
+- [x] Pesanan dicari lewat `salesorder_id`, cadangan `ref_no`/`salesorder_no`. Bukan pesanan website → `200` tanpa dicatat.
+- [x] Pesanan yang tidak berstatus `paid`/`processing` → event `ignored`.
+- [x] Sales order dibaca ulang dari Jubelio (INT-JB-13). Pesanan menjadi `shipped` bila **semua** terpenuhi: `marked_as_complete = true` (atau `internal_status = COMPLETED`), `invoice_no` terisi, dan `is_canceled` bukan `true`. Nilai ini dipastikan pada WS-000027 (3 Nov 2026): setelah mark-as-complete, Jubelio mengisi `marked_as_complete: true`, `internal_status`/`wms_status`/`channel_status` `COMPLETED`, `completed_date`, dan `invoice_no: "INV-000187421"`, sedangkan `tracking_no` tetap `null`.
+- [x] Belum selesai di Jubelio → event `processed` tanpa perubahan status.
+- [x] Perubahan dicatat di `order_status_histories` (`source = jubelio`, catatan "Diselesaikan di Jubelio, faktur INV-…"). `tracking_no` dan kurir ikut disimpan bila Jubelio mengisinya dan order belum punya.
+- [x] Status hanya bergerak maju (`OrderStatusRecorder`); event berulang tidak mengubah apa pun.
+- [x] Cadangan bila webhook tidak sampai: `orders:check-shipped` setiap 10 menit menanyakan paling banyak 30 pesanan `paid`/`processing` berumur ≤ 60 hari, yang paling lama tidak ditanyakan lebih dulu.
+- [ ] Belum dipakai: `processing` dari status picking/packing, pembatalan dari Jubelio (`is_canceled`), dan email "Pesanan dikirim" (`OrderShippedMail`, template sudah ada).

@@ -538,6 +538,23 @@ Sebagai admin yang baru mengubah produk di Jubelio, saya ingin menjalankan sinkr
 
 `202 Accepted`: `{ "data": { "order_number", "sent_to" }, "message": "Invoice dikirim ke ... Email sampai dalam sekitar satu menit." }`. Pengiriman otomatis tidak lewat endpoint ini: email "Pembayaran diterima" sudah membawa invoice PDF saat pembayaran dikonfirmasi.
 
+## ADM-29 · Tandai pesanan selesai
+
+`POST /api/v1/admin/orders/{order_number}/complete` · **Admin**. Tanpa body. Ditambah 3 Nov 2026.
+
+Sebagai admin, saya ingin menandai pesanan selesai setelah pelanggan menerimanya, karena website tidak tahu kapan barang sampai.
+
+Hanya untuk pesanan `shipped` (Dikirim), yaitu pesanan yang sales order-nya sudah diselesaikan gudang di Jubelio (WH-05). Status menjadi `completed`, dicatat di riwayat status dengan `source = admin` dan catatan "Diselesaikan oleh admin {nama}". Tidak ada panggilan ke Jubelio, karena sales order di sana sudah selesai. Tidak ada email ke pelanggan.
+
+`200 OK`: `{ "data": { "order_number", "status": "completed", "status_label": "Selesai" }, "message": "Pesanan WS-000027 ditandai selesai." }`
+
+| HTTP | `code` | Kapan |
+| --- | --- | --- |
+| 404 | `ORDER_NOT_FOUND` | Nomor pesanan tidak ada |
+| 409 | `ORDER_NOT_SHIPPED` | Status pesanan bukan `shipped` (termasuk yang sudah `completed`) |
+
+Di panel admin, tombol "Tandai selesai" hanya muncul di detail pesanan berstatus Dikirim dan meminta konfirmasi sekali lagi, karena status tidak bisa dikembalikan.
+
 ## ADM-23 · Periksa pembayaran semua pesanan menunggu
 
 `POST /api/v1/admin/orders/refresh-payments` · **Admin**. Tanpa body. Menanyakan ke DANA (aturan yang sama dengan ADM-12) untuk pesanan `pending_payment` yang punya order pembayaran, terbaru dulu, paling banyak 40 sekali panggil.

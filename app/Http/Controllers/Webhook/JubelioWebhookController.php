@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Webhook;
 
-use App\Exceptions\NotImplementedException;
 use App\Http\Controllers\Controller;
+use App\Services\Webhooks\Handlers\JubelioSalesOrderUpdated;
 use App\Services\Webhooks\WebhookReceiver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -43,10 +43,16 @@ class JubelioWebhookController extends Controller
     }
 
     /**
-     * WH-05 · Sales order berubah di Jubelio
+     * WH-05 · Sales order berubah di Jubelio. Jubelio sends it for the orders of every channel; only the
+     * website's own orders are recorded.
      */
-    public function salesorder(Request $request): JsonResponse
+    public function salesorder(Request $request, WebhookReceiver $receiver): JsonResponse
     {
-        throw new NotImplementedException('WH-05');
+        return $receiver->jubelio(
+            $request,
+            'update-salesorder',
+            ['salesorder_id' => ['required', 'integer']],
+            fn (array $payload) => JubelioSalesOrderUpdated::findOrder($payload) !== null,
+        );
     }
 }

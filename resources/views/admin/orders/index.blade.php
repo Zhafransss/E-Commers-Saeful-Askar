@@ -153,6 +153,20 @@
                                 <button type="button" @click="pushJubelio()" :disabled="busy || !canResend"
                                         class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold disabled:opacity-40">Kirim ulang ke Jubelio</button>
                             </div>
+                            {{-- ADM-29: only a shipped order; asks once more because it cannot be undone. --}}
+                            <div x-show="canComplete" class="mt-2 flex flex-wrap items-center gap-2">
+                                <button type="button" x-show="!confirmingComplete" @click="confirmingComplete = true" :disabled="busy"
+                                        class="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-40">Tandai selesai</button>
+                                <template x-if="confirmingComplete">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="text-xs text-gray-700">Pesanan sudah diterima pelanggan? Status tidak bisa dikembalikan.</span>
+                                        <button type="button" @click="completeOrder()" :disabled="busy"
+                                                class="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-40">Ya, selesai</button>
+                                        <button type="button" @click="confirmingComplete = false" :disabled="busy"
+                                                class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-gray-100 disabled:opacity-40">Batal</button>
+                                    </div>
+                                </template>
+                            </div>
                             <div class="mt-2 flex flex-wrap gap-2">
                                 <a :href="invoiceUrl(detail.order_number)" target="_blank" rel="noopener"
                                    class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold hover:bg-gray-100">Lihat invoice (PDF)</a>

@@ -46,6 +46,9 @@ Schedule::call(fn () => SyncLog::failStale())->name('sync-logs:fail-stale')->eve
 // Backup for a Finish Notify that never arrived (WH-01): ask Gapura about orders past their deadline.
 $task('orders:expire-unpaid')->everyFiveMinutes();
 
+// Backup for a WH-05 webhook that never arrived: paid orders whose sales order was finished in Jubelio become shipped.
+$task('orders:check-shipped')->everyTenMinutes();
+
 // Shared hosting (branch `deployment`): no long-running worker is possible, so the minutely cron
 // that runs `schedule:run` also drains the queue. --max-time stays below retry_after (90 s) and
 // typical PHP time limits; withoutOverlapping() keeps two workers from running at once.
