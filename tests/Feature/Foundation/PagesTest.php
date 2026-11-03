@@ -80,6 +80,13 @@ test('customer pages render for logged-in customers', function (string $uri) {
     $this->get($uri)->assertOk();
 })->with(['/cart', '/checkout', '/checkout/finish?order=WEB-000001', '/account/orders', '/account/orders/WEB-000001', '/account/addresses']);
 
+test('the checkout page states the payment deadline from the Gapura config', function (int $seconds, string $words) {
+    config(['app.api_mock' => false, 'gapura.payment_duration' => $seconds]);
+    $this->actingAs(User::factory()->create());
+
+    $this->get('/checkout')->assertOk()->assertSee("Selesaikan pembayaran dalam <span class=\"font-semibold text-ink\">{$words}</span>", false);
+})->with([[86400, '24 jam'], [600, '10 menit'], [5400, '1 jam 30 menit']]);
+
 test('the root sends visitors to the product list, which is the front page', function () {
     $this->get('/')->assertRedirect('/products');
 });

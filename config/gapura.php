@@ -34,9 +34,9 @@ return [
     // Behind a tunnel (ngrok) or a different domain, set the full URL; empty means APP_URL + path.
     'notify_url' => env('GAPURA_NOTIFY_URL'),
 
-    // Payment deadline in seconds; 2 hours pending a final business decision.
-    // The sandbox refuses anything beyond 30 minutes, so it is capped there.
-    'payment_duration' => (int) env('GAPURA_PAYMENT_DURATION', 600),
+    // Payment deadline in seconds: 24 hours (decided 3 Nov 2026). The order can be paid until the deadline itself,
+    // and its stock stays locked in Jubelio until then. The sandbox refuses anything beyond 30 minutes, so it is capped there.
+    'payment_duration' => (int) env('GAPURA_PAYMENT_DURATION', 86400),
 
     // DANA's expected timeout is 8 seconds per call.
     'timeout' => (int) env('GAPURA_TIMEOUT', 8),

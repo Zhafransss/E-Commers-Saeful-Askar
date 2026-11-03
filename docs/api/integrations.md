@@ -1060,7 +1060,7 @@ Konfigurasi di `.env` (`config/gapura.php`):
 | `GAPURA_ORIGIN` | Domain asal request (default `APP_URL`) |
 | `GAPURA_MCC` | Merchant category code, wajib di Create Order |
 | `GAPURA_NOTIFY_URL` | URL publik webhook; kosong = `APP_URL` + `/v1.0/debit/notify`. Lewat tunnel (ngrok) isi URL lengkapnya |
-| `GAPURA_PAYMENT_DURATION` | Batas bayar dalam detik (default 600 = 10 menit; sandbox DANA maksimal 30 menit) |
+| `GAPURA_PAYMENT_DURATION` | Batas bayar dalam detik (default 86400 = 24 jam sejak 3 Nov 2026; sandbox DANA maksimal 30 menit) |
 
 ---
 

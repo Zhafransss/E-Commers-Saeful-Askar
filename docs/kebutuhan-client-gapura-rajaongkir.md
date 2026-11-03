@@ -19,7 +19,7 @@ Panduan ini untuk pemilik toko. Isinya langkah-langkah mendapatkan data yang kam
 | **Kunci publik DANA** (file `.pem`) | File dari DANA, dipakai untuk memastikan pemberitahuan pembayaran benar-benar dari DANA |
 | **Kode MCC** | Kode 4 digit kategori usaha Anda yang tercatat di DANA |
 | **Alamat website (domain) final** | Contoh `https://namatoko.id`. Harus memakai HTTPS dan jangan diganti setelah didaftarkan |
-| **Batas waktu bayar** | Berapa menit pelanggan boleh membayar sebelum pesanan otomatis batal (sekarang 10 menit) |
+| **Batas waktu bayar** | Berapa menit pelanggan boleh membayar sebelum pesanan otomatis batal (sekarang 24 jam) |
 
 ### Langkah 1. Daftar dan verifikasi bisnis di DANA
 
@@ -79,7 +79,7 @@ Panduan DANA: [Production Testing and Soft Go Live](https://dashboard.dana.id/ap
 
 | Pertanyaan | Catatan |
 |---|---|
-| Berapa menit batas waktu bayar? | Sekarang 10 menit. Terlalu singkat membuat pelanggan gagal bayar, terlalu lama menahan stok. |
+| Berapa menit batas waktu bayar? | Sekarang 24 jam (diubah 3 Nov 2026 dari 10 menit). Terlalu singkat membuat pelanggan gagal bayar, terlalu lama menahan stok. |
 | Metode pembayaran apa yang ingin ditampilkan? (Virtual Account bank, QRIS, e-wallet DANA, dll.) | Sampaikan ke kami agar sesuai dengan yang diaktifkan di DANA. |
 
 ---

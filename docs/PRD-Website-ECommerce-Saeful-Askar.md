@@ -412,7 +412,7 @@ Ongkir memakai RajaOngkir (menggantikan Jubelio Shipment sejak 20 Okt 2026); yan
 **Pertanyaan terbuka.**
 
 - [ ] API key RajaOngkir dan uji satu panggilan nyata.
-- [x] Durasi batas bayar order Gapura: 10 menit (diputuskan 20 Okt 2026; sandbox maksimal 30 menit).
+- [x] Durasi batas bayar order Gapura: 24 jam (diubah 3 Nov 2026; sebelumnya 10 menit sejak 20 Okt 2026; sandbox maksimal 30 menit).
 - [x] Nama header signature webhook Jubelio: `sign`, berisi HMAC-SHA256 (contoh resmi Jubelio di `api/dist.yaml`, bagian Webhook Signature).
 - [x] Toko internal dibuat di Jubelio dengan nama "Website" (`store_id` -102, dari `GET /locations/store/`).
 - [ ] Metode pembayaran Gapura yang diaktifkan di akun (VA, e-wallet, QRIS, kartu) dan biaya per metode; `mcc` toko; public key produksi DANA.
