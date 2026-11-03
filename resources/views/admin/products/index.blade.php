@@ -28,8 +28,8 @@
             </template>
         </div>
 
-        <p x-cloak x-show="notice" class="mt-4 rounded-lg bg-green-50 p-3 text-sm text-green-700" x-text="notice"></p>
-        <p x-cloak x-show="actionError" class="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700" x-text="actionError"></p>
+        <p x-cloak x-show="notice" class="sticky top-2 z-20 mt-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 shadow" x-text="notice"></p>
+        <p x-cloak x-show="actionError" class="sticky top-2 z-20 mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 shadow" x-text="actionError"></p>
 
         {{-- Product list --}}
         <div class="mt-8 flex flex-wrap items-end justify-between gap-2">
@@ -103,7 +103,7 @@
                         </button>
                         <span class="flex w-36 items-center gap-2 px-4 text-xs font-semibold" :class="product.is_hidden ? 'text-gray-500' : 'text-green-700'">
                             <button type="button" role="switch" :aria-checked="(!product.is_hidden).toString()" :aria-label="(product.is_hidden ? 'Tampilkan ' : 'Sembunyikan ') + product.name"
-                                @click="setHidden(product, !product.is_hidden)" :disabled="saving[product.id]"
+                                @click="setHidden(product, !product.is_hidden)" :disabled="!!saving[product.id]"
                                 class="relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-50" :class="product.is_hidden ? 'bg-gray-300' : 'bg-green-500'">
                             <span class="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition" :class="product.is_hidden ? '' : 'translate-x-5'"></span>
                         </button>
@@ -163,7 +163,7 @@
                     <div class="flex items-center justify-between border-t border-gray-100 px-4 py-2.5 text-xs font-semibold" :class="product.is_hidden ? 'text-gray-500' : 'text-green-700'">
                         <span x-text="product.is_hidden ? 'Disembunyikan dari pelanggan' : 'Tampil di toko'"></span>
                         <button type="button" role="switch" :aria-checked="(!product.is_hidden).toString()" :aria-label="(product.is_hidden ? 'Tampilkan ' : 'Sembunyikan ') + product.name"
-                                @click="setHidden(product, !product.is_hidden)" :disabled="saving[product.id]"
+                                @click="setHidden(product, !product.is_hidden)" :disabled="!!saving[product.id]"
                                 class="relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-50" :class="product.is_hidden ? 'bg-gray-300' : 'bg-green-500'">
                             <span class="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition" :class="product.is_hidden ? '' : 'translate-x-5'"></span>
                         </button>
