@@ -29,7 +29,7 @@ class GapuraDiagnose extends Command
         $stack->push(Middleware::history($history));
         $client = new GapuraClient(config('gapura'), new Client(['handler' => $stack, 'timeout' => 15, 'connect_timeout' => 15, 'http_errors' => true]));
 
-        $this->components->info('Environment: '.config('gapura.env').', merchant: '.config('gapura.merchant_id').', MCC: '.config('gapura.mcc'));
+        $this->components->info('Environment: '.config('gapura.env').', merchant: '.config('gapura.merchant_id').', MCC: '.config('gapura.mcc').', store: '.(config('gapura.external_store_id') ?: '(kosong, QRIS tidak tampil)'));
 
         try {
             if (filled($this->option('status'))) {

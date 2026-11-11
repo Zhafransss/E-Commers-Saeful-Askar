@@ -30,6 +30,10 @@ return [
     // Merchant category code (additionalInfo.mcc), required by Create Order.
     'mcc' => env('GAPURA_MCC'),
 
+    // Our store (shop) ID at DANA, sent as `externalStoreId`. DANA needs it to offer QRIS (NETWORK_PAY_PG_QRIS) on its
+    // checkout page, and gives it once QRIS is activated for the merchant. Empty = not sent, so no QRIS.
+    'external_store_id' => env('GAPURA_EXTERNAL_STORE_ID'),
+
     // Public URL DANA posts the payment result to. DANA requires the path /v1.0/debit/notify.
     // Behind a tunnel (ngrok) or a different domain, set the full URL; empty means APP_URL + path.
     'notify_url' => env('GAPURA_NOTIFY_URL'),

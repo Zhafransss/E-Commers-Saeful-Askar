@@ -131,6 +131,18 @@ test('Create Order headers carry the partner id and a signature our public key v
         ))->toBe(1);
 });
 
+test('Create Order sends the store ID that QRIS needs when one is configured', function () {
+    createGapuraOrder(gapuraClient([gapuraJson('create-order-success')], ['external_store_id' => 'store-789']));
+
+    expect(json_decode((string) gapuraSent()[0]->getBody(), true)['externalStoreId'])->toBe('store-789');
+});
+
+test('Create Order leaves the store ID out when none is configured', function (?string $store) {
+    createGapuraOrder(gapuraClient([gapuraJson('create-order-success')], ['external_store_id' => $store]));
+
+    expect(json_decode((string) gapuraSent()[0]->getBody(), true))->not->toHaveKey('externalStoreId');
+})->with([null, '']);
+
 test('a configured notify URL is used as the NOTIFICATION url', function () {
     createGapuraOrder(gapuraClient([gapuraJson('create-order-success')], ['notify_url' => 'https://abc.ngrok-free.app/v1.0/debit/notify']));
 

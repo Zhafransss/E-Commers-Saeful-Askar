@@ -78,11 +78,14 @@ class GapuraClient extends IntegrationClient
      * INT-GP-01. Creates the order at DANA and returns the hosted checkout URL to redirect the
      * customer to. `partnerReferenceNo` is our order number: asking again with the same number and
      * the same data returns the same order, so a retry after a timeout cannot create a second one.
+     *
+     * `externalStoreId` is sent only when GAPURA_EXTERNAL_STORE_ID is set: DANA shows QRIS only with it.
      */
     public function createOrder(string $orderNumber, int $amount, CarbonInterface $expiresAt, string $title, string $returnUrl): GapuraOrder
     {
         $deadline = $this->deadline($expiresAt);
-        $request = new CreateOrderByRedirectRequest([
+        $store = $this->config['external_store_id'] ?? null;
+        $request = new CreateOrderByRedirectRequest((filled($store) ? ['externalStoreId' => (string) $store] : []) + [
             'partnerReferenceNo' => $orderNumber,
             'merchantId' => $this->config['merchant_id'],
             'amount' => $this->money($amount),
