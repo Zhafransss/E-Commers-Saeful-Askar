@@ -215,7 +215,7 @@ test('orders:check-shipped marks finished sales orders shipped and leaves the re
     ]);
 
     $this->artisan('orders:check-shipped')
-        ->expectsOutputToContain('3 pesanan diperiksa di Jubelio, 1 ditandai dikirim.')
+        ->expectsOutputToContain('3 pesanan diperiksa di Jubelio, 1 ditandai dikirim, 0 resi baru.')
         ->assertSuccessful();
 
     expect($finished->refresh()->status)->toBe(OrderStatus::Shipped)
@@ -252,6 +252,52 @@ test('orders:check-shipped goes on when Jubelio fails for one order', function (
 
     expect($failing->refresh()->status)->toBe(OrderStatus::Paid)
         ->and($finished->refresh()->status)->toBe(OrderStatus::Shipped);
+});
+
+test('orders:check-shipped fills in a tracking number that reached Jubelio after the order was shipped', function () {
+    $order = paidWebsiteOrder('WS-000060', 193530);
+    $detail = finishedSalesOrder(193530, 'WS-000060');
+    fakeJubelioCatalog(['/sales/orders/193530' => function () use (&$detail) {
+        return Http::response($detail);
+    }]);
+
+    // The warehouse finished the sales order before the courier's number was in Jubelio.
+    $this->artisan('orders:check-shipped')->expectsOutputToContain('1 ditandai dikirim, 0 resi baru.')->assertSuccessful();
+    expect($order->refresh())->status->toBe(OrderStatus::Shipped)->tracking_no->toBeNull();
+
+    $detail = finishedSalesOrder(193530, 'WS-000060', ['tracking_no' => 'WHN789', 'shipper' => 'Wahana Baru']);
+
+    $this->artisan('orders:check-shipped')->expectsOutputToContain('1 pesanan diperiksa di Jubelio, 0 ditandai dikirim, 1 resi baru.')->assertSuccessful();
+
+    expect($order->refresh())
+        ->status->toBe(OrderStatus::Shipped)
+        ->tracking_no->toBe('WHN789')
+        ->jubelio_courier->toBe('Wahana Express')
+        ->and($order->statusHistories()->where('status', OrderStatus::Shipped)->count())->toBe(1);
+});
+
+test('orders:check-shipped asks only shipped orders that still lack a tracking number', function () {
+    $waiting = paidWebsiteOrder('WS-000061', 193531, ['status' => OrderStatus::Shipped]);
+    $tracked = paidWebsiteOrder('WS-000062', 193532, ['status' => OrderStatus::Shipped, 'tracking_no' => 'WHN-ADA']);
+    $old = paidWebsiteOrder('WS-000063', 193533, ['status' => OrderStatus::Shipped, 'created_at' => now()->subDays(61)]);
+    $completed = paidWebsiteOrder('WS-000064', 193534, ['status' => OrderStatus::Completed]);
+    fakeSalesOrders([
+        193531 => finishedSalesOrder(193531, 'WS-000061'),
+        193532 => finishedSalesOrder(193532, 'WS-000062', ['tracking_no' => 'WHN-BARU']),
+        193533 => finishedSalesOrder(193533, 'WS-000063', ['tracking_no' => 'WHN-LAMA']),
+        193534 => finishedSalesOrder(193534, 'WS-000064', ['tracking_no' => 'WHN-SELESAI']),
+    ]);
+    $before = $waiting->updated_at;
+    $this->travel(1)->minute();
+
+    $this->artisan('orders:check-shipped')->expectsOutputToContain('1 pesanan diperiksa di Jubelio, 0 ditandai dikirim, 0 resi baru.')->assertSuccessful();
+
+    expect($waiting->refresh()->tracking_no)->toBeNull()
+        ->and($waiting->updated_at->gt($before))->toBeTrue()
+        ->and($tracked->refresh()->tracking_no)->toBe('WHN-ADA')
+        ->and($old->refresh()->tracking_no)->toBeNull()
+        ->and($completed->refresh()->tracking_no)->toBeNull()
+        ->and(collect(jubelioCalls())->filter(fn ($path) => str_starts_with($path, '/sales/orders/'))->values()->all())->toBe(['/sales/orders/193531']);
 });
 
 test('orders:check-shipped runs on the schedule', function () {

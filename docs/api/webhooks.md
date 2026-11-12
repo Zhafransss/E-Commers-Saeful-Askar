@@ -365,4 +365,5 @@ Sales order dari channel lain (Shopee, dll.) juga dijawab `200` tetapi **tidak d
 - [x] Perubahan dicatat di `order_status_histories` (`source = jubelio`, catatan "Diselesaikan di Jubelio, faktur INV-…"). `tracking_no` dan kurir ikut disimpan bila Jubelio mengisinya dan order belum punya.
 - [x] Status hanya bergerak maju (`OrderStatusRecorder`); event berulang tidak mengubah apa pun.
 - [x] Cadangan bila webhook tidak sampai: `orders:check-shipped` setiap menit (sejak 3 Nov 2026; sebelumnya 10 menit) menanyakan paling banyak 30 pesanan `paid`/`processing` berumur ≤ 60 hari, yang paling lama tidak ditanyakan lebih dulu.
+- [x] Resi yang menyusul: pesanan `shipped` yang belum punya resi ikut ditanyakan oleh `orders:check-shipped` (sejak 12 Nov 2026), karena gudang bisa menyelesaikan sales order sebelum resi kurir masuk ke Jubelio. Hanya `tracking_no` (dan `jubelio_courier` bila kosong) yang diisi; status tidak berubah.
 - [ ] Belum dipakai: `processing` dari status picking/packing, pembatalan dari Jubelio (`is_canceled`), dan email "Pesanan dikirim" (`OrderShippedMail`, template sudah ada).

@@ -51,13 +51,11 @@ class SalesOrderProgress
         }
 
         $invoice = trim((string) $salesOrder['invoice_no']);
-        $tracking = trim((string) ($salesOrder['tracking_no'] ?? $salesOrder['tracking_number'] ?? ''));
-        $courier = trim((string) ($salesOrder['shipper'] ?? $salesOrder['courier'] ?? ''));
 
         // A tracking number already read by "Ambil resi" (ADM-22) is kept when Jubelio has none.
         $attributes = array_filter([
-            'tracking_no' => $order->tracking_no === null && $tracking !== '' ? mb_substr($tracking, 0, 100) : null,
-            'jubelio_courier' => $order->jubelio_courier === null && $courier !== '' ? mb_substr($courier, 0, 100) : null,
+            'tracking_no' => $order->tracking_no === null ? self::trackingNo($salesOrder) : null,
+            'jubelio_courier' => $order->jubelio_courier === null ? self::courier($salesOrder) : null,
         ]);
 
         return $this->status->transition(
@@ -67,6 +65,67 @@ class SalesOrderProgress
             "Diselesaikan di Jubelio, faktur {$invoice}",
             $attributes,
         );
+    }
+
+    /**
+     * Fills in the tracking number of a shipped order that had none when it became shipped: the warehouse may finish
+     * the sales order before the courier's number reaches Jubelio. The status is left as it is.
+     *
+     * @return bool Whether a tracking number was found
+     */
+    public function refreshTracking(Order $order): bool
+    {
+        if (! self::awaitsTracking($order)) {
+            return false;
+        }
+
+        $salesOrder = $this->jubelio->salesOrder((int) $order->jubelio_salesorder_id);
+        $tracking = $salesOrder === null ? null : self::trackingNo($salesOrder);
+
+        if ($tracking === null) {
+            return false;
+        }
+
+        $order->forceFill([
+            'tracking_no' => $tracking,
+            'jubelio_courier' => $order->jubelio_courier ?? self::courier($salesOrder),
+        ])->save();
+
+        return true;
+    }
+
+    /**
+     * Shipped, sent to Jubelio, and still without a tracking number.
+     */
+    public static function awaitsTracking(Order $order): bool
+    {
+        return $order->status === OrderStatus::Shipped
+            && $order->tracking_no === null
+            && $order->jubelio_salesorder_id !== null;
+    }
+
+    /**
+     * The tracking number (resi) on a sales order detail, or null while it has none.
+     *
+     * @param  array<string, mixed>  $salesOrder
+     */
+    public static function trackingNo(array $salesOrder): ?string
+    {
+        $tracking = trim((string) ($salesOrder['tracking_no'] ?? $salesOrder['tracking_number'] ?? ''));
+
+        return $tracking === '' ? null : mb_substr($tracking, 0, 100);
+    }
+
+    /**
+     * The courier the warehouse used, as Jubelio names it, or null.
+     *
+     * @param  array<string, mixed>  $salesOrder
+     */
+    public static function courier(array $salesOrder): ?string
+    {
+        $courier = trim((string) ($salesOrder['shipper'] ?? $salesOrder['courier'] ?? ''));
+
+        return $courier === '' ? null : mb_substr($courier, 0, 100);
     }
 
     /**

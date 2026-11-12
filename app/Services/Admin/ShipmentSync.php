@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Exceptions\IntegrationException;
 use App\Models\Order;
 use App\Services\Jubelio\JubelioClient;
+use App\Services\Jubelio\SalesOrderProgress;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -44,15 +45,15 @@ class ShipmentSync
                 continue;
             }
 
-            $tracking = trim((string) ($salesOrder['tracking_no'] ?? $salesOrder['tracking_number'] ?? ''));
+            $tracking = $salesOrder === null ? null : SalesOrderProgress::trackingNo($salesOrder);
 
-            if ($tracking === '') {
+            if ($tracking === null) {
                 $order->touch();
 
                 continue;
             }
 
-            $order->forceFill(['tracking_no' => $tracking, 'jubelio_courier' => $this->courier($salesOrder)])->save();
+            $order->forceFill(['tracking_no' => $tracking, 'jubelio_courier' => SalesOrderProgress::courier($salesOrder)])->save();
             $updated++;
         }
 
@@ -62,15 +63,5 @@ class ShipmentSync
             'failed' => $failed,
             'remaining' => max(0, (clone $waiting)->count() - $orders->count()),
         ];
-    }
-
-    /**
-     * @param  array<string, mixed>  $salesOrder
-     */
-    private function courier(array $salesOrder): ?string
-    {
-        $courier = trim((string) ($salesOrder['shipper'] ?? $salesOrder['courier'] ?? ''));
-
-        return $courier === '' ? null : mb_substr($courier, 0, 100);
     }
 }
