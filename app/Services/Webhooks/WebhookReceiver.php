@@ -82,7 +82,7 @@ class WebhookReceiver
 
         if (! $this->validJubelioSignature($request, $raw)) {
             $headers = implode(', ', array_keys($request->headers->all()));
-            $this->recordRejected(WebhookProvider::Jubelio, $action, $request, "Signature webhook tidak valid. Header diterima: {$headers}.");
+            $this->recordRejected(WebhookProvider::Jubelio, $action, $request, "Signature webhook tidak valid. {$this->jubelioSignatureHint($request, $raw)} Header diterima: {$headers}.");
 
             throw new ApiException('Signature webhook tidak valid.', 'INVALID_SIGNATURE', 401);
         }
@@ -123,6 +123,51 @@ class WebhookReceiver
         $expected = hash_hmac('sha256', trim($raw).$secret, $secret);
 
         return hash_equals($expected, strtolower((string) $request->header($header)));
+    }
+
+    /**
+     * For a rejected delivery: which other way of signing, with our secret, would have produced the `sign` it came
+     * with. None means Jubelio signs with another secret; a match names the formula Jubelio really uses. Only the
+     * formula's name and the shape of the header are recorded, never the secret or the signature itself.
+     */
+    private function jubelioSignatureHint(Request $request, string $raw): string
+    {
+        $secret = (string) config('jubelio.webhook_secret');
+        $sign = trim((string) $request->header((string) config('jubelio.webhook_signature_header')));
+
+        if ($secret === '' || $sign === '') {
+            return $secret === '' ? 'JUBELIO_WEBHOOK_SECRET kosong.' : 'Header signature kosong.';
+        }
+
+        $shape = 'sign '.strlen($sign).' karakter'.(ctype_xdigit($sign) ? ' hex' : '');
+        // A hex digest is compared without regard to case; a base64 one exactly.
+        $received = ctype_xdigit($sign) ? strtolower($sign) : $sign;
+
+        // JSON.stringify of the decoded payload, in case Jubelio signs that rather than the bytes it sends.
+        $bodies = array_unique([
+            'body' => trim($raw),
+            'body mentah' => $raw,
+            'JSON ulang' => (string) json_encode($request->json()->all(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+        ]);
+
+        foreach ($bodies as $name => $body) {
+            $candidates = [
+                "HMAC({$name}+secret)" => hash_hmac('sha256', $body.$secret, $secret),
+                "SHA256({$name}+secret)" => hash('sha256', $body.$secret),
+                "HMAC({$name})" => hash_hmac('sha256', $body, $secret),
+                "SHA256({$name})" => hash('sha256', $body),
+                "HMAC({$name}+secret) base64" => base64_encode(hash_hmac('sha256', $body.$secret, $secret, true)),
+                "HMAC({$name}) base64" => base64_encode(hash_hmac('sha256', $body, $secret, true)),
+            ];
+
+            foreach ($candidates as $formula => $expected) {
+                if (hash_equals($expected, $received)) {
+                    return "{$shape}; cocok dengan {$formula}.";
+                }
+            }
+        }
+
+        return "{$shape}; tidak cocok dengan rumus mana pun memakai JUBELIO_WEBHOOK_SECRET (kemungkinan secret di Jubelio berbeda).";
     }
 
     /**

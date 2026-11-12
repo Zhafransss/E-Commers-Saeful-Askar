@@ -145,6 +145,31 @@ test('the signature is read from the sign header by default; a rejected delivery
         ->and(WebhookEvent::sole()->error)->toContain('x-signature')->toContain('content-type');
 });
 
+test('a rejected delivery names the formula its signature matches, without storing the secret or the signature', function (Closure $sign, string $hint) {
+    $body = fixtureContent('jubelio/webhooks/update-product.json');
+    $signature = $sign($body, 'rahasia-webhook');
+
+    assertApiError(postJubelio($body, $signature), 401, 'INVALID_SIGNATURE');
+
+    expect(WebhookEvent::sole()->error)
+        ->toContain($hint)
+        ->not->toContain('rahasia-webhook')
+        ->not->toContain($signature);
+})->with([
+    'plain SHA256 of body + secret' => [fn (string $body, string $secret) => hash('sha256', trim($body).$secret), 'sign 64 karakter hex; cocok dengan SHA256(body+secret).'],
+    'HMAC of the body alone' => [fn (string $body, string $secret) => hash_hmac('sha256', trim($body), $secret), 'cocok dengan HMAC(body).'],
+    'HMAC in base64' => [fn (string $body, string $secret) => base64_encode(hash_hmac('sha256', trim($body).$secret, $secret, true)), 'cocok dengan HMAC(body+secret) base64.'],
+    'HMAC of the re-encoded JSON' => [fn (string $body, string $secret) => hash_hmac('sha256', json_encode(json_decode($body, true), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE).$secret, $secret), 'cocok dengan HMAC(JSON ulang+secret).'],
+]);
+
+test('a rejected delivery signed with another secret says no formula matches', function () {
+    $body = fixtureContent('jubelio/webhooks/update-product.json');
+
+    assertApiError(postJubelio($body, jubelioSignature($body, 'secret-lain')), 401, 'INVALID_SIGNATURE');
+
+    expect(WebhookEvent::sole()->error)->toContain('sign 64 karakter hex; tidak cocok dengan rumus mana pun');
+});
+
 test('the signature header name can be changed in config', function () {
     config(['jubelio.webhook_signature_header' => 'X-Jubelio-Sign']);
     $body = fixtureContent('jubelio/webhooks/update-product.json');
