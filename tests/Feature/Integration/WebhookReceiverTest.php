@@ -160,6 +160,7 @@ test('a rejected delivery names the formula its signature matches, without stori
     'HMAC of the body alone' => [fn (string $body, string $secret) => hash_hmac('sha256', trim($body), $secret), 'cocok dengan HMAC(body).'],
     'HMAC in base64' => [fn (string $body, string $secret) => base64_encode(hash_hmac('sha256', trim($body).$secret, $secret, true)), 'cocok dengan HMAC(body+secret) base64.'],
     'HMAC of the re-encoded JSON' => [fn (string $body, string $secret) => hash_hmac('sha256', json_encode(json_decode($body, true), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE).$secret, $secret), 'cocok dengan HMAC(JSON ulang+secret).'],
+    'the official formula with an empty secret' => [fn (string $body) => jubelioSignature($body, ''), 'cocok dengan HMAC(body+secret) dengan secret kosong.'],
 ]);
 
 test('a rejected delivery signed with another secret says no formula matches', function () {

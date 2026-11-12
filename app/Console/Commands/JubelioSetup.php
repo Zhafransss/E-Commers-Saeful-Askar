@@ -13,7 +13,7 @@ use Illuminate\Console\Command;
 class JubelioSetup extends Command
 {
     protected $signature = 'jubelio:setup
-        {--register-webhooks : Daftarkan URL WH-02 – WH-05 ke Jubelio}
+        {--register-webhooks : Daftarkan URL WH-02 – WH-05 dan secret key (JUBELIO_WEBHOOK_SECRET) ke Jubelio}
         {--url= : URL publik website untuk webhook (default APP_URL)}
         {--force : Daftarkan webhook tanpa konfirmasi}';
 
@@ -125,6 +125,17 @@ class JubelioSetup extends Command
             $this->components->twoColumnDetail($action, $url);
         }
 
+        // Jubelio keeps the secret key as one more entry of the same list (action `secret-key`, docs/api/dist.yaml
+        // saveWebhookRequest). After registering the URLs without it, webhooks came signed with another secret than the
+        // one shown in its settings page (12 Nov 2026), so the secret of .env is sent along instead of typed by hand.
+        $secret = (string) config('jubelio.webhook_secret');
+        if ($secret !== '') {
+            $urls = ['secret-key' => $secret] + $urls;
+            $this->components->twoColumnDetail('secret-key', 'JUBELIO_WEBHOOK_SECRET ('.strlen($secret).' karakter, tidak ditampilkan)');
+        } else {
+            $this->components->warn('JUBELIO_WEBHOOK_SECRET kosong: secret key tidak dikirim, dan website akan menolak semua webhook.');
+        }
+
         if (! str_starts_with($baseUrl, 'https://') || str_contains($baseUrl, 'localhost') || str_contains($baseUrl, '127.0.0.1')) {
             $this->components->warn('URL bukan HTTPS publik; Jubelio tidak akan bisa menjangkaunya. Pakai --url=https://<domain>.');
         }
@@ -143,7 +154,9 @@ class JubelioSetup extends Command
             return false;
         }
 
-        $this->components->info('Webhook terdaftar. Isi secret key di Jubelio (Pengaturan → Developer → Webhook) sama dengan JUBELIO_WEBHOOK_SECRET.');
+        $this->components->info($secret !== ''
+            ? 'Webhook dan secret key terdaftar. Jangan ubah Webhook Secret Key di halaman Jubelio; jalankan perintah ini lagi bila JUBELIO_WEBHOOK_SECRET diganti.'
+            : 'Webhook terdaftar tanpa secret key. Isi JUBELIO_WEBHOOK_SECRET, lalu jalankan perintah ini lagi.');
 
         return true;
     }

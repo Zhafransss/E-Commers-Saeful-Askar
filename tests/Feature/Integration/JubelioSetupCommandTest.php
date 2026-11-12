@@ -70,10 +70,12 @@ test('fails when an ID in .env does not exist in Jubelio or is empty', function 
         ->toContain('JUBELIO_TAX_ID | belum diisi');
 });
 
-test('--register-webhooks registers the four WH-02 – WH-05 URLs on the given domain', function () {
+test('--register-webhooks registers the four WH-02 – WH-05 URLs on the given domain, and warns when there is no secret', function () {
     fakeJubelioSetupData();
+    config(['jubelio.webhook_secret' => null]);
 
     $this->artisan('jubelio:setup', ['--register-webhooks' => true, '--url' => 'https://toko.example', '--force' => true])
+        ->expectsOutputToContain('JUBELIO_WEBHOOK_SECRET kosong')
         ->assertSuccessful();
 
     Http::assertSent(fn (Request $request) => $request->url() === 'https://api2.jubelio.com/systemsetting/webhook'
@@ -84,6 +86,20 @@ test('--register-webhooks registers the four WH-02 – WH-05 URLs on the given d
             ['action' => 'update-qty', 'url' => 'https://toko.example/webhooks/jubelio/stock'],
             ['action' => 'update-salesorder', 'url' => 'https://toko.example/webhooks/jubelio/salesorder'],
         ]);
+});
+
+test('--register-webhooks sends the secret key of .env along, without printing it', function () {
+    fakeJubelioSetupData();
+    config(['jubelio.webhook_secret' => 'rahasia-webhook-baru']);
+
+    $this->artisan('jubelio:setup', ['--register-webhooks' => true, '--url' => 'https://toko.example', '--force' => true])
+        ->doesntExpectOutputToContain('rahasia-webhook-baru')
+        ->expectsOutputToContain('JUBELIO_WEBHOOK_SECRET (20 karakter, tidak ditampilkan)')
+        ->assertSuccessful();
+
+    Http::assertSent(fn (Request $request) => str_contains($request->url(), 'systemsetting')
+        && $request['webhooks'][0] === ['action' => 'secret-key', 'url' => 'rahasia-webhook-baru']
+        && count($request['webhooks']) === 5);
 });
 
 test('webhooks are not registered when the confirmation is declined, and localhost is warned about', function () {

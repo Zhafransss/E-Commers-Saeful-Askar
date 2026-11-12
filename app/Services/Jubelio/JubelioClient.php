@@ -100,7 +100,7 @@ class JubelioClient extends IntegrationClient
     }
 
     /**
-     * INT-JB-14 · Register webhook URLs.
+     * INT-JB-14 · Register webhook URLs. The secret key travels in the same list as action `secret-key`.
      *
      * @param  array<string, string>  $urls  action => URL, e.g. 'update-qty' => 'https://…/webhooks/jubelio/stock'
      */
