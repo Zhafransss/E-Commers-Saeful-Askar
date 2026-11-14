@@ -320,7 +320,8 @@ test('the invoice says LUNAS only for a paid order', function () {
     ])->render();
 
     expect($html(panelOrder($this->customer, 'WEB-000001', ['status' => OrderStatus::Paid])))->toContain('LUNAS')->toContain('Baterai Lithium 48V')->toContain('Rp3.585.000')
-        ->and($html(panelOrder($this->customer, 'WEB-000002')))->toContain('MENUNGGU PEMBAYARAN')->not->toContain('LUNAS');
+        ->toContain('Resi akan dikirim selambat-lambatnya')
+        ->and($html(panelOrder($this->customer, 'WEB-000002')))->toContain('MENUNGGU PEMBAYARAN')->not->toContain('LUNAS')->not->toContain('Resi akan dikirim');
 });
 
 test('the invoice PDF carries the store logo from a local file', function () {
@@ -414,7 +415,8 @@ test('the mail sent when a payment arrives carries the invoice too, and still go
     config(['app.url' => 'https://toko.example']);
     $with = sentNow(new PaymentReceivedMail($order), 'siti@example.com');
     expect($with->getAttachments())->toHaveCount(1)->and($with->getHtmlBody())->toContain('Invoice pesanan ini terlampir')
-        ->toContain('src="https://toko.example/images/logo-saefulaskar.png"');
+        ->toContain('src="https://toko.example/images/logo-saefulaskar.png"')
+        ->toContain('Resi akan dikirim selambat-lambatnya');
 
     app()->bind(InvoicePdf::class, fn () => new class extends InvoicePdf
     {

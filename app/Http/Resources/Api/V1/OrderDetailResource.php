@@ -60,6 +60,7 @@ class OrderDetailResource extends ApiResource
                 'service_name' => $this->service_name,
                 'tracking_no' => $this->tracking_no,
                 'etd_text' => $this->etd_text,
+                'tracking_promise' => $this->trackingPromise(),
             ],
             'amounts' => [
                 'subtotal' => $this->subtotal,

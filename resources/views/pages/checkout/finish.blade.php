@@ -29,6 +29,7 @@
                         </span>
                         <h1 class="mt-6 text-2xl font-bold">Pembayaran berhasil</h1>
                         <p class="mt-2 text-gray-600">Terima kasih! Pesanan Anda sedang disiapkan gudang. Nomor resi muncul di halaman pesanan setelah dikirim.</p>
+                        <p x-show="order?.shipping.tracking_promise" class="mx-auto mt-5 w-fit rounded-2xl bg-brand-soft px-5 py-3 text-sm font-semibold text-ink" x-text="order?.shipping.tracking_promise"></p>
                     </div>
 
                     {{-- pending --}}

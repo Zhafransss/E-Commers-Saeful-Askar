@@ -23,4 +23,14 @@ return [
     */
     'whatsapp' => env('SHOP_WHATSAPP_NUMBER', '6282227222971'),
 
+    /*
+    | When the tracking number is promised (WIB), on the finish page, the payment mail, and the invoice: an order paid
+    | before `tracking_cutoff` gets it by `tracking_deadline` the same day, a later one by `tracking_deadline` the next.
+    | A deadline on a day the warehouse does not ship (ISO weekday, 7 = Sunday) moves to the next day it does, so
+    | Saturday after the cutoff and all of Sunday get Monday.
+    */
+    'tracking_cutoff' => '15:00',
+    'tracking_deadline' => '16:00',
+    'tracking_closed_days' => [7],
+
 ];

@@ -408,7 +408,8 @@ ID wilayah mengikuti endpoint Region Jubelio (string). Response REG-04 (keluraha
     "service_code": "JTR",
     "service_name": "JNE Trucking",
     "tracking_no": "JT1234567890",
-    "etd_text": "3–5 hari"
+    "etd_text": "3–5 hari",
+    "tracking_promise": null
   },
   "amounts": {
     "subtotal": 6750000,
@@ -441,7 +442,7 @@ ID wilayah mengikuti endpoint Region Jubelio (string). Response REG-04 (keluraha
 }
 ```
 
-`payment.checkout_url` (halaman bayar DANA) hanya terisi saat status `pending_payment` dan order belum kedaluwarsa. `can_pay` dan `can_cancel` = `true` hanya saat `pending_payment`.
+`payment.checkout_url` (halaman bayar DANA) hanya terisi saat status `pending_payment` dan order belum kedaluwarsa. `shipping.tracking_promise` hanya terisi saat status `paid` atau `processing`, misalnya "Resi akan dikirim selambat-lambatnya besok pukul 16.00 WIB (Selasa, 17 November 2026).": dibayar sebelum 15.00 WIB berarti resi paling lambat pukul 16.00 hari itu, setelahnya pukul 16.00 esok hari. Gudang tidak mengirim hari Minggu, jadi Sabtu setelah 15.00 dan seluruh hari Minggu mendapat Senin pukul 16.00 (`config/shop.php`). `can_pay` dan `can_cancel` = `true` hanya saat `pending_payment`.
 
 ## Indeks endpoint
 

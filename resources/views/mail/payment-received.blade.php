@@ -3,6 +3,12 @@
 
 Halo {{ $order->shipping_recipient_name }}, terima kasih! Pembayaran pesanan **{{ $order->order_number }}** sudah kami terima dan pesanan Anda sedang disiapkan oleh gudang.
 
+@if ($trackingPromise = $order->trackingPromise())
+<x-mail::panel>
+**{{ $trackingPromise }}**
+</x-mail::panel>
+@endif
+
 <x-mail::table>
 | Produk | Jumlah | Subtotal |
 | :----- | :----: | -------: |

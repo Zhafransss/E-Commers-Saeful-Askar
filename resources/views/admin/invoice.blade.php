@@ -27,6 +27,7 @@
         .totals { margin-top: 10px; width: 45%; margin-left: 55%; }
         .totals td { padding: 4px 8px; }
         .totals .grand td { border-top: 2px solid #111; font-weight: bold; font-size: 12px; padding-top: 8px; }
+        .promise { margin-top: 16px; padding: 8px 10px; border: 1px solid #e6b800; background: #fff8db; font-weight: bold; }
         .foot { margin-top: 30px; font-size: 9px; color: #666; border-top: 1px solid #ddd; padding-top: 10px; }
     </style>
 </head>
@@ -72,6 +73,10 @@
             </td>
         </tr>
     </table>
+
+    @if ($trackingPromise = $order->trackingPromise())
+        <div class="promise">{{ $trackingPromise }}</div>
+    @endif
 
     <table class="items">
         <thead>

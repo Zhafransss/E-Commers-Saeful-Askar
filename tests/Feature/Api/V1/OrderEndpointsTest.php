@@ -12,6 +12,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
@@ -71,9 +72,17 @@ test('ORD-03 shows my order and hides anyone else\'s', function () {
     placed($this->user, 'WEB-000010');
     placed(User::factory()->create(), 'WEB-000011');
 
-    $this->actingAs($this->user)->getJson('/api/v1/orders/WEB-000010')->assertOk()->assertJsonPath('data.order_number', 'WEB-000010');
+    $this->actingAs($this->user)->getJson('/api/v1/orders/WEB-000010')->assertOk()->assertJsonPath('data.order_number', 'WEB-000010')
+        ->assertJsonPath('data.shipping.tracking_promise', null);
     assertApiError($this->actingAs($this->user)->getJson('/api/v1/orders/WEB-000011'), 404, 'ORDER_NOT_FOUND');
     assertApiError($this->actingAs($this->user)->getJson('/api/v1/orders/WEB-999999'), 404, 'ORDER_NOT_FOUND');
+});
+
+test('ORD-03 tells a paid order when its tracking number will come, for the finish page', function () {
+    placed($this->user, 'WEB-000012', ['status' => OrderStatus::Paid, 'paid_at' => Carbon::parse('2026-11-14 16:20', 'Asia/Jakarta')]);
+
+    $this->actingAs($this->user)->getJson('/api/v1/orders/WEB-000012')->assertOk()
+        ->assertJsonPath('data.shipping.tracking_promise', 'Resi akan dikirim selambat-lambatnya hari Senin pukul 16.00 WIB (Senin, 16 November 2026).');
 });
 
 test('ORD-04 gives the payment link of an order still waiting', function () {

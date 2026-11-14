@@ -48,6 +48,40 @@ class Order extends Model
         return 'order_number';
     }
 
+    /**
+     * "Resi akan dikirim selambat-lambatnya [besok | hari Senin] pukul 16.00 WIB (Senin, 16 November 2026).", counted
+     * from the payment (config/shop.php tracking_*). A deadline on a day the warehouse does not ship moves to the next
+     * day it does. The date keeps the day clear on an invoice read later. Only while a paid order waits for the
+     * warehouse: null before payment and once shipped.
+     */
+    public function trackingPromise(): ?string
+    {
+        if (! in_array($this->status, [OrderStatus::Paid, OrderStatus::Processing], true)) {
+            return null;
+        }
+
+        $paidAt = ($this->paid_at ?? $this->created_at ?? now())->copy()->timezone('Asia/Jakarta');
+        [$hour, $minute] = array_map('intval', explode(':', config('shop.tracking_deadline')));
+        $deadline = $paidAt->copy()->setTime($hour, $minute);
+
+        if ($paidAt->format('H:i') >= config('shop.tracking_cutoff')) {
+            $deadline->addDay();
+        }
+
+        while (in_array($deadline->isoWeekday(), config('shop.tracking_closed_days'), true)) {
+            $deadline->addDay();
+        }
+
+        $deadline->locale('id');
+        $day = match ((int) $paidAt->copy()->startOfDay()->diffInDays($deadline->copy()->startOfDay())) {
+            0 => '',
+            1 => 'besok ',
+            default => 'hari '.$deadline->translatedFormat('l').' ',
+        };
+
+        return sprintf('Resi akan dikirim selambat-lambatnya %spukul %s WIB (%s).', $day, $deadline->format('H.i'), $deadline->translatedFormat('l, j F Y'));
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
