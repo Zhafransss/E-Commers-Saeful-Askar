@@ -359,6 +359,10 @@ test('the storefront header shows the cart to customers and guests but not to an
     $this->actingAs($this->admin)->get('/products')->assertOk()->assertDontSee('aria-label="Keranjang"', false);
 });
 
+test('the storefront menu links to the warranty check on the main site', function () {
+    $this->get('/products')->assertOk()->assertSee('href="https://www.saefulaskar.com/cek-garansi"', false)->assertSee('Cek Garansi');
+});
+
 // --- Invoice by email (ADM-24 and the automatic one) ---------------------------------------------
 
 /**

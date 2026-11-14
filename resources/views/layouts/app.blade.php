@@ -66,6 +66,7 @@
             ]],
             ['label' => 'Jasa Service', 'url' => 'https://www.saefulaskar.com/jasa-service', 'active' => false],
             ['label' => 'Tentang Kami', 'url' => 'https://www.saefulaskar.com/tentang-kami', 'active' => false],
+            ['label' => 'Cek Garansi', 'url' => 'https://www.saefulaskar.com/cek-garansi', 'active' => false],
         ];
 
         // Pages that open with a full-bleed hero (the home page) set @section('header_overlay', '1'): the content
