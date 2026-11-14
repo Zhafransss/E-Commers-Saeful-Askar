@@ -37,6 +37,7 @@ class InvoicePdf
             'number' => self::number($order),
             'store' => require resource_path('static/store.php'),
             'paid' => in_array($order->status, [OrderStatus::Paid, OrderStatus::Processing, OrderStatus::Shipped, OrderStatus::Completed], true),
+            'logo' => self::logo(),
         ])->render();
 
         $dompdf = new Dompdf($this->options());
@@ -45,6 +46,17 @@ class InvoicePdf
         $dompdf->render();
 
         return (string) $dompdf->output();
+    }
+
+    /**
+     * The store logo as a local file (inside Dompdf's chroot, no remote fetch). Dompdf throws on a transparent PNG
+     * without GD, so the invoice leaves the logo out there rather than failing.
+     */
+    public static function logo(): ?string
+    {
+        $path = public_path('images/logo-saefulaskar.png');
+
+        return function_exists('imagecreatefrompng') && is_file($path) ? $path : null;
     }
 
     private function options(): Options

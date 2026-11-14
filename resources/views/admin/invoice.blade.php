@@ -34,9 +34,18 @@
     <table class="head">
         <tr>
             <td style="width: 60%">
-                <div class="store">{{ $store['name'] }}</div>
-                <div class="muted" style="margin-top: 4px">{{ $store['address'] }}</div>
-                <div class="muted">{{ $store['phone'] }}</div>
+                <table>
+                    <tr>
+                        @if ($logo)
+                            <td style="width: 56px; padding-right: 10px; vertical-align: top"><img src="{{ $logo }}" alt="" style="width: 52px; height: 52px"></td>
+                        @endif
+                        <td style="vertical-align: top">
+                            <div class="store">{{ $store['name'] }}</div>
+                            <div class="muted" style="margin-top: 4px">{{ $store['address'] }}</div>
+                            <div class="muted">{{ $store['phone'] }}</div>
+                        </td>
+                    </tr>
+                </table>
             </td>
             <td class="right">
                 <h1>INVOICE</h1>

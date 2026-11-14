@@ -316,10 +316,18 @@ test('the invoice says LUNAS only for a paid order', function () {
     $html = fn (Order $order) => view('admin.invoice', [
         'order' => $order->load(['user', 'items', 'payment']), 'number' => 'INV-'.$order->order_number,
         'store' => require resource_path('static/store.php'), 'paid' => in_array($order->status, [OrderStatus::Paid, OrderStatus::Completed], true),
+        'logo' => InvoicePdf::logo(),
     ])->render();
 
     expect($html(panelOrder($this->customer, 'WEB-000001', ['status' => OrderStatus::Paid])))->toContain('LUNAS')->toContain('Baterai Lithium 48V')->toContain('Rp3.585.000')
         ->and($html(panelOrder($this->customer, 'WEB-000002')))->toContain('MENUNGGU PEMBAYARAN')->not->toContain('LUNAS');
+});
+
+test('the invoice PDF carries the store logo from a local file', function () {
+    $order = panelOrder($this->customer, 'WEB-000006', ['status' => OrderStatus::Paid]);
+
+    expect(InvoicePdf::logo())->toBe(public_path('images/logo-saefulaskar.png'))
+        ->and(app(InvoicePdf::class)->render($order))->toContain('/Subtype /Image');
 });
 
 // --- An admin does not shop ------------------------------------------------------------------
@@ -403,8 +411,10 @@ test('the invoice mail carries the invoice as a PDF attachment', function () {
 test('the mail sent when a payment arrives carries the invoice too, and still goes out if the PDF cannot be made', function () {
     $order = panelOrder($this->customer, 'WEB-000006', ['status' => OrderStatus::Paid]);
 
+    config(['app.url' => 'https://toko.example']);
     $with = sentNow(new PaymentReceivedMail($order), 'siti@example.com');
-    expect($with->getAttachments())->toHaveCount(1)->and($with->getHtmlBody())->toContain('Invoice pesanan ini terlampir');
+    expect($with->getAttachments())->toHaveCount(1)->and($with->getHtmlBody())->toContain('Invoice pesanan ini terlampir')
+        ->toContain('src="https://toko.example/images/logo-saefulaskar.png"');
 
     app()->bind(InvoicePdf::class, fn () => new class extends InvoicePdf
     {
